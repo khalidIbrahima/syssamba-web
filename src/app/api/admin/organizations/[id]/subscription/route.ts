@@ -14,7 +14,7 @@ const updateSubscriptionSchema = z.object({
 // PATCH - Update organization subscription (change plan)
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -43,9 +43,11 @@ export async function PATCH(
       );
     }
 
+    const { id } = await params;
+
     // Check if organization exists
     const organization = await db.selectOne<{ id: string }>('organizations', {
-      eq: { id: params.id },
+      eq: { id: id },
     });
 
     if (!organization) {
@@ -75,7 +77,7 @@ export async function PATCH(
       id: string;
       status: string;
     }>('subscriptions', {
-      eq: { organization_id: params.id },
+      eq: { organization_id: id },
       orderBy: { column: 'created_at', ascending: false },
       limit: 1,
     });
@@ -100,7 +102,7 @@ export async function PATCH(
     } else {
       // Create new subscription
       await db.insertOne('subscriptions', {
-        organization_id: params.id,
+        organization_id: id,
         plan_id: validatedData.planId,
         status: validatedData.status || 'active',
         stripe_subscription_id: null,
@@ -116,7 +118,7 @@ export async function PATCH(
       status: string;
       created_at: string;
     }>('subscriptions', {
-      eq: { organization_id: params.id },
+      eq: { organization_id: id },
       orderBy: { column: 'created_at', ascending: false },
       limit: 1,
     });
