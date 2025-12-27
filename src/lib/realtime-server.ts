@@ -179,16 +179,16 @@ class RealtimeServer {
           .where(eq(users.id, user.id))
           .limit(1);
 
-        const user = userRecords[0];
+        const dbUser = userRecords[0];
 
-        if (!user || !user.organizationId) {
+        if (!dbUser || !dbUser.organizationId) {
           return next(new Error('User organization not found'));
         }
 
         // Attach user info to socket
         (socket as any).userId = user.id;
-        (socket as any).organizationId = user.organizationId;
-        (socket as any).tenantId = user.tenantId || null;
+        (socket as any).organizationId = dbUser.organizationId;
+        (socket as any).tenantId = dbUser.tenantId || null;
 
         next();
       } catch (error) {
