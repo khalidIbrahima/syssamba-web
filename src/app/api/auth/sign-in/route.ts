@@ -48,8 +48,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, phone, password } = body;
 
-    // Rate limiting per Supabase guidelines
-    const identifier = email || phone || request.ip || 'unknown';
+    // Rate limiting per Supabase guidelines - extract IP from headers
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const realIp = request.headers.get('x-real-ip');
+    const cfConnectingIp = request.headers.get('cf-connecting-ip');
+    const clientIp = forwardedFor?.split(',')[0]?.trim() || realIp || cfConnectingIp || 'unknown';
+
+    const identifier = email || phone || clientIp;
     const rateLimitResult = checkRateLimit(identifier, 'auth');
 
     if (!rateLimitResult.allowed) {
