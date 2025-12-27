@@ -44,7 +44,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: netlify/actions/cli@master
         with:
-          args: deploy --dir=.next --prod
+          args: deploy --prod
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
@@ -54,7 +54,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: netlify/actions/cli@master
         with:
-          args: deploy --dir=.next
+          args: deploy
         env:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
