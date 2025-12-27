@@ -95,10 +95,7 @@ export async function PATCH(
         updateData.status = validatedData.status;
       }
 
-      await db.update('subscriptions', {
-        eq: { id: currentSubscription.id },
-        data: updateData,
-      });
+      await db.update('subscriptions', updateData, { id: currentSubscription.id });
     } else {
       // Create new subscription
       await db.insertOne('subscriptions', {

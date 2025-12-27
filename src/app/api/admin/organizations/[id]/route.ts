@@ -252,10 +252,7 @@ export async function PATCH(
       updateData.is_configured = validatedData.isConfigured;
     }
 
-    await db.update('organizations', {
-      eq: { id: id },
-      data: updateData,
-    });
+    await db.update('organizations', updateData, { id });
 
     // Fetch updated organization
     const updated = await db.selectOne<{
