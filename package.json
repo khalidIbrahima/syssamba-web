@@ -7,6 +7,7 @@
     "dev:realtime": "cross-env NODE_OPTIONS=--max-old-space-size=4096 node scripts/realtime-server.js",
     "dev:all": "cross-env NODE_OPTIONS=--max-old-space-size=8192 GENERATE_SOURCEMAP=false concurrently \"npm run dev\" \"npm run dev:realtime\"",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=dummy_pk_test NEXT_PUBLIC_APP_URL=http://localhost:3000 next build",
+    "build:netlify": "next build",
     "start": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next start",
     "start:realtime": "cross-env NODE_OPTIONS=--max-old-space-size=4096 node scripts/realtime-server.js",
     "lint": "cross-env NODE_OPTIONS=--max-old-space-size=4096 eslint",
