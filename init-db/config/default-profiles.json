@@ -1,0 +1,33 @@
+{
+  "defaultProfiles": [
+    {
+      "name": "Owner",
+      "displayName": "Propriétaire",
+      "description": "Profil propriétaire avec accès complet à ses biens",
+      "isSystemProfile": true,
+      "isActive": true
+    },
+    {
+      "name": "Accountant",
+      "displayName": "Comptable",
+      "description": "Profil comptable avec accès aux données financières et comptables",
+      "isSystemProfile": true,
+      "isActive": true
+    },
+    {
+      "name": "Agent",
+      "displayName": "Agent",
+      "description": "Profil agent avec accès opérationnel pour la gestion des biens et locataires",
+      "isSystemProfile": true,
+      "isActive": true
+    },
+    {
+      "name": "Viewer",
+      "displayName": "Lecteur",
+      "description": "Profil lecteur avec accès en lecture seule",
+      "isSystemProfile": true,
+      "isActive": true
+    }
+  ]
+}
+
