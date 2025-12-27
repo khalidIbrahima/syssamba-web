@@ -61,7 +61,7 @@ export default function DSFGenerationPage() {
   });
 
   const { data: stats, isLoading } = useDataQuery(
-    ['dsf-stats', year],
+    ['dsf-stats', year.toString()],
     () => getDSFStats(year)
   );
 

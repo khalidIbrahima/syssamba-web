@@ -155,7 +155,7 @@ export default function TaskDetailsPage() {
   const [dueTime, setDueTime] = useState('');
 
   const { data: task, isLoading, error, refetch } = useDataQuery(
-    ['task', taskId],
+    ['task', taskId || 'unknown'],
     () => getTaskDetails(taskId!),
     { enabled: !!taskId }
   );

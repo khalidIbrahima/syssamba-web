@@ -71,15 +71,15 @@ const leaseFormSchema = z.object({
   // Step 2: Financial conditions
   rentAmount: z.number().min(0, 'Le loyer doit être positif'),
   chargesAmount: z.number().min(0, 'Les charges doivent être positives'),
-  chargesIncluded: z.boolean().default(false),
+  chargesIncluded: z.boolean(),
   depositAmount: z.number().min(0, 'La caution doit être positive'),
   paymentDay: z.string().min(1, 'La date de paiement est requise'),
-  paymentMethods: z.array(z.string()).min(1, 'Au moins un mode de paiement est requis').default(['wave']),
-  gracePeriod: z.number().min(0).optional(),
-  penaltyRate: z.number().min(0).optional(),
-  indexationEnabled: z.boolean().default(false),
-  indexationRate: z.number().min(0).optional(),
-  indexationDate: z.string().optional(),
+  paymentMethods: z.array(z.string()).min(1, 'Au moins un mode de paiement est requis'),
+  gracePeriod: z.number().min(0),
+  penaltyRate: z.number().min(0),
+  indexationEnabled: z.boolean(),
+  indexationRate: z.number().min(0),
+  indexationDate: z.string(),
   
   // Step 3: Clauses & Options (to be added)
   // Step 4: Signature (to be added)

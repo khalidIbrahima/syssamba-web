@@ -83,7 +83,7 @@ export default function AccountingPage() {
   const [accountFilter, setAccountFilter] = useState<string>('all');
   
   const { data: journalData, isLoading } = useDataQuery(
-    ['journal-entries', currentPage, accountFilter],
+    ['journal-entries', currentPage.toString(), accountFilter],
     () => getJournalEntries(currentPage, accountFilter === 'all' ? undefined : accountFilter)
   );
 
@@ -128,6 +128,16 @@ export default function AccountingPage() {
     total: 0,
     totalPages: 1,
   };
+
+  // Mock data for balance evolution chart
+  const balanceEvolutionData = [
+    { month: 'Jan', balance: 150000 },
+    { month: 'Fév', balance: 165000 },
+    { month: 'Mar', balance: 158000 },
+    { month: 'Avr', balance: 172000 },
+    { month: 'Mai', balance: 168000 },
+    { month: 'Jun', balance: 175000 },
+  ];
 
   // Flatten entries to show each line as a row
   const tableRows: any[] = [];

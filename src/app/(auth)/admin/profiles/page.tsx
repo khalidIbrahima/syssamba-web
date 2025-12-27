@@ -129,13 +129,13 @@ export default function ProfilesPage() {
   const { data: organizations } = useDataQuery(
     ['admin-organizations'],
     getOrganizations,
-    { enabled: isSuperAdmin }
+    { enabled: !!isSuperAdmin }
   );
 
   // Fetch profiles with filter
   const { data: profiles, isLoading, error, refetch } = useDataQuery(
-    ['profiles', selectedOrganizationId, showAll],
-    () => getProfiles(selectedOrganizationId, showAll && isSuperAdmin)
+    ['profiles', selectedOrganizationId || 'all', showAll.toString()],
+    () => getProfiles(selectedOrganizationId, showAll && !!isSuperAdmin)
   );
 
   // Check access: Super admin OR can edit Profile object OR canViewSettings

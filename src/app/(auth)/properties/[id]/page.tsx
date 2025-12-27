@@ -218,7 +218,7 @@ export default function PropertyDetailsPage() {
                     )}
                   </div>
                   <div className="flex gap-2 mt-4">
-                    {property.photos.slice(0, 2).map((photo, index) => (
+                    {property.photos.slice(0, 2).map((photo: any, index: number) => (
                       <div
                         key={photo.id}
                         className="relative h-24 w-32 rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-blue-600"
@@ -273,7 +273,7 @@ export default function PropertyDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {property.diagnostics.map((diagnostic) => {
+                {property.diagnostics.map((diagnostic: any) => {
                   const Icon = diagnostic.icon;
                   return (
                     <div
@@ -369,7 +369,7 @@ export default function PropertyDetailsPage() {
               <div>
                 <h4 className="font-semibold text-gray-900 mb-4">Propriétaires ({property.owners.length})</h4>
                 <div className="space-y-3">
-                  {property.owners.map((owner) => (
+                  {property.owners.map((owner: any) => (
                     <div
                       key={owner.id}
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
@@ -377,7 +377,7 @@ export default function PropertyDetailsPage() {
                       <div className="flex items-center gap-4">
                         <Avatar>
                           <AvatarImage src={owner.avatar} alt={owner.name} />
-                          <AvatarFallback>{owner.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                          <AvatarFallback>{owner.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-semibold text-gray-900">{owner.name}</p>
@@ -502,7 +502,7 @@ export default function PropertyDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {property.recentActivity.map((activity) => {
+                {property.recentActivity.map((activity: any) => {
                   const Icon = activity.icon;
                   return (
                     <div key={activity.id} className="flex items-start gap-3">

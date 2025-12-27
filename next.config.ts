@@ -1,5 +1,3 @@
-import webpack from 'webpack';
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Désactiver complètement les source maps pour éviter les erreurs
@@ -77,20 +75,20 @@ const nextConfig = {
         // Ignorer spécifiquement les erreurs de source map Supabase
         { module: /@supabase/ },
         // Ignorer toutes les erreurs de source map
-        (warning) => warning.message && (
+        (warning: any) => warning.message && (
           warning.message.includes('sourceMapURL could not be parsed') ||
           warning.message.includes('Invalid source map') ||
           warning.message.includes('Only conformant source maps') ||
           warning.message.includes('source map')
         ),
         // Ignorer les avertissements de performance de webpack
-        (warning) => warning.name === 'ModuleDependencyWarning',
+        (warning: any) => warning.name === 'ModuleDependencyWarning',
         // Ignorer les avertissements de taille de chunk
-        (warning) => warning.name === 'ChunkSizeWarning'
+        (warning: any) => warning.name === 'ChunkSizeWarning'
       ];
 
       // Supprimer complètement les source maps des règles de module
-      config.module.rules = config.module.rules.filter(rule => {
+      config.module.rules = config.module.rules.filter((rule: any) => {
         if (rule.test && rule.test.toString().includes('.map')) {
           return false;
         }
@@ -104,10 +102,10 @@ const nextConfig = {
         }),
         // Plugin personnalisé pour supprimer les erreurs de source map
         {
-          apply: (compiler) => {
-            compiler.hooks.done.tap('SuppressSourceMapWarnings', (stats) => {
+          apply: (compiler: any) => {
+            compiler.hooks.done.tap('SuppressSourceMapWarnings', (stats: any) => {
               if (stats.compilation.warnings) {
-                stats.compilation.warnings = stats.compilation.warnings.filter(warning => {
+                stats.compilation.warnings = stats.compilation.warnings.filter((warning: any) => {
                   const message = warning.message || warning;
                   return !(
                     message.includes('sourceMapURL could not be parsed') ||
@@ -145,7 +143,7 @@ const nextConfig = {
       // Supprimer les avertissements de source map en production aussi
       config.ignoreWarnings = config.ignoreWarnings || [];
       config.ignoreWarnings.push(
-        (warning) => warning.message && (
+        (warning: any) => warning.message && (
           warning.message.includes('sourceMapURL could not be parsed') ||
           warning.message.includes('Invalid source map') ||
           warning.message.includes('source map')

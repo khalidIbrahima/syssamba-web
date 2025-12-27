@@ -42,8 +42,8 @@ const tenantFormSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email('Email invalide').optional().or(z.literal('')),
   idNumber: z.string().optional(),
-  hasExtranetAccess: z.boolean().default(false),
-  language: z.enum(['fr', 'en', 'wo']).default('fr'),
+  hasExtranetAccess: z.boolean(),
+  language: z.enum(['fr', 'en', 'wo']),
 });
 
 type TenantFormValues = z.infer<typeof tenantFormSchema>;

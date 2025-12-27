@@ -247,7 +247,7 @@ export default function OwnersPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={null} />
+                          <AvatarImage src={undefined} />
                           <AvatarFallback>
                             {owner.firstName[0]}{owner.lastName[0]}
                           </AvatarFallback>

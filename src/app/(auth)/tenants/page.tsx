@@ -347,7 +347,7 @@ export default function TenantsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les biens</SelectItem>
-                  {allProperties.map((property) => (
+                  {allProperties.map((property: any) => (
                     <SelectItem key={property} value={property}>
                       {property}
                     </SelectItem>
@@ -493,16 +493,10 @@ export default function TenantsPage() {
                   </Link>
                 </Button>
               ) : (
-                <AccessDeniedAction
-                  requiredPermission="Créer des locataires"
-                  reason="permission"
-                  featureName="Gestion des locataires"
-                >
-                  <Button disabled>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Ajouter un locataire
-                  </Button>
-                </AccessDeniedAction>
+                <Button disabled title="Permission requise pour créer des locataires">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter un locataire
+                </Button>
               )
             )}
           </CardContent>

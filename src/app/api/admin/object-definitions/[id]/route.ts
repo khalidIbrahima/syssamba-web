@@ -162,10 +162,7 @@ export async function PATCH(
       updateData.sort_order = validatedData.sortOrder;
     }
 
-    await db.update('object_definitions', {
-      eq: { id: id },
-      data: updateData,
-    });
+    await db.update('object_definitions', updateData, { id });
 
     // Fetch updated definition
     const updated = await db.selectOne<{
@@ -204,7 +201,7 @@ export async function PATCH(
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation error', details: error.issues },
         { status: 400 }
       );
     }

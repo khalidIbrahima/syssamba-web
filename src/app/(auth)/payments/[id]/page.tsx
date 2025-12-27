@@ -28,6 +28,8 @@ import {
   Receipt,
 } from 'lucide-react';
 import { useDataQuery } from '@/hooks/use-query';
+import { useAccess } from '@/hooks/use-access';
+import { AccessDenied } from '@/components/ui/access-denied';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -331,7 +333,7 @@ export default function PaymentDetailsPage() {
             <CardContent>
               <div className="flex items-center gap-3 mb-4">
                 <Avatar>
-                  <AvatarImage src={null} />
+                  <AvatarImage src={undefined} />
                   <AvatarFallback>
                     {payment.tenant?.firstName?.[0] || ''}{payment.tenant?.lastName?.[0] || ''}
                   </AvatarFallback>

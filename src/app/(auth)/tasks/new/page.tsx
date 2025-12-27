@@ -88,16 +88,16 @@ async function getRecentTasks() {
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
   description: z.string().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
-  category: z.string().optional(),
-  assignedTo: z.string().uuid().optional().nullable(),
-  dueDate: z.string().optional(),
-  dueTime: z.string().optional(),
-  unitIds: z.array(z.string().uuid()).optional(),
-  attachments: z.array(z.string()).optional(),
-  sendEmailNotification: z.boolean().default(false),
-  sendSMSNotification: z.boolean().default(false),
-  createReminder: z.boolean().default(false),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']),
+  category: z.string(),
+  assignedTo: z.string().uuid().nullable(),
+  dueDate: z.string(),
+  dueTime: z.string(),
+  unitIds: z.array(z.string().uuid()),
+  attachments: z.array(z.string()),
+  sendEmailNotification: z.boolean(),
+  sendSMSNotification: z.boolean(),
+  createReminder: z.boolean(),
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
