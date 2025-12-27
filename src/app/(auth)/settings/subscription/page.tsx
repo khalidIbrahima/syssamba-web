@@ -1,0 +1,509 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Crown,
+  Download,
+  AlertTriangle,
+  CheckCircle2,
+  X,
+  CreditCard,
+  Info,
+  ChevronRight,
+} from 'lucide-react';
+import { useDataQuery } from '@/hooks/use-query';
+import { useAccess } from '@/hooks/use-access';
+import { AccessDenied } from '@/components/ui/access-denied';
+import { format, parseISO, addMonths } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+
+// Fetch billing information
+async function getBillingInfo() {
+  const response = await fetch('/api/subscription/billing', {
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch billing information');
+  }
+  return response.json();
+}
+
+// Fetch all plans
+async function getAllPlans() {
+  const response = await fetch('/api/plans', {
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch plans');
+  }
+  return response.json();
+}
+
+export default function SubscriptionPage() {
+  const { canPerformAction, canAccessObject } = useAccess();
+  const { data: billingData, isLoading: billingLoading } = useDataQuery(
+    ['billing-info'],
+    getBillingInfo
+  );
+  const { data: plansData, isLoading: plansLoading } = useDataQuery(
+    ['all-plans'],
+    getAllPlans
+  );
+
+  // Check access - must be after all hooks (Rules of Hooks)
+  // Subscription management requires settings access and organization edit
+  if (!canPerformAction('canViewSettings') && 
+      !canAccessObject('Organization', 'edit')) {
+    return (
+      <AccessDenied
+        featureName="Gestion de l'abonnement"
+        requiredPermission="canViewSettings"
+        icon="lock"
+      />
+    );
+  }
+
+  const subscription = billingData?.subscription;
+  const usage = billingData?.usage || { lots: 0, users: 0, extranetTenants: 0 };
+  const paymentHistory = billingData?.paymentHistory || [];
+  const paymentMethod = billingData?.paymentMethod;
+  const plans = plansData?.plans || [];
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'XOF',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return format(parseISO(dateString), 'dd MMMM yyyy', { locale: fr });
+  };
+
+  const getUsagePercentage = (used: number, limit: number | null) => {
+    if (!limit || limit === -1) return 0;
+    return Math.min((used / limit) * 100, 100);
+  };
+
+  const getUsageColor = (percentage: number) => {
+    if (percentage >= 90) return 'bg-red-500';
+    if (percentage >= 75) return 'bg-orange-500';
+    return 'bg-blue-500';
+  };
+
+  const isNearLimit = (used: number, limit: number | null) => {
+    if (!limit || limit === -1) return false;
+    return (used / limit) * 100 >= 75;
+  };
+
+  const currentPlanName = subscription?.planName || 'freemium';
+  const currentPlanDisplayName = subscription?.planDisplayName || 'Plan Gratuit';
+  const monthlyPrice = subscription?.price || 0;
+  const billingPeriod = subscription?.billingPeriod || 'monthly';
+  const subscriptionStatus = subscription?.status || 'active';
+  const nextBillingDate = subscription?.currentPeriodEnd
+    ? format(parseISO(subscription.currentPeriodEnd), 'dd MMMM yyyy', { locale: fr })
+    : 'N/A';
+  const isTrial = subscription?.trialStart && subscription?.trialEnd && 
+    new Date(subscription.trialEnd) > new Date();
+  const willCancelAtPeriodEnd = subscription?.cancelAtPeriodEnd || false;
+
+  // Filter available plans (exclude current plan)
+  const availablePlans = plans.filter((plan: any) => plan.name !== currentPlanName);
+
+  // Check if extranet limit is near
+  const extranetLimit = subscription?.limits?.extranetTenants;
+  const extranetNearLimit = isNearLimit(usage.extranetTenants, extranetLimit);
+
+  const handleUpgrade = (planName: string) => {
+    toast.info(`Mise à niveau vers ${planName}...`);
+    // TODO: Implement upgrade logic
+  };
+
+  const handleDowngrade = () => {
+    toast.warning('Le downgrade n\'est pas recommandé. Vos données pourraient être affectées.');
+    // TODO: Implement downgrade logic
+  };
+
+  const handleDownloadInvoice = (invoiceId: string) => {
+    toast.info('Téléchargement de la facture...');
+    // TODO: Implement invoice download
+  };
+
+  if (billingLoading || plansLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Facturation & Abonnement</h1>
+        <p className="text-gray-600">Gérez votre plan et vos paiements</p>
+      </div>
+
+      {/* Current Plan Details */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="h-5 w-5 text-yellow-500" />
+                <CardTitle>{currentPlanDisplayName}</CardTitle>
+              </div>
+              <CardDescription>Abonnement {billingPeriod === 'monthly' ? 'mensuel' : 'annuel'} actuel</CardDescription>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-gray-900">
+                {formatCurrency(monthlyPrice)}/mois
+              </p>
+              <Button variant="outline" size="sm" className="mt-2">
+                <Download className="h-4 w-4 mr-2" />
+                Télécharger facture
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Usage Metrics */}
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Utilisateurs</span>
+                <span className="text-sm text-gray-600">
+                  {usage.users}/{subscription?.limits?.users === -1 ? '∞' : subscription?.limits?.users || 'N/A'}
+                </span>
+              </div>
+              {subscription?.limits?.users && subscription.limits.users !== -1 && (
+                <Progress
+                  value={getUsagePercentage(usage.users, subscription.limits.users)}
+                  className="h-2"
+                />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Lots gérés</span>
+                <span className="text-sm text-gray-600">
+                  {usage.lots}/{subscription?.limits?.lots === -1 ? '∞' : subscription?.limits?.lots || 'N/A'}
+                </span>
+              </div>
+              {subscription?.limits?.lots && subscription.limits.lots !== -1 && (
+                <Progress
+                  value={getUsagePercentage(usage.lots, subscription.limits.lots)}
+                  className="h-2"
+                  indicatorClassName={getUsageColor(getUsagePercentage(usage.lots, subscription.limits.lots))}
+                />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Extranet locataires</span>
+                <span className="text-sm text-gray-600">
+                  {usage.extranetTenants}/{subscription?.limits?.extranetTenants === -1 ? '∞' : subscription?.limits?.extranetTenants || 'N/A'}
+                </span>
+              </div>
+              {subscription?.limits?.extranetTenants && subscription.limits.extranetTenants !== -1 && (
+                <Progress
+                  value={getUsagePercentage(usage.extranetTenants, subscription.limits.extranetTenants)}
+                  className="h-2"
+                  indicatorClassName={getUsageColor(getUsagePercentage(usage.extranetTenants, subscription.limits.extranetTenants))}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Upgrade Alert */}
+          {extranetNearLimit && extranetLimit && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-yellow-900 mb-1">
+                    Limite extranet locataires bientôt atteinte
+                  </h4>
+                  <p className="text-sm text-yellow-800 mb-3">
+                    Vous avez activé l'extranet pour {usage.extranetTenants} locataires sur les {extranetLimit} autorisés dans votre plan {currentPlanDisplayName}. Pensez à upgrader vers le plan Syndic pour bénéficier de 200 locataires avec extranet.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+                      Upgrader maintenant
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      Plus tard
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Next Billing Date */}
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div>
+              {isTrial ? (
+                <p className="text-sm text-gray-600">
+                  Période d'essai jusqu'au : {subscription?.trialEnd ? format(parseISO(subscription.trialEnd), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-600">
+                  {willCancelAtPeriodEnd ? 'Expiration' : 'Prochaine facturation'} : {nextBillingDate}
+                </p>
+              )}
+              {willCancelAtPeriodEnd && (
+                <p className="text-xs text-orange-600 mt-1">
+                  L'abonnement sera annulé à la fin de la période
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "h-2 w-2 rounded-full",
+                subscriptionStatus === 'active' ? 'bg-green-500' :
+                subscriptionStatus === 'trialing' ? 'bg-blue-500' :
+                subscriptionStatus === 'past_due' ? 'bg-orange-500' :
+                'bg-red-500'
+              )}></div>
+              <span className="text-sm font-medium text-gray-900">
+                {subscriptionStatus === 'active' ? 'Actif' :
+                 subscriptionStatus === 'trialing' ? 'Essai' :
+                 subscriptionStatus === 'past_due' ? 'En retard' :
+                 subscriptionStatus === 'canceled' ? 'Annulé' :
+                 subscriptionStatus === 'expired' ? 'Expiré' :
+                 subscriptionStatus}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <Link href="#" className="text-sm text-blue-600 hover:underline">
+              Modifier le plan
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Available Plans */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Plans disponibles</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {availablePlans.map((plan: any) => {
+              const isRecommended = plan.name === 'syndic';
+              const isDowngrade = ['freemium', 'starter', 'individual'].includes(plan.name);
+              
+              return (
+                <Card key={plan.id} className={cn(
+                  'relative',
+                  isRecommended && 'border-blue-500 border-2'
+                )}>
+                  {isRecommended && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-blue-600 text-white">Recommandé</Badge>
+                    </div>
+                  )}
+                  <CardHeader>
+                    <CardTitle className="text-lg">{plan.displayName}</CardTitle>
+                    <p className="text-2xl font-bold text-gray-900 mt-2">
+                      {plan.price ? formatCurrency(parseFloat(plan.price.toString())) : 'Sur mesure'}
+                      {plan.price && <span className="text-sm font-normal text-gray-600">/mois</span>}
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2">
+                      {plan.lotsLimit === -1 ? (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span>Lots illimités</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span>{plan.lotsLimit} lots</span>
+                        </div>
+                      )}
+                      {plan.usersLimit === -1 ? (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span>Utilisateurs illimités</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span>{plan.usersLimit} utilisateurs</span>
+                        </div>
+                      )}
+                      {plan.extranetTenantsLimit === -1 ? (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span>Locataires extranet illimités</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span>{plan.extranetTenantsLimit} locataires extranet</span>
+                        </div>
+                      )}
+                      {plan.name === 'enterprise' && (
+                        <>
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span>Marque blanche complète</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span>API & intégrations</span>
+                          </div>
+                        </>
+                      )}
+                      {plan.name === 'syndic' && (
+                        <>
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span>Domaine personnalisé</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span>Support prioritaire</span>
+                          </div>
+                        </>
+                      )}
+                      {plan.name === 'individual' && (
+                        <>
+                          <div className="flex items-center gap-2 text-sm text-gray-400">
+                            <X className="h-4 w-4 text-red-500" />
+                            <span>Pas de domaine personnalisé</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span>Support standard</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      className={cn(
+                        'w-full mt-4',
+                        isRecommended ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+                      )}
+                      onClick={() => isDowngrade ? handleDowngrade() : handleUpgrade(plan.name)}
+                    >
+                      {isDowngrade ? 'Downgrader (non recommandé)' : `Upgrader vers ${plan.displayName}`}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment History */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Historique des paiements</CardTitle>
+            <Link href="#" className="text-sm text-blue-600 hover:underline">
+              Voir tout
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Montant</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead>Facture</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paymentHistory.map((payment: any) => (
+                <TableRow key={payment.id}>
+                  <TableCell>{formatDate(payment.date)}</TableCell>
+                  <TableCell>{payment.description}</TableCell>
+                  <TableCell className="font-medium">
+                    {formatCurrency(payment.amount)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className="bg-green-100 text-green-800 border-green-200">
+                      Payé
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDownloadInvoice(payment.id)}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Payment Method */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Méthode de paiement</CardTitle>
+            <Link href="#" className="text-sm text-blue-600 hover:underline">
+              Modifier
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4 p-4 border rounded-lg">
+            <CreditCard className="h-8 w-8 text-gray-400" />
+            <div>
+              <p className="font-medium text-gray-900">
+                **** **** **** {paymentMethod?.last4 || '4532'}
+              </p>
+              <p className="text-sm text-gray-600">
+                Expire {paymentMethod?.expiryMonth || 12}/{paymentMethod?.expiryYear || 2027}
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-blue-900 mb-1">Paiements sécurisés</h4>
+                <p className="text-sm text-blue-800">
+                  Nous acceptons les cartes Visa, Mastercard, ainsi que Wave et Orange Money pour les paiements locaux au Sénégal.
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
