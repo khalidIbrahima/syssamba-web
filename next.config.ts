@@ -28,8 +28,6 @@ const nextConfig = {
     webpackMemoryOptimizations: true,
     // Désactiver le cache handler personnalisé pour Netlify
     // incrementalCacheHandlerPath: require.resolve('./cache-handler.js'),
-    // Optimisations supplémentaires
-    serverComponentsExternalPackages: [],
   },
 
   // Optimisations de build
