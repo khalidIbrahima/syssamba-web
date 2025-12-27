@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/supabase-db';
 import { userInvitations, users, organizations } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 // Clerk removed - using Supabase auth
 
 /**
@@ -23,24 +22,33 @@ export async function GET(
       );
     }
 
-    // Get invitation
-    const invitationRecords = await db
-      .select({
-        id: userInvitations.id,
-        organizationId: userInvitations.organizationId,
-        email: userInvitations.email,
-        firstName: userInvitations.firstName,
-        lastName: userInvitations.lastName,
-        phone: userInvitations.phone,
-        role: userInvitations.role,
-        status: userInvitations.status,
-        expiresAt: userInvitations.expiresAt,
-        organizationName: organizations.name,
-      })
-      .from(userInvitations)
-      .leftJoin(organizations, eq(userInvitations.organizationId, organizations.id))
-      .where(eq(userInvitations.token, token))
+    // Get invitation with organization details
+    const { data: invitationRecords, error: invitationError } = await supabaseAdmin
+      .from('user_invitations')
+      .select(`
+        id,
+        organization_id,
+        email,
+        first_name,
+        last_name,
+        phone,
+        role,
+        status,
+        expires_at,
+        organizations:organization_id (
+          name
+        )
+      `)
+      .eq('token', token)
       .limit(1);
+
+    if (invitationError) {
+      console.error('Error fetching invitation:', invitationError);
+      return NextResponse.json(
+        { error: 'Failed to fetch invitation' },
+        { status: 500 }
+      );
+    }
 
     const invitation = invitationRecords[0];
 
@@ -52,16 +60,16 @@ export async function GET(
     }
 
     // Check if invitation is expired
-    if (new Date(invitation.expiresAt) < new Date()) {
+    if (new Date(invitation.expires_at) < new Date()) {
       // Update status to expired
-      await db
-        .update(userInvitations)
-        .set({ status: 'expired' })
-        .where(eq(userInvitations.id, invitation.id));
+      await supabaseAdmin
+        .from('user_invitations')
+        .update({ status: 'expired' })
+        .eq('id', invitation.id);
 
       return NextResponse.json(
         { error: 'Invitation has expired' },
-        { status: 400 }
+        { status: 410 }
       );
     }
 
@@ -77,12 +85,12 @@ export async function GET(
       invitation: {
         id: invitation.id,
         email: invitation.email,
-        firstName: invitation.firstName,
-        lastName: invitation.lastName,
+        firstName: invitation.first_name,
+        lastName: invitation.last_name,
         phone: invitation.phone,
         role: invitation.role,
-        organizationName: invitation.organizationName,
-        expiresAt: invitation.expiresAt,
+        organizationName: invitation.organizations?.name || null,
+        expiresAt: invitation.expires_at,
       },
     });
   } catch (error) {
