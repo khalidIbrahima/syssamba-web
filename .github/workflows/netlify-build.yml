@@ -1,4 +1,4 @@
-name: Trigger Netlify Build
+name: Deploy to Netlify (Build Hook)
 
 on:
   push:
@@ -43,11 +43,34 @@ jobs:
           NEXT_PUBLIC_APP_URL: https://dummy.netlify.app
           NEXT_TELEMETRY_DISABLED: 1
 
-      # Trigger Netlify build via webhook (alternative to CLI)
-      - name: Trigger Netlify Deploy
+      # Trigger Netlify build via webhook
+      - name: Trigger Netlify Production Deploy
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         run: |
-          curl -X POST "https://api.netlify.com/build_hooks/${{ secrets.NETLIFY_BUILD_HOOK }}"
-          -H "Content-Type: application/json"
-        env:
-          NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
+          echo "🚀 Triggering production deployment..."
+          response=$(curl -s -o response.txt -w "%{http_code}" -X POST "https://api.netlify.com/build_hooks/695046df1d20c7a607e6c990" \
+            -H "Content-Type: application/json" \
+            -d '{"branch": "master", "trigger_title": "Production deployment from GitHub Actions"}')
+          if [ "$response" -eq 200 ] || [ "$response" -eq 201 ]; then
+            echo "✅ Build hook triggered successfully (HTTP $response)"
+          else
+            echo "❌ Failed to trigger build hook (HTTP $response)"
+            cat response.txt
+            exit 1
+          fi
+
+      # Trigger preview build for pull requests
+      - name: Trigger Netlify Preview Deploy
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "🚀 Triggering preview deployment..."
+          response=$(curl -s -o response.txt -w "%{http_code}" -X POST "https://api.netlify.com/build_hooks/695046df1d20c7a607e6c990" \
+            -H "Content-Type: application/json" \
+            -d "{\"branch\": \"${{ github.head_ref }}\", \"trigger_title\": \"Preview deployment for PR #${{ github.event.number }}\"}")
+          if [ "$response" -eq 200 ] || [ "$response" -eq 201 ]; then
+            echo "✅ Preview build hook triggered successfully (HTTP $response)"
+          else
+            echo "❌ Failed to trigger preview build hook (HTTP $response)"
+            cat response.txt
+            exit 1
+          fi

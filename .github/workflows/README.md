@@ -2,24 +2,14 @@
 
 ## Configuration Requise
 
-### 1. Secrets GitHub
+### 1. Build Hook Netlify
 
-Ajoutez ces secrets dans votre repository GitHub (Settings → Secrets and variables → Actions) :
+Le workflow utilise directement le build hook Netlify fourni. **Aucune configuration de secrets n'est requise !**
 
-#### `NETLIFY_SITE_ID`
-- **Comment l'obtenir** :
-  1. Allez dans votre [dashboard Netlify](https://app.netlify.com)
-  2. Sélectionnez votre site
-  3. Allez dans "Site settings" → "General" → "Site details"
-  4. Copiez le "Site ID"
-
-#### `NETLIFY_AUTH_TOKEN`
-- **Comment l'obtenir** :
-  1. Allez dans [User Settings](https://app.netlify.com/user/settings)
-  2. "Applications" → "Personal access tokens"
-  3. "New access token"
-  4. Nommez-le (ex: "GitHub Actions")
-  5. Copiez le token généré
+**Build Hook configuré :**
+```
+https://api.netlify.com/build_hooks/695046df1d20c7a607e6c990
+```
 
 ### 2. Variables d'Environnement Netlify
 
@@ -42,10 +32,8 @@ NEXT_PUBLIC_APP_URL=https://votre-site.netlify.app
 1. **Checkout** : Récupération du code
 2. **Setup Node.js** : Installation de Node.js 18
 3. **Dependencies** : Installation des dépendances npm
-4. **Build** : Construction avec `npm run build:netlify`
-5. **Deploy** :
-   - Production : `--prod` flag (site live)
-   - Preview : Déploiement temporaire
+4. **Build** : Validation avec `npm run build:netlify`
+5. **Trigger** : Déclenchement du build Netlify via webhook
 
 ## Utilisation
 
@@ -70,13 +58,17 @@ git push origin feature/nouvelle-fonctionnalite
 
 ### Erreurs Courantes
 
-#### "Netlify CLI not found"
-- Le workflow utilise `netlify/actions/cli@master`
-- Assurez-vous que les secrets sont correctement configurés
+#### "Build hook failed"
+- Vérifiez que le build hook URL est accessible
+- Le workflow utilise le build hook directement (pas de secrets requis)
 
 #### "Build failed"
 - Vérifiez les logs du workflow GitHub Actions
 - Testez le build localement : `npm run build:netlify`
+
+#### "HTTP error from build hook"
+- Code 200/201 = succès
+- Autres codes = vérifiez la configuration Netlify
 
 #### "Environment variables missing"
 - Vérifiez que les variables sont définies dans Netlify Dashboard
@@ -90,14 +82,15 @@ git push origin feature/nouvelle-fonctionnalite
 
 ## Sécurité
 
-- ✅ **Secrets chiffrés** : Clés API non exposées
+- ✅ **Pas de secrets** : Build hook publique
 - ✅ **Variables isolées** : Build vs Runtime
-- ✅ **Permissions limitées** : Token d'accès personnel
+- ✅ **Webhook sécurisé** : URL unique pour votre site
 - ✅ **Reviews required** : Pour les merges en production
 
 ## Optimisations
 
 - **Cache npm** : Accélère les builds suivants
 - **Node.js 18** : Version optimisée pour Next.js
-- **Build optimisé** : Variables fictives pendant le build
+- **Validation locale** : Build testé avant déclenchement
+- **Webhook rapide** : Déclenchement instantané
 - **Preview deployments** : Tests avant production
