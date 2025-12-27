@@ -1,0 +1,53 @@
+name: Trigger Netlify Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Run linting (optional)
+      - name: Run linting
+        run: npm run lint
+        continue-on-error: true
+
+      # Build the application (for validation)
+      - name: Validate build
+        run: npm run build:netlify
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-key
+          NEXT_PUBLIC_APP_URL: https://dummy.netlify.app
+          NEXT_TELEMETRY_DISABLED: 1
+
+      # Trigger Netlify build via webhook (alternative to CLI)
+      - name: Trigger Netlify Deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          curl -X POST "https://api.netlify.com/build_hooks/${{ secrets.NETLIFY_BUILD_HOOK }}"
+          -H "Content-Type: application/json"
+        env:
+          NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
