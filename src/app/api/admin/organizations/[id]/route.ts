@@ -18,7 +18,7 @@ const updateOrganizationSchema = z.object({
 // GET - Get a specific organization with full details
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -47,6 +47,8 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
+
     // Get organization
     const organization = await db.selectOne<{
       id: string;
@@ -61,7 +63,7 @@ export async function GET(
       created_at: string;
       updated_at: string;
     }>('organizations', {
-      eq: { id: params.id },
+      eq: { id: id },
     });
 
     if (!organization) {
@@ -78,7 +80,7 @@ export async function GET(
       status: string;
       created_at: string;
     }>('subscriptions', {
-      eq: { organization_id: params.id },
+      eq: { organization_id: id },
       orderBy: { column: 'created_at', ascending: false },
       limit: 1,
     });
@@ -115,19 +117,19 @@ export async function GET(
 
     // Get usage counts
     const userCount = await db.count('users', {
-      eq: { organization_id: params.id },
+      eq: { organization_id: id },
     });
 
     const unitCount = await db.count('units', {
-      eq: { organization_id: params.id },
+      eq: { organization_id: id },
     });
 
     const tenantCount = await db.count('tenants', {
-      eq: { organization_id: params.id },
+      eq: { organization_id: id },
     });
 
     const propertyCount = await db.count('properties', {
-      eq: { organization_id: params.id },
+      eq: { organization_id: id },
     });
 
     return NextResponse.json({
@@ -169,11 +171,11 @@ export async function GET(
 // PATCH - Update organization
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
-    
+
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -182,6 +184,7 @@ export async function PATCH(
     }
 
     const user = await getCurrentUser();
+    const { id } = await params;
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -203,7 +206,7 @@ export async function PATCH(
 
     // Check if organization exists
     const existing = await db.selectOne<{ id: string }>('organizations', {
-      eq: { id: params.id },
+      eq: { id: id },
     });
 
     if (!existing) {
@@ -227,7 +230,7 @@ export async function PATCH(
         eq: { slug: validatedData.slug },
       });
 
-      if (slugExists && slugExists.id !== params.id) {
+      if (slugExists && slugExists.id !== id) {
         return NextResponse.json(
           { error: 'Slug already exists' },
           { status: 400 }
@@ -250,7 +253,7 @@ export async function PATCH(
     }
 
     await db.update('organizations', {
-      eq: { id: params.id },
+      eq: { id: id },
       data: updateData,
     });
 
@@ -264,7 +267,7 @@ export async function PATCH(
       custom_extranet_domain: string | null;
       is_configured: boolean;
     }>('organizations', {
-      eq: { id: params.id },
+      eq: { id: id },
     });
 
     return NextResponse.json({

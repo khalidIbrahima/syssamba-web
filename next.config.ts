@@ -31,7 +31,7 @@ const nextConfig = {
   },
 
   // Optimisations de build
-  webpack: (config, { dev, isServer, webpack }) => {
+  webpack: (config: any, { dev, isServer, webpack }: { dev: boolean, isServer: boolean, webpack: any }) => {
     // Optimisations générales pour réduire l'usage mémoire
     config.optimization = {
       ...config.optimization,
