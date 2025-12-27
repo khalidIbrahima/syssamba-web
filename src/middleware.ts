@@ -35,6 +35,14 @@ export async function middleware(req: NextRequest) {
   // Check protected routes
   if (protectedRoutes.some(route => pathname.startsWith(route))) {
     try {
+      // Skip authentication during build time
+      if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        // During Netlify build, allow access without authentication
+        const response = NextResponse.next();
+        response.headers.set('x-pathname', pathname);
+        return response;
+      }
+
       const supabase = createMiddlewareClient(req);
       const { data: { user } } = await supabase.auth.getUser();
 

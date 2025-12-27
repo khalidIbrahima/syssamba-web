@@ -26,8 +26,8 @@ const nextConfig = {
   experimental: {
     // Réduire l'usage mémoire du cache webpack
     webpackMemoryOptimizations: true,
-    // Désactiver la compilation incrémentielle pour réduire la mémoire
-    incrementalCacheHandlerPath: require.resolve('./cache-handler.js'),
+    // Désactiver le cache handler personnalisé pour Netlify
+    // incrementalCacheHandlerPath: require.resolve('./cache-handler.js'),
     // Optimisations supplémentaires
     serverComponentsExternalPackages: [],
   },

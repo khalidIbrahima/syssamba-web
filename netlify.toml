@@ -16,11 +16,20 @@
   # Disable Next.js telemetry
   NEXT_TELEMETRY_DISABLED = "1"
 
+  # Set dummy environment variables for build time
+  NEXT_PUBLIC_SUPABASE_URL = "https://dummy.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "dummy-anon-key"
+  SUPABASE_SERVICE_ROLE_KEY = "dummy-service-key"
+  NEXT_PUBLIC_APP_URL = "https://dummy.netlify.app"
+
+  # Force runtime environment
+  NEXT_RUNTIME = "nodejs"
+
 [[redirects]]
-  # Handle Next.js routing
+  # Handle Next.js routing - SPA fallback
   from = "/*"
-  to = "/index.html"
-  status = 200
+  to = "/404.html"
+  status = 404
 
 [[headers]]
   # Security headers
