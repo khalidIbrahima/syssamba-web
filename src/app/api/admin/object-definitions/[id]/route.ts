@@ -20,17 +20,19 @@ const updateObjectDefinitionSchema = z.object({
 // GET - Get a specific object definition
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
-    
+
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
+
+    const { id } = await params;
 
     const objectDefinition = await db.selectOne<{
       id: string;
@@ -48,7 +50,7 @@ export async function GET(
       created_at: string;
       updated_at: string;
     }>('object_definitions', {
-      eq: { id: params.id },
+      eq: { id: id },
     });
 
     if (!objectDefinition) {
@@ -88,10 +90,12 @@ export async function GET(
 // PATCH - Update an object definition
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
+
+    const { id } = await params;
     
     if (!userId) {
       return NextResponse.json(
@@ -112,7 +116,7 @@ export async function PATCH(
 
     // Check if object definition exists
     const existing = await db.selectOne<{ is_system: boolean }>('object_definitions', {
-      eq: { id: params.id },
+      eq: { id: id },
     });
 
     if (!existing) {
@@ -159,7 +163,7 @@ export async function PATCH(
     }
 
     await db.update('object_definitions', {
-      eq: { id: params.id },
+      eq: { id: id },
       data: updateData,
     });
 
@@ -178,7 +182,7 @@ export async function PATCH(
       is_system: boolean;
       sort_order: number;
     }>('object_definitions', {
-      eq: { id: params.id },
+      eq: { id: id },
     });
 
     return NextResponse.json({
@@ -216,10 +220,12 @@ export async function PATCH(
 // DELETE - Delete an object definition
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
+
+    const { id } = await params;
     
     if (!userId) {
       return NextResponse.json(
@@ -240,7 +246,7 @@ export async function DELETE(
 
     // Check if object definition exists and is not a system object
     const existing = await db.selectOne<{ is_system: boolean; object_key: string }>('object_definitions', {
-      eq: { id: params.id },
+      eq: { id: id },
     });
 
     if (!existing) {
@@ -274,7 +280,7 @@ export async function DELETE(
 
     // Delete the object definition
     await db.delete('object_definitions', {
-      eq: { id: params.id },
+      eq: { id: id },
     });
 
     return NextResponse.json({ success: true });
