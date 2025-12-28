@@ -41,9 +41,9 @@ const journalEntryFormSchema = z.object({
   reference: z.string().min(1, 'La référence est requise'),
   description: z.string().optional(),
   lines: z.array(z.object({
-    accountId: z.string().uuid('Le compte est requis'),
-    debit: z.number().min(0, 'Le débit doit être positif').default(0),
-    credit: z.number().min(0, 'Le crédit doit être positif').default(0),
+    accountId: z.string().min(1, 'Le compte est requis'),
+    debit: z.number().min(0, 'Le débit doit être positif'),
+    credit: z.number().min(0, 'Le crédit doit être positif'),
     description: z.string().optional(),
   })).min(2, 'Au moins 2 lignes sont requises'),
 }).refine(
