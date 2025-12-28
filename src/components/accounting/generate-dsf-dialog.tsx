@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 const dsfFormSchema = z.object({
   startDate: z.string().min(1, 'La date de début est requise'),
   endDate: z.string().min(1, 'La date de fin est requise'),
-  format: z.enum(['csv', 'excel']).default('csv'),
+  format: z.enum(['csv', 'excel']),
 }).refine(
   (data) => {
     return new Date(data.startDate) <= new Date(data.endDate);
