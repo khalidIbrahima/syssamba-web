@@ -73,15 +73,15 @@ export async function POST(req: Request) {
         : null;
 
       // Create user in database
-      await db.insert(users).values({
-        clerkId: id,
+      await db.insertOne('users', {
+        clerk_id: id,
         email: primaryEmail || null,
         phone: primaryPhone || null,
-        firstName: (data.first_name as string) || null,
-        lastName: (data.last_name as string) || null,
-        avatarUrl: (data.image_url as string) || null,
+        first_name: (data.first_name as string) || null,
+        last_name: (data.last_name as string) || null,
+        avatar_url: (data.image_url as string) || null,
         role: 'viewer', // Default role
-        isActive: true,
+        is_active: true,
       });
 
       console.log(`User created in database: ${id}`);
