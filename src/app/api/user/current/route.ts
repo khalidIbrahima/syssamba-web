@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { checkAuth, getCurrentUser } from '@/lib/auth-helpers';
+import { db } from '@/lib/db';
 
 /**
  * GET /api/user/current
@@ -24,9 +25,27 @@ export async function GET() {
       );
     }
 
+    // Get organization name if user has an organization
+    let organizationName = null;
+    if (user.organizationId) {
+      try {
+        const organization = await db.selectOne<{
+          id: string;
+          name: string | null;
+        }>('organizations', {
+          eq: { id: user.organizationId },
+        });
+        organizationName = organization?.name || null;
+      } catch (error) {
+        console.warn('Error fetching organization name:', error);
+        // Don't fail the request if organization fetch fails
+      }
+    }
+
     return NextResponse.json({
       id: user.id,
       organizationId: user.organizationId,
+      organizationName,
       role: user.role,
     });
   } catch (error) {

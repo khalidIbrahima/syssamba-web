@@ -17,9 +17,21 @@ import {
 import { useUser } from '@/hooks/use-user';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '@/components/ui/badge';
+import { useDataQuery } from '@/hooks/use-query';
 
 interface ProfileAvatarProps {
   className?: string;
+}
+
+// Fetch current user's organization data
+async function getCurrentUserData() {
+  const response = await fetch('/api/user/current', {
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    return null;
+  }
+  return response.json();
 }
 
 export function ProfileAvatar({ className }: ProfileAvatarProps) {
@@ -27,6 +39,12 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
   const { user, isLoaded } = useUser();
   const { signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  // Get current user's organization data
+  const { data: currentUserData } = useDataQuery(
+    ['current-user-data'],
+    getCurrentUserData
+  );
 
   const handleSignOut = async () => {
     try {
@@ -106,6 +124,12 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
               {getUserFullName()}
             </span>
             <div className="flex items-center gap-2">
+              {currentUserData?.organizationName && (
+                <Badge variant="outline" className="text-xs px-2 py-0">
+                  <Building className="w-3 h-3 mr-1" />
+                  {currentUserData.organizationName}
+                </Badge>
+              )}
               <Badge variant="secondary" className="text-xs px-2 py-0">
                 <Shield className="w-3 h-3 mr-1" />
                 Utilisateur
@@ -120,6 +144,12 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
             <p className="text-sm font-medium leading-none">
               {getUserFullName()}
             </p>
+            {currentUserData?.organizationName && (
+              <p className="text-xs leading-none text-muted-foreground flex items-center">
+                <Building className="w-3 h-3 mr-1" />
+                {currentUserData.organizationName}
+              </p>
+            )}
             <p className="text-xs leading-none text-muted-foreground">
               {user.primaryEmailAddress?.emailAddress}
             </p>
