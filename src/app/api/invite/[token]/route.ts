@@ -122,11 +122,19 @@ export async function POST(
     }
 
     // Get invitation
-    const invitationRecords = await db
-      .select()
-      .from(userInvitations)
-      .where(eq(userInvitations.token, token))
+    const { data: invitationRecords, error: invitationError } = await supabaseAdmin
+      .from('user_invitations')
+      .select('*')
+      .eq('token', token)
       .limit(1);
+
+    if (invitationError) {
+      console.error('Error fetching invitation:', invitationError);
+      return NextResponse.json(
+        { error: 'Failed to fetch invitation' },
+        { status: 500 }
+      );
+    }
 
     const invitation = invitationRecords[0];
 
@@ -138,11 +146,11 @@ export async function POST(
     }
 
     // Check if invitation is expired
-    if (new Date(invitation.expiresAt) < new Date()) {
-      await db
-        .update(userInvitations)
-        .set({ status: 'expired' })
-        .where(eq(userInvitations.id, invitation.id));
+    if (new Date(invitation.expires_at) < new Date()) {
+      await supabaseAdmin
+        .from('user_invitations')
+        .update({ status: 'expired' })
+        .eq('id', invitation.id);
 
       return NextResponse.json(
         { error: 'Invitation has expired' },
@@ -170,26 +178,30 @@ export async function POST(
     }
 
     // Check if user already exists
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.id, userId),
-          eq(users.organizationId, invitation.organizationId)
-        )
-      )
+    const { data: existingUser, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .eq('organization_id', invitation.organization_id)
       .limit(1);
 
-    if (existingUser.length > 0) {
+    if (userError) {
+      console.error('Error checking existing user:', userError);
+      return NextResponse.json(
+        { error: 'Failed to check user existence' },
+        { status: 500 }
+      );
+    }
+
+    if (existingUser && existingUser.length > 0) {
       // User already exists, mark invitation as accepted
-      await db
-        .update(userInvitations)
-        .set({
+      await supabaseAdmin
+        .from('user_invitations')
+        .update({
           status: 'accepted',
-          acceptedAt: new Date(),
+          accepted_at: new Date().toISOString(),
         })
-        .where(eq(userInvitations.id, invitation.id));
+        .eq('id', invitation.id);
 
       return NextResponse.json({
         message: 'User already exists in this organization',
@@ -198,29 +210,37 @@ export async function POST(
     }
 
     // Create user in database
-    const [newUser] = await db
-      .insert(users)
-      .values({
+    const { data: newUser, error: createError } = await supabaseAdmin
+      .from('users')
+      .insert({
         id: userId,
-        clerk_id: userId, // Keep for backward compatibility
         email: invitation.email,
         phone: invitation.phone || null,
-        firstName: invitation.firstName || null,
-        lastName: invitation.lastName || null,
+        first_name: invitation.first_name || null,
+        last_name: invitation.last_name || null,
         role: invitation.role,
-        organizationId: invitation.organizationId,
-        isActive: true,
+        organization_id: invitation.organization_id,
+        is_active: true,
       })
-      .returning();
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Error creating user:', createError);
+      return NextResponse.json(
+        { error: 'Failed to create user account' },
+        { status: 500 }
+      );
+    }
 
     // Mark invitation as accepted
-    await db
-      .update(userInvitations)
-      .set({
+    await supabaseAdmin
+      .from('user_invitations')
+      .update({
         status: 'accepted',
-        acceptedAt: new Date(),
+        accepted_at: new Date().toISOString(),
       })
-      .where(eq(userInvitations.id, invitation.id));
+      .eq('id', invitation.id);
 
     return NextResponse.json({
       user: newUser,
