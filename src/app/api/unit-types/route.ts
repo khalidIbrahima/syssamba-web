@@ -147,6 +147,13 @@ export async function POST(req: Request) {
       is_active: true,
     });
 
+    if (!newUnitType) {
+      return NextResponse.json(
+        { error: 'Failed to create unit type' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       id: newUnitType.id,
       name: newUnitType.name,

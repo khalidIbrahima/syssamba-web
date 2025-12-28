@@ -144,6 +144,13 @@ export async function POST(request: Request) {
       created_by: user.id,
     });
 
+    if (!newDefinition) {
+      return NextResponse.json(
+        { error: 'Failed to create object definition' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       objectDefinition: {
         id: newDefinition.id,
