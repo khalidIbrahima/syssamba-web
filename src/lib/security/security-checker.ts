@@ -50,7 +50,7 @@ export async function checkSecurity(
   if (!currentUserId || !currentOrgId) {
     const user = await getCurrentUser();
     currentUserId = currentUserId || user?.id;
-    currentOrgId = currentOrgId || user?.organizationId;
+    currentOrgId = currentOrgId || user?.organizationId || undefined;
   }
 
   if (!currentUserId || !currentOrgId) {
