@@ -259,7 +259,8 @@ export function useSupabaseRealtimeTasks(organizationId?: string, userIdParam?: 
               }
               
               // Also invalidate specific task if we have the ID
-              const taskId = payload.new?.id || payload.old?.id;
+              const taskId = (payload.new && 'id' in payload.new ? payload.new.id : undefined) ||
+                            (payload.old && 'id' in payload.old ? payload.old.id : undefined);
               if (taskId) {
                 queryClient.invalidateQueries({ queryKey: ['task', taskId] });
               }
