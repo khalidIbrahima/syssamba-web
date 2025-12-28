@@ -2,10 +2,9 @@
 
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Bell, MessageSquare, ChevronDown, Download, Search, Building2 } from 'lucide-react';
+import { Bell, MessageSquare, Download, Search, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -14,13 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useUser } from '@/hooks/use-user';
 import Link from 'next/link';
 import { usePlan } from '@/hooks/use-plan';
 import { UserMessageDialog } from '@/components/messaging/user-message-dialog';
 import { useMessageNotifications } from '@/hooks/use-message-notifications';
 import { usePaymentNotifications } from '@/hooks/use-payment-notifications';
 import { useDataQuery } from '@/hooks/use-query';
+import { ProfileAvatar } from '@/components/ui/profile-avatar';
 
 // Fetch current user's organization ID
 async function getCurrentUserOrg() {
@@ -36,7 +35,6 @@ async function getCurrentUserOrg() {
 export function Header() {
   const pathname = usePathname();
   const { plan, limits } = usePlan();
-  const { user, isLoaded } = useUser();
   const [isMounted, setIsMounted] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -211,29 +209,8 @@ export function Header() {
             )}
           </Button>
 
-          {/* User Profile */}
-          <div className="hidden md:flex items-center gap-3">
-            {isMounted && isLoaded && user ? (
-              <>
-                <Avatar className="h-10 w-10">
-                  {user.imageUrl ? (
-                    <img src={user.imageUrl} alt={`${user.firstName} ${user.lastName}`} />
-                  ) : (
-                    <AvatarFallback>
-                      {user.firstName?.[0] || user.primaryEmailAddress?.emailAddress?.[0] || 'U'}
-                      {user.lastName?.[0] || ''}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <div className="hidden lg:block">
-                  <p className="text-sm font-medium text-gray-900">
-                    {user.firstName} {user.lastName}
-                  </p>
-                  <p className="text-xs text-gray-500">{currentUser?.role || 'Utilisateur'}</p>
-                </div>
-              </>
-            ) : null}
-          </div>
+          {/* User Profile Avatar */}
+          <ProfileAvatar className="hidden md:flex" />
 
           {/* Period Selector (only on dashboard) */}
           {isDashboardPage && (
