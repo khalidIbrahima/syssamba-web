@@ -76,7 +76,7 @@ async function getMessages(currentUserId: string, otherUserId: string): Promise<
 
 export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }: UserMessageDialogProps) {
   const { user: currentUser } = useUser();
-  const { getToken } = useAuth();
+  const { user: authUser } = useAuth();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
