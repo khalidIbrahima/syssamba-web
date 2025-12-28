@@ -37,8 +37,8 @@ import { useQueryClient } from '@tanstack/react-query';
 const taskFormSchema = z.object({
   title: z.string().min(1, 'Le titre est requis'),
   description: z.string().optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
-  status: z.enum(['todo', 'in_progress', 'waiting', 'done']).default('todo'),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']),
+  status: z.enum(['todo', 'in_progress', 'waiting', 'done']),
   dueDate: z.string().optional(),
   assignedTo: z.string().optional().nullable(),
 });
