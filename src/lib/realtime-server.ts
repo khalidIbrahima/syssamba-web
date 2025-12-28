@@ -187,7 +187,7 @@ class RealtimeServer {
 
         // Attach user info to socket
         (socket as any).userId = user.id;
-        (socket as any).organizationId = dbUser.organizationId;
+        (socket as any).organizationId = dbUser.organization_id;
         (socket as any).tenantId = dbUser.tenantId || null;
 
         next();
