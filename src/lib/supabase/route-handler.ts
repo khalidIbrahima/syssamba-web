@@ -43,12 +43,6 @@ export async function createRouteHandlerClient(request?: NextRequest) {
         'x-client-info': 'samba-one-web@1.0.0',
       },
     },
-        ...options,
-      }).catch((error) => {
-        } else if (error.code === 'ECONNRESET') {
-        }
-      });
-    },
   });
 }
 
