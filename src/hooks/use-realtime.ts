@@ -201,7 +201,7 @@ if (supabase) {
         unsubscribe();
       }
     };
-  }, [organizationId, userId, queryClient, getToken]);
+  }, [organizationId, userId, queryClient, ]);
 }
 
 /**
@@ -272,7 +272,7 @@ if (supabase) {
         unsubscribe();
       }
     };
-  }, [organizationId, tenantId, queryClient, getToken]);
+  }, [organizationId, tenantId, queryClient, ]);
 }
 
 /**
@@ -338,6 +338,6 @@ if (supabase) {
         unsubscribe();
       }
     };
-  }, [organizationId, queryClient, getToken]);
+  }, [organizationId, queryClient, ]);
 }
 
