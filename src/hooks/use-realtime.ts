@@ -6,6 +6,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getRealtimeClient, type RealtimeEvent } from '@/lib/realtime-client';
 import { useAuth } from './use-auth';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Hook to subscribe to real-time updates for a specific table
@@ -48,8 +49,9 @@ export function useRealtime<T = any>(
           return; // Silently skip if disabled
         }
 
-        // Get auth token
-        const token = await getToken();
+        // Get auth token from Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
 
         // Connect if not connected (with timeout)
         if (!client.connected) {
