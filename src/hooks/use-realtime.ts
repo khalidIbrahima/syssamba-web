@@ -126,7 +126,6 @@ export function useRealtime<T = any>(
     tenantId,
     enabled,
     queryClient,
-    getToken,
     onUpdate,
     queryKey,
   ]);
