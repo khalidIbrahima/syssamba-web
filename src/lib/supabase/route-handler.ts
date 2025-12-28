@@ -37,8 +37,6 @@ export async function createRouteHandlerClient(request?: NextRequest) {
           cookieStore.delete(key);
         },
       },
-      // Reduce retry attempts to avoid rate limiting
-      retryOnFailure: false,
     },
     global: {
       headers: {
