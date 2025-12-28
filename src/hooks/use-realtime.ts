@@ -50,9 +50,11 @@ export function useRealtime<T = any>(
         }
 
         // Get auth token from Supabase
-        const token = supabase
-          ? (await supabase.auth.getSession()).data.session?.access_token
-          : undefined;
+        let token: string | undefined;
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          token = session?.access_token;
+        }
 
         // Connect if not connected (with timeout)
         if (!client.connected) {
