@@ -188,9 +188,10 @@ export function useSupabaseRealtimeTasks(organizationId?: string, userIdParam?: 
 
               console.log('Real-time task update received:', {
                 eventType: payload.eventType,
-                taskId: payload.new?.id || payload.old?.id,
-                newStatus: payload.new?.status,
-                oldStatus: payload.old?.status,
+                taskId: (payload.new && 'id' in payload.new ? payload.new.id : undefined) ||
+                        (payload.old && 'id' in payload.old ? payload.old.id : undefined),
+                newStatus: payload.new && 'status' in payload.new ? payload.new.status : undefined,
+                oldStatus: payload.old && 'status' in payload.old ? payload.old.status : undefined,
                 payload: payload,
               });
 
