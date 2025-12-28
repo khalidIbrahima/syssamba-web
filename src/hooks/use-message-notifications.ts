@@ -62,6 +62,8 @@ export function useMessageNotifications(
     if (!userId || currentUserIdRef.current) return;
 
     const fetchCurrentUserId = async () => {
+      if (!supabase) return;
+
       try {
         const { data: currentUserRecord } = await supabase
           .from('users')
