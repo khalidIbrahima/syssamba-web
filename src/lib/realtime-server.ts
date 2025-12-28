@@ -70,7 +70,10 @@ class RealtimeServer {
 
     // Set up notification handler
     this.pgClient.on('notification', (msg) => {
-      this.handleNotification(msg);
+      this.handleNotification({
+        channel: msg.channel,
+        payload: msg.payload || null,
+      });
     });
 
     // Handle connection errors
