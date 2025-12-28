@@ -289,12 +289,12 @@ export function useMessageNotifications(
                 // Use cached current user ID or fetch it if not available
                 let currentUserIdInDb = currentUserIdRef.current;
 
-                if (!currentUserIdInDb && currentUser?.id) {
+                if (!currentUserIdInDb && userId) {
                   try {
                     const { data: currentUserRecord } = await client
                       .from('users')
                       .select('id')
-                      .eq('clerk_id', currentUser.id)
+                      .eq('sb_user_id', userId)
                       .maybeSingle();
                     
                     if (currentUserRecord) {
