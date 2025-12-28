@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, LogOut, Settings, Shield, Building } from 'lucide-react';
+import { User, LogOut, Settings, Shield, Building, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -127,7 +127,7 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={`flex items-center gap-3 h-auto p-2 hover:bg-gray-100 rounded-lg ${className}`}
+          className={`flex items-center gap-3 h-auto p-2 hover:bg-gray-100 hover:shadow-sm hover:scale-105 active:scale-95 transition-all duration-200 rounded-lg cursor-pointer border border-transparent hover:border-gray-200 ${className}`}
         >
           <Avatar className="h-10 w-10">
             {user.imageUrl ? (
@@ -157,6 +157,7 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
               </Badge>
             </div>
           </div>
+          <ChevronDown className="h-4 w-4 text-gray-400 ml-1" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
