@@ -103,16 +103,13 @@ export async function POST(req: Request) {
         : null;
 
       // Update user in database
-      await db
-        .update(users)
-        .set({
-          email: primaryEmail || null,
-          phone: primaryPhone || null,
-          firstName: (data.first_name as string) || null,
-          lastName: (data.last_name as string) || null,
-          avatarUrl: (data.image_url as string) || null,
-        })
-        .where(eq(users.clerkId, id));
+      await db.update('users', {
+        email: primaryEmail || null,
+        phone: primaryPhone || null,
+        first_name: (data.first_name as string) || null,
+        last_name: (data.last_name as string) || null,
+        avatar_url: (data.image_url as string) || null,
+      }, { clerk_id: id });
 
       console.log(`User updated in database: ${id}`);
     }
