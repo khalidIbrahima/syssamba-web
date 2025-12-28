@@ -23,17 +23,30 @@ export function ObjectGuard({
   fallback = null,
   children,
 }: ObjectGuardProps) {
-  const { canPerformAction, canAccessObject, isLoading } = useSecurity();
+  const { canPerformAction, canAccessObject, isLoading, useObjectInstanceAccess } = useSecurity();
 
   if (isLoading) {
     return <>{fallback}</>;
   }
 
-  // Check object-level security using the appropriate method
-  // Map 'viewAll' action to 'read' for canAccessObject check
-  const mappedAction = action === 'viewAll' ? 'read' : action as 'read' | 'create' | 'edit' | 'delete';
-  if (!canAccessObject(objectType, mappedAction)) {
-    return <>{fallback}</>;
+  // If checking a specific object instance, use instance-level security
+  if (objectId) {
+    const { allowed, isLoading: instanceLoading } = useObjectInstanceAccess(objectType, objectId, action);
+
+    if (instanceLoading) {
+      return <>{fallback}</>;
+    }
+
+    if (!allowed) {
+      return <>{fallback}</>;
+    }
+  } else {
+    // Check general object type access
+    // Map 'viewAll' action to 'read' for canAccessObject check
+    const mappedAction = action === 'viewAll' ? 'read' : action as 'read' | 'create' | 'edit' | 'delete';
+    if (!canAccessObject(objectType, mappedAction)) {
+      return <>{fallback}</>;
+    }
   }
 
   return <>{children}</>;

@@ -256,21 +256,87 @@ export async function getProfileFieldPermissions(
 
 /**
  * Create default profiles for a new organization
- * Creates Owner, Admin, Accountant, Agent, and Viewer profiles
- * Note: Permissions will be set via SQL script or admin interface
+ * Creates Owner, Accountant, Agent, and Viewer profiles with comprehensive permissions
  */
 export async function createDefaultProfilesForOrganization(organizationId: string): Promise<void> {
   try {
-    // Define default profiles
-    // Note: System Administrator is a global profile, not created per organization
+    // Define default profiles with their permissions
     const defaultProfiles = [
-      { name: 'Propriétaire', description: 'Profil propriétaire avec accès complet', role: 'owner' },
-      { name: 'Comptable', description: 'Profil comptable avec accès aux données financières', role: 'accountant' },
-      { name: 'Agent', description: 'Profil agent avec accès opérationnel', role: 'agent' },
-      { name: 'Lecteur', description: 'Profil lecteur avec accès en lecture seule', role: 'viewer' },
+      {
+        name: 'Propriétaire',
+        description: 'Profil propriétaire avec accès complet',
+        role: 'owner',
+        permissions: {
+          Property: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          Unit: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          Tenant: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          Lease: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          Payment: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          Task: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          Message: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          JournalEntry: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          User: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: false },
+          Organization: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: false },
+          Profile: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: false },
+        }
+      },
+      {
+        name: 'Comptable',
+        description: 'Profil comptable avec accès aux données financières',
+        role: 'accountant',
+        permissions: {
+          Property: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Unit: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Tenant: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Lease: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Payment: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          Task: { accessLevel: 'ReadWrite' as const, canCreate: true, canRead: true, canEdit: true, canDelete: false, canViewAll: true },
+          Message: { accessLevel: 'ReadWrite' as const, canCreate: true, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          JournalEntry: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          User: { accessLevel: 'None' as const, canCreate: false, canRead: false, canEdit: false, canDelete: false, canViewAll: false },
+          Organization: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: false },
+          Profile: { accessLevel: 'None' as const, canCreate: false, canRead: false, canEdit: false, canDelete: false, canViewAll: false },
+        }
+      },
+      {
+        name: 'Agent',
+        description: 'Profil agent avec accès opérationnel',
+        role: 'agent',
+        permissions: {
+          Property: { accessLevel: 'ReadWrite' as const, canCreate: true, canRead: true, canEdit: true, canDelete: false, canViewAll: true },
+          Unit: { accessLevel: 'ReadWrite' as const, canCreate: true, canRead: true, canEdit: true, canDelete: false, canViewAll: true },
+          Tenant: { accessLevel: 'ReadWrite' as const, canCreate: true, canRead: true, canEdit: true, canDelete: false, canViewAll: true },
+          Lease: { accessLevel: 'ReadWrite' as const, canCreate: true, canRead: true, canEdit: true, canDelete: false, canViewAll: true },
+          Payment: { accessLevel: 'ReadWrite' as const, canCreate: true, canRead: true, canEdit: true, canDelete: false, canViewAll: true },
+          Task: { accessLevel: 'ReadWrite' as const, canCreate: true, canRead: true, canEdit: true, canDelete: false, canViewAll: true },
+          Message: { accessLevel: 'All' as const, canCreate: true, canRead: true, canEdit: true, canDelete: true, canViewAll: true },
+          JournalEntry: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          User: { accessLevel: 'None' as const, canCreate: false, canRead: false, canEdit: false, canDelete: false, canViewAll: false },
+          Organization: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: false },
+          Profile: { accessLevel: 'None' as const, canCreate: false, canRead: false, canEdit: false, canDelete: false, canViewAll: false },
+        }
+      },
+      {
+        name: 'Lecteur',
+        description: 'Profil lecteur avec accès en lecture seule',
+        role: 'viewer',
+        permissions: {
+          Property: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Unit: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Tenant: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Lease: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Payment: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Task: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          Message: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          JournalEntry: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: true },
+          User: { accessLevel: 'None' as const, canCreate: false, canRead: false, canEdit: false, canDelete: false, canViewAll: false },
+          Organization: { accessLevel: 'Read' as const, canCreate: false, canRead: true, canEdit: false, canDelete: false, canViewAll: false },
+          Profile: { accessLevel: 'None' as const, canCreate: false, canRead: false, canEdit: false, canDelete: false, canViewAll: false },
+        }
+      },
     ];
 
-    // Create each profile
+    // Create each profile and set permissions
     for (const profileDef of defaultProfiles) {
       // Check if profile already exists
       const existing = await db.selectOne<{ id: string }>('profiles', {
@@ -280,32 +346,49 @@ export async function createDefaultProfilesForOrganization(organizationId: strin
         },
       });
 
+      let profileId: string;
+
       if (existing) {
-        continue; // Skip if already exists
+        profileId = existing.id;
+        console.log(`Profile ${profileDef.name} already exists, updating permissions`);
+      } else {
+        // Create profile
+        const newProfile = await db.insertOne<{
+          id: string;
+          organization_id: string | null;
+          name: string;
+          description: string | null;
+          is_system_profile: boolean;
+          is_global: boolean;
+          is_active: boolean;
+          created_at: Date;
+          updated_at: Date;
+        }>('profiles', {
+          organization_id: organizationId,
+          name: profileDef.name,
+          description: profileDef.description,
+          is_system_profile: true, // These are system profiles
+          is_global: false, // Organization-specific
+          is_active: true,
+        });
+
+        if (!newProfile) {
+          throw new Error(`Failed to create profile ${profileDef.name}`);
+        }
+
+        profileId = newProfile.id;
+        console.log(`Created profile ${profileDef.name} with ID ${profileId}`);
       }
 
-      // Create profile
-      await db.insertOne<{
-        id: string;
-        organization_id: string | null;
-        name: string;
-        description: string | null;
-        is_system_profile: boolean;
-        is_global: boolean;
-        is_active: boolean;
-        created_at: Date;
-        updated_at: Date;
-      }>('profiles', {
-        organization_id: organizationId,
-        name: profileDef.name,
-        description: profileDef.description,
-        is_system_profile: true, // These are system profiles
-        is_global: false, // Organization-specific
-        is_active: true,
-      });
+      // Set permissions for this profile
+      for (const [objectType, permission] of Object.entries(profileDef.permissions)) {
+        await setProfileObjectPermission(profileId, objectType as ObjectType, permission);
+      }
+
+      console.log(`Set permissions for profile ${profileDef.name}`);
     }
 
-    console.log(`Created default profiles for organization ${organizationId}`);
+    console.log(`Created/updated default profiles and permissions for organization ${organizationId}`);
   } catch (error) {
     console.error('Error creating default profiles for organization:', error);
     throw error;
