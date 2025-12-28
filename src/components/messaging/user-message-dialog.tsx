@@ -192,8 +192,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
           const url = await uploadFile(
             file,
             'messages/attachments',
-            currentUserData?.organizationId,
-            token || undefined
+            currentUserData?.organizationId
           );
           uploadedUrls.push(url);
         } catch (error) {
