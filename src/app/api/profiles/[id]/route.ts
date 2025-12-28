@@ -206,6 +206,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const resolvedParams = await params;
+    const profileId = resolvedParams.id;
+
     const user = await getCurrentUser();
     if (!user || !user.organizationId) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
@@ -237,7 +240,7 @@ export async function DELETE(
       );
     }
 
-    const profile = await getProfile(params.id);
+    const profile = await getProfile(profileId);
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
@@ -277,6 +280,13 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const resolvedParams = await params;
+    const profileId = resolvedParams.id;
+
+    if (!profileId) {
+      return NextResponse.json({ error: 'Profile ID is required' }, { status: 400 });
+    }
+
     const user = await getCurrentUser();
     if (!user || !user.organizationId) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
@@ -308,7 +318,7 @@ export async function POST(
       );
     }
 
-    const profile = await getProfile(params.id);
+    const profile = await getProfile(profileId);
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
@@ -364,6 +374,13 @@ export async function PUT(
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const resolvedParams = await params;
+    const profileId = resolvedParams.id;
+
+    if (!profileId) {
+      return NextResponse.json({ error: 'Profile ID is required' }, { status: 400 });
     }
 
     const user = await getCurrentUser();
