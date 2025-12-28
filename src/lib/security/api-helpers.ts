@@ -132,7 +132,7 @@ export async function withSecurity<T = any>(
 ): Promise<NextResponse<T>> {
   const securityError = await requireSecurity(params);
   if (securityError) {
-    return securityError;
+    return securityError as NextResponse<T>;
   }
 
   const context = await getSecurityContext();
