@@ -99,7 +99,9 @@ export function useSecurity() {
     }
 
     // Level 2: Check profile permission
-    return canAccessObject(objectType as any, action);
+    // Map 'viewAll' action to 'read' for canAccessObject check
+    const mappedAction = action === 'viewAll' ? 'read' : action as 'read' | 'create' | 'edit' | 'delete';
+    return canAccessObject(objectType as any, mappedAction);
   };
 
   /**
