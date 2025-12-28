@@ -89,7 +89,7 @@ export async function GET(
         lastName: invitation.last_name,
         phone: invitation.phone,
         role: invitation.role,
-        organizationName: invitation.organizations?.name || null,
+        organizationName: invitation.organizations?.[0]?.name || null,
         expiresAt: invitation.expires_at,
       },
     });
