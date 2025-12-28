@@ -70,7 +70,9 @@ export async function getAuthenticatedSupabase(token: string): Promise<SupabaseC
   if (authenticatedClientsCache.size > 10) {
     // Remove oldest entry (simple FIFO)
     const firstKey = authenticatedClientsCache.keys().next().value;
-    authenticatedClientsCache.delete(firstKey);
+    if (firstKey) {
+      authenticatedClientsCache.delete(firstKey);
+    }
   }
   authenticatedClientsCache.set(token, client);
 
