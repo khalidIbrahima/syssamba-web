@@ -157,12 +157,12 @@ export function usePaymentNotifications(
               // Create notification in database for all users in the organization
               // Use current user ID if available, otherwise fetch it
               let currentUserIdInDb = currentUserIdRef.current;
-              if (!currentUserIdInDb && currentUser?.id) {
+              if (!currentUserIdInDb && userId) {
                 try {
                   const { data: currentUserRecord } = await client
                     .from('users')
                     .select('id')
-                    .eq('clerk_id', currentUser.id)
+                    .eq('sb_user_id', currentUser.id)
                     .maybeSingle();
 
                   if (currentUserRecord) {
@@ -241,12 +241,12 @@ export function usePaymentNotifications(
 
               // Use cached current user ID or fetch it if not available
               let currentUserIdInDb = currentUserIdRef.current;
-              if (!currentUserIdInDb && currentUser?.id) {
+              if (!currentUserIdInDb && userId) {
                 try {
                   const { data: currentUserRecord } = await client
                     .from('users')
                     .select('id')
-                    .eq('clerk_id', currentUser.id)
+                    .eq('sb_user_id', currentUser.id)
                     .maybeSingle();
 
                   if (currentUserRecord) {
@@ -292,12 +292,12 @@ export function usePaymentNotifications(
               if (!oldNotification.read_at && updatedNotification.read_at) {
                 // Use cached current user ID or fetch it if not available
                 let currentUserIdInDb = currentUserIdRef.current;
-                if (!currentUserIdInDb && currentUser?.id) {
+                if (!currentUserIdInDb && userId) {
                   try {
                     const { data: currentUserRecord } = await client
                       .from('users')
                       .select('id')
-                      .eq('clerk_id', currentUser.id)
+                      .eq('sb_user_id', currentUser.id)
                       .maybeSingle();
 
                     if (currentUserRecord) {
