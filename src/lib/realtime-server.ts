@@ -176,15 +176,12 @@ class RealtimeServer {
         const { users } = await import('@/db/schema');
         const { eq } = await import('drizzle-orm');
         
-        const userRecords = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, user.id))
-          .limit(1);
+        const dbUser = await db.selectOne<{
+          id: string;
+          organization_id: string;
+        }>('users', { eq: { id: user.id } });
 
-        const dbUser = userRecords[0];
-
-        if (!dbUser || !dbUser.organizationId) {
+        if (!dbUser || !dbUser.organization_id) {
           return next(new Error('User organization not found'));
         }
 
