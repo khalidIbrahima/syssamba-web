@@ -267,15 +267,22 @@ export async function PATCH(
       eq: { id: id },
     });
 
+    if (!updated) {
+      return NextResponse.json(
+        { error: 'Organization not found after update' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({
       organization: {
-        id: updated!.id,
-        name: updated!.name,
-        slug: updated!.slug,
-        type: updated!.type,
-        country: updated!.country,
-        customExtranetDomain: updated!.custom_extranet_domain,
-        isConfigured: updated!.is_configured,
+        id: updated.id,
+        name: updated.name,
+        slug: updated.slug,
+        type: updated.type,
+        country: updated.country,
+        customExtranetDomain: updated.custom_extranet_domain,
+        isConfigured: updated.is_configured,
       },
     });
   } catch (error: any) {

@@ -182,20 +182,27 @@ export async function PATCH(
       eq: { id: id },
     });
 
+    if (!updated) {
+      return NextResponse.json(
+        { error: 'Object definition not found after update' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({
       objectDefinition: {
-        id: updated!.id,
-        objectKey: updated!.object_key,
-        displayName: updated!.display_name,
-        description: updated!.description,
-        databaseTable: updated!.database_table,
-        ownershipField: updated!.ownership_field,
-        sensitiveFields: updated!.sensitive_fields || [],
-        icon: updated!.icon,
-        category: updated!.category,
-        isActive: updated!.is_active,
-        isSystem: updated!.is_system,
-        sortOrder: updated!.sort_order,
+        id: updated.id,
+        objectKey: updated.object_key,
+        displayName: updated.display_name,
+        description: updated.description,
+        databaseTable: updated.database_table,
+        ownershipField: updated.ownership_field,
+        sensitiveFields: updated.sensitive_fields || [],
+        icon: updated.icon,
+        category: updated.category,
+        isActive: updated.is_active,
+        isSystem: updated.is_system,
+        sortOrder: updated.sort_order,
       },
     });
   } catch (error: any) {
