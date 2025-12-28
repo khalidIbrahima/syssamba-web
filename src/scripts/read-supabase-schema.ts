@@ -61,7 +61,7 @@ async function readPlansSchema() {
       let type = typeof value;
       
       if (value === null) {
-        type = 'null';
+        type = 'object';
       } else if (Array.isArray(value)) {
         type = 'array';
       } else if (typeof value === 'object' && value !== null) {
