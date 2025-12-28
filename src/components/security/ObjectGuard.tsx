@@ -30,7 +30,9 @@ export function ObjectGuard({
   }
 
   // Check object-level security using the appropriate method
-  if (!canAccessObject(objectType, action)) {
+  // Map 'viewAll' action to 'read' for canAccessObject check
+  const mappedAction = action === 'viewAll' ? 'read' : action as 'read' | 'create' | 'edit' | 'delete';
+  if (!canAccessObject(objectType, mappedAction)) {
     return <>{fallback}</>;
   }
 
