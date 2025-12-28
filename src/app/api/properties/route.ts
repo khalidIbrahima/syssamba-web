@@ -196,8 +196,8 @@ export async function GET() {
       );
     }
 
-    // Check plan feature
-    const planFeatures = await getEnabledPlanFeatures(user.planName || 'freemium');
+    // Check plan feature - TODO: Get actual plan from organization subscription
+    const planFeatures = await getEnabledPlanFeatures('freemium');
     if (!planFeatures.has('properties_management')) {
       return NextResponse.json(
         { error: 'Forbidden: Properties feature is not available in your plan' },
