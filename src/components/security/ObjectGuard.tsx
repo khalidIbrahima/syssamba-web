@@ -23,25 +23,15 @@ export function ObjectGuard({
   fallback = null,
   children,
 }: ObjectGuardProps) {
-  const { canPerformAction, canAccessObjectInstance, isLoading } = useSecurity();
+  const { canPerformAction, canAccessObject, isLoading } = useSecurity();
 
   if (isLoading) {
     return <>{fallback}</>;
   }
 
-  // If objectId is provided, check object-level security
-  if (objectId) {
-    // For object instance checks, we need to use the hook
-    // This is a limitation - ObjectGuard with objectId should be used differently
-    // For now, fall back to profile-level check
-    if (!canPerformAction(objectType, action)) {
-      return <>{fallback}</>;
-    }
-  } else {
-    // Check profile-level security only
-    if (!canPerformAction(objectType, action)) {
-      return <>{fallback}</>;
-    }
+  // Check object-level security using the appropriate method
+  if (!canAccessObject(objectType, action)) {
+    return <>{fallback}</>;
   }
 
   return <>{children}</>;
