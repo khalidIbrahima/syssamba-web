@@ -22,7 +22,7 @@ export function useRealtime<T = any>(
   }
 ) {
   const queryClient = useQueryClient();
-  const { userId } = useAuth();
+  const { userId: authUserId } = useAuth();
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const client = getRealtimeClient();
 
@@ -136,7 +136,7 @@ export function useRealtime<T = any>(
  */
 export function useRealtimeTasks(organizationId?: string, userId?: string) {
   const queryClient = useQueryClient();
-  const { userId } = useAuth();
+  const { userId: authUserId } = useAuth();
   const client = getRealtimeClient();
 
   useEffect(() => {
@@ -201,7 +201,7 @@ export function useRealtimeTasks(organizationId?: string, userId?: string) {
  */
 export function useRealtimeMessages(organizationId?: string, tenantId?: string) {
   const queryClient = useQueryClient();
-  const { userId } = useAuth();
+  const { userId: authUserId } = useAuth();
   const client = getRealtimeClient();
 
   useEffect(() => {
@@ -268,7 +268,7 @@ export function useRealtimeMessages(organizationId?: string, tenantId?: string) 
  */
 export function useRealtimePayments(organizationId?: string) {
   const queryClient = useQueryClient();
-  const { userId } = useAuth();
+  const { userId: authUserId } = useAuth();
   const client = getRealtimeClient();
 
   useEffect(() => {
