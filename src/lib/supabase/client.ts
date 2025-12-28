@@ -29,30 +29,6 @@ export function createClientClient() {
         'x-client-info': 'samba-one-web@1.0.0',
       },
     },
-    // Configure fetch options with rate limiting protection
-    fetch: (url: RequestInfo | URL, options: RequestInit = {}) => {
-      return fetch(url, {
-        ...options,
-        // Add timeout to prevent hanging requests
-        signal: AbortSignal.timeout(15000), // 15 second timeout (reduced)
-      }).catch((error) => {
-        // Handle network errors gracefully
-        if (error.name === 'AbortError') {
-          console.warn('[Supabase] Request timed out');
-        } else if (error.code === 'ECONNRESET') {
-          console.warn('[Supabase] Connection reset');
-        } else if (error.message?.includes('rate limit')) {
-          console.warn('[Supabase] Rate limit reached, slowing down...');
-          // Add delay before retry
-          return new Promise((resolve, reject) => {
-            setTimeout(() => {
-              fetch(url, options).then(resolve).catch(reject);
-            }, 2000); // 2 second delay
-          });
-        }
-        throw error;
-      });
-    },
   });
 }
 
