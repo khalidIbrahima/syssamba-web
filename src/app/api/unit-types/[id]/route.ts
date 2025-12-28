@@ -187,6 +187,7 @@ export async function DELETE(
     const unitType = await db.selectOne<{
       id: string;
       organization_id: string;
+      slug: string;
     }>('unit_types', {
       eq: { id },
     });
