@@ -142,7 +142,7 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
     
     if (!user && !sessionError) {
       const { data: { user: userData }, error: userError } = await supabase.auth.getUser();
-      user = userData;
+      user = userData || undefined;
       error = userError;
       
       if (userError) {
