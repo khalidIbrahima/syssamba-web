@@ -40,6 +40,7 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
   const { signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
+
   // Get current user's organization data
   const { data: currentUserData } = useDataQuery(
     ['current-user-data'],
@@ -61,19 +62,27 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
   const getUserInitials = () => {
     if (!user) return 'U';
 
-    const firstInitial = user.firstName?.[0] || '';
-    const lastInitial = user.lastName?.[0] || '';
-    const emailInitial = user.primaryEmailAddress?.emailAddress?.[0] || '';
-
-    if (firstInitial && lastInitial) {
-      return `${firstInitial}${lastInitial}`;
-    } else if (firstInitial) {
-      return firstInitial;
-    } else if (lastInitial) {
-      return lastInitial;
-    } else {
-      return emailInitial.toUpperCase();
+    // Try first name + last name first
+    if (user.firstName && user.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
     }
+
+    // Try first name only
+    if (user.firstName) {
+      return user.firstName[0].toUpperCase();
+    }
+
+    // Try last name only
+    if (user.lastName) {
+      return user.lastName[0].toUpperCase();
+    }
+
+    // Fallback to email
+    const email = user.primaryEmailAddress?.emailAddress ||
+                  user.emailAddresses?.[0]?.emailAddress ||
+                  'U';
+
+    return email[0].toUpperCase();
   };
 
   const getUserFullName = () => {
@@ -93,11 +102,21 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
     }
   };
 
-  if (!isLoaded || !user) {
+  if (!isLoaded) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
         <Avatar className="h-10 w-10">
-          <AvatarFallback>U</AvatarFallback>
+          <AvatarFallback className="bg-gray-300 text-gray-600">...</AvatarFallback>
+        </Avatar>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <Avatar className="h-10 w-10">
+          <AvatarFallback className="bg-gray-400 text-white">U</AvatarFallback>
         </Avatar>
       </div>
     );
@@ -111,10 +130,12 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
           className={`flex items-center gap-3 h-auto p-2 hover:bg-gray-100 rounded-lg ${className}`}
         >
           <Avatar className="h-10 w-10">
-            <AvatarImage
-              src={user.imageUrl || undefined}
-              alt={getUserFullName()}
-            />
+            {user.imageUrl ? (
+              <AvatarImage
+                src={user.imageUrl}
+                alt={getUserFullName()}
+              />
+            ) : null}
             <AvatarFallback className="bg-blue-600 text-white font-semibold">
               {getUserInitials()}
             </AvatarFallback>
