@@ -43,20 +43,10 @@ export async function createRouteHandlerClient(request?: NextRequest) {
         'x-client-info': 'samba-one-web@1.0.0',
       },
     },
-    // Configure fetch options with rate limiting protection
-    fetch: (url: RequestInfo | URL, options: RequestInit = {}) => {
-      return fetch(url, {
         ...options,
-        // Add timeout to prevent hanging requests
-        signal: AbortSignal.timeout(10000), // 10 second timeout (reduced)
       }).catch((error) => {
-        // Handle network errors gracefully
-        if (error.name === 'AbortError') {
-          console.warn('[Supabase] Request timed out');
         } else if (error.code === 'ECONNRESET') {
-          console.warn('[Supabase] Connection reset');
         }
-        throw error;
       });
     },
   });
