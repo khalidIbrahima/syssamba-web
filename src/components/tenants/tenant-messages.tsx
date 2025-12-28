@@ -48,7 +48,7 @@ async function getTenantMessages(tenantId: string) {
 
 export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps) {
   const { user } = useUser();
-  const { getToken } = useAuth();
+  const { user: authUser } = useAuth();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
@@ -80,7 +80,6 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
 
     setUploadingFiles(true);
     try {
-      const token = await getToken();
       const fileArray = Array.from(files);
       const uploadedUrls: string[] = [];
 
@@ -89,8 +88,7 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
           const url = await uploadFile(
             file,
             'messages/attachments',
-            organizationId,
-            token || undefined
+            organizationId
           );
           uploadedUrls.push(url);
         } catch (error) {
