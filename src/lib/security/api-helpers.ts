@@ -96,7 +96,7 @@ export async function requireSecurity(
     action: params.action,
     fieldName: params.fieldName,
     userId: context.userId,
-    organizationId: context.organizationId,
+    organizationId: context.organizationId || undefined,
   });
 
   if (!result.allowed) {
