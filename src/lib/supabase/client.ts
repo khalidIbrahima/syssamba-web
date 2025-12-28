@@ -21,8 +21,6 @@ export function createClientClient() {
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
       autoRefreshToken: true,
       persistSession: true,
-      // Reduce retry attempts to avoid rate limiting
-      retryOnFailure: false,
       // Add flow type to reduce unnecessary calls
       flowType: 'pkce',
     },
