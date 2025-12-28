@@ -151,7 +151,11 @@ export function useRealtimeTasks(organizationId?: string, userId?: string) {
 
     const setup = async () => {
       try {
-        const token = await supabase ? (await supabase.auth.getSession()).data.session?.access_token : undefined;
+        let token: string | undefined;
+if (supabase) {
+  const { data: { session } } = await supabase.auth.getSession();
+  token = session?.access_token;
+}
         if (!client.connected) {
           await client.connect(token || undefined);
         }
@@ -216,7 +220,11 @@ export function useRealtimeMessages(organizationId?: string, tenantId?: string) 
 
     const setup = async () => {
       try {
-        const token = await supabase ? (await supabase.auth.getSession()).data.session?.access_token : undefined;
+        let token: string | undefined;
+if (supabase) {
+  const { data: { session } } = await supabase.auth.getSession();
+  token = session?.access_token;
+}
         if (!client.connected) {
           await client.connect(token || undefined);
         }
@@ -283,7 +291,11 @@ export function useRealtimePayments(organizationId?: string) {
 
     const setup = async () => {
       try {
-        const token = await supabase ? (await supabase.auth.getSession()).data.session?.access_token : undefined;
+        let token: string | undefined;
+if (supabase) {
+  const { data: { session } } = await supabase.auth.getSession();
+  token = session?.access_token;
+}
         if (!client.connected) {
           await client.connect(token || undefined);
         }
