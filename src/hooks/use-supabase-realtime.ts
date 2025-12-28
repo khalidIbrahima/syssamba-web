@@ -172,7 +172,7 @@ export function useSupabaseRealtimeTasks(organizationId?: string, userIdParam?: 
         console.log(`[Realtime] Setting up subscription for tasks`);
         console.log(`[Realtime] Organization ID: ${organizationId}`);
         console.log(`[Realtime] Filter: ${filter}`);
-        console.log(`[Realtime] Client URL: ${client.supabaseUrl}`);
+        console.log(`[Realtime] Client connected: ${client.connected}`);
 
         channel = client
           .channel(`tasks:${organizationId}`)
