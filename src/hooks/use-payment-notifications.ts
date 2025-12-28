@@ -162,7 +162,7 @@ export function usePaymentNotifications(
                   const { data: currentUserRecord } = await client
                     .from('users')
                     .select('id')
-                    .eq('sb_user_id', currentUser.id)
+                    .eq('sb_user_id', userId)
                     .maybeSingle();
 
                   if (currentUserRecord) {
@@ -246,7 +246,7 @@ export function usePaymentNotifications(
                   const { data: currentUserRecord } = await client
                     .from('users')
                     .select('id')
-                    .eq('sb_user_id', currentUser.id)
+                    .eq('sb_user_id', userId)
                     .maybeSingle();
 
                   if (currentUserRecord) {
@@ -297,7 +297,7 @@ export function usePaymentNotifications(
                     const { data: currentUserRecord } = await client
                       .from('users')
                       .select('id')
-                      .eq('sb_user_id', currentUser.id)
+                      .eq('sb_user_id', userId)
                       .maybeSingle();
 
                     if (currentUserRecord) {
