@@ -284,7 +284,7 @@ export default function PlanFeaturesAdminPage() {
       </div>
 
       {/* Detailed Plan Features */}
-      <Tabs defaultValue={plans[0]?.plan.id} className="w-full">
+      <Tabs defaultValue={plans[0]?.id} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           {plans.map((planData: any) => (
             <TabsTrigger key={planData.id} value={planData.id} className="text-xs">
