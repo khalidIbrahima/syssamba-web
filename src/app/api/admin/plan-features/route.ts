@@ -80,14 +80,14 @@ export async function GET() {
 
     console.log('Found features:', features.length);
 
-    // Get all plan_features relationships
+    // Get all plan_features relationships (actual table structure)
     const planFeatures = await db.select<{
       id: string;
       plan_id: string;
-      feature_name: string;
+      feature_id: string; // This is the correct column name
       is_enabled: boolean;
+      limits: any; // JSONB field for limits
       created_at: string;
-      updated_at: string;
     }>('plan_features', {
       orderBy: { column: 'created_at', ascending: true },
     });
@@ -100,12 +100,12 @@ export async function GET() {
       const planFeatureRelations = planFeatures.filter(pf => pf.plan_id === plan.id);
 
       const featuresWithStatus = features.map(feature => {
-        // Find the relationship in plan_features table
-        const relation = planFeatureRelations.find(pf => pf.feature_name === feature.name);
+        // Find the relationship in plan_features table by feature_id
+        const relation = planFeatureRelations.find(pf => pf.feature_id === feature.id);
         const isEnabled = relation ? relation.is_enabled : false;
 
         return {
-          id: relation?.id || `${plan.id}-${feature.name}`, // Use real ID if exists, otherwise generate
+          id: relation?.id || `${plan.id}-${feature.id}`, // Use real ID if exists, otherwise generate
           featureId: feature.id,
           featureKey: feature.name,
           featureName: feature.display_name,
@@ -113,6 +113,7 @@ export async function GET() {
           category: feature.category,
           isEnabled: isEnabled,
           planFeatureId: relation?.id || null, // Real plan_feature ID or null
+          limits: relation?.limits || null, // Include limits if available
         };
       });
 
@@ -206,16 +207,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if feature exists
-    const feature = await db.selectOne<{ id: string }>('features', {
-      eq: { name: validatedData.featureKey },
-    });
+    // For POST endpoint, we expect featureKey to be the feature name, but we need to find the feature by name first
+    let featureId: string;
 
-    if (!feature) {
-      return NextResponse.json(
-        { error: 'Feature not found' },
-        { status: 404 }
-      );
+    // Check if featureKey is a UUID (feature_id) or name
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(validatedData.featureKey);
+
+    if (isUUID) {
+      // featureKey is already a UUID (feature_id)
+      featureId = validatedData.featureKey;
+    } else {
+      // featureKey is a feature name, need to find the feature
+      const feature = await db.selectOne<{ id: string }>('features', {
+        eq: { name: validatedData.featureKey },
+      });
+
+      if (!feature) {
+        return NextResponse.json(
+          { error: 'Feature not found' },
+          { status: 404 }
+        );
+      }
+      featureId = feature.id;
     }
 
     // Check if plan_feature relationship already exists
@@ -225,7 +238,7 @@ export async function POST(request: NextRequest) {
     }>('plan_features', {
       eq: {
         plan_id: validatedData.planId,
-        feature_name: validatedData.featureKey,
+        feature_id: featureId,
       },
     });
 
@@ -235,7 +248,6 @@ export async function POST(request: NextRequest) {
         'plan_features',
         {
           is_enabled: validatedData.isEnabled,
-          updated_at: new Date(),
         },
         { id: existingRelation.id }
       );
@@ -250,7 +262,7 @@ export async function POST(request: NextRequest) {
       // Create new relationship
       const newRelation = await db.insertOne('plan_features', {
         plan_id: validatedData.planId,
-        feature_name: validatedData.featureKey,
+        feature_id: featureId,
         is_enabled: validatedData.isEnabled,
       });
 
@@ -351,14 +363,24 @@ export async function PUT(request: NextRequest) {
         continue; // Skip invalid entries
       }
 
-      // Check if feature exists
-      const feature = await db.selectOne<{ id: string }>('features', {
-        eq: { name: featureKey },
-      });
+      // Determine if featureKey is a UUID (feature_id) or name
+      let featureId: string;
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(featureKey);
 
-      if (!feature) {
-        console.warn(`Feature ${featureKey} not found, skipping`);
-        continue; // Skip if feature doesn't exist
+      if (isUUID) {
+        // featureKey is already a UUID (feature_id)
+        featureId = featureKey;
+      } else {
+        // featureKey is a feature name, need to find the feature
+        const feature = await db.selectOne<{ id: string }>('features', {
+          eq: { name: featureKey },
+        });
+
+        if (!feature) {
+          console.warn(`Feature ${featureKey} not found, skipping`);
+          continue; // Skip if feature doesn't exist
+        }
+        featureId = feature.id;
       }
 
       // Check if plan_feature relationship already exists
@@ -368,7 +390,7 @@ export async function PUT(request: NextRequest) {
       }>('plan_features', {
         eq: {
           plan_id: planId,
-          feature_name: featureKey,
+          feature_id: featureId,
         },
       });
 
@@ -379,7 +401,6 @@ export async function PUT(request: NextRequest) {
             'plan_features',
             {
               is_enabled: isEnabled,
-              updated_at: new Date(),
             },
             { id: existingRelation.id }
           );
@@ -395,7 +416,7 @@ export async function PUT(request: NextRequest) {
         // Create new relationship
         const newRelation = await db.insertOne('plan_features', {
           plan_id: planId,
-          feature_name: featureKey,
+          feature_id: featureId,
           is_enabled: isEnabled,
         });
 

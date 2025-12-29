@@ -211,11 +211,21 @@ async function seedPlanFeatures() {
       console.log(`📋 Setting up features for plan: ${plan.name}`);
 
       for (const [featureName, isEnabled] of Object.entries(planFeatures)) {
+        // Get the feature ID by name
+        const feature = await db.selectOne<{ id: string }>('features', {
+          eq: { name: featureName },
+        });
+
+        if (!feature) {
+          console.log(`⚠️  Feature ${featureName} not found, skipping`);
+          continue;
+        }
+
         // Check if relationship already exists
         const existing = await db.selectOne<{ id: string }>('plan_features', {
           eq: {
             plan_id: plan.id,
-            feature_name: featureName,
+            feature_id: feature.id,
           },
         });
 
@@ -225,7 +235,6 @@ async function seedPlanFeatures() {
             'plan_features',
             {
               is_enabled: isEnabled,
-              updated_at: new Date(),
             },
             { id: existing.id }
           );
@@ -234,7 +243,7 @@ async function seedPlanFeatures() {
           // Create new relationship
           const newRelation = await db.insertOne('plan_features', {
             plan_id: plan.id,
-            feature_name: featureName,
+            feature_id: feature.id,
             is_enabled: isEnabled,
           });
 
