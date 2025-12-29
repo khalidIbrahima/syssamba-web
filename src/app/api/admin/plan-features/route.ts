@@ -63,11 +63,13 @@ export async function GET() {
         limits,
         created_at,
         plans (
+          id,
           name,
           display_name,
           description
         ),
         features (
+        id,
           name,
           display_name,
           description,
@@ -175,37 +177,11 @@ export async function GET() {
 
       const plan = result.get(planId)!;
 
-      // Determine feature information - use joined data if available, otherwise use mappings
-      let featureKey = pf.feature_name;
-      let featureName = pf.feature_display_name;
-      let featureDescription = pf.feature_description;
-      let category = pf.feature_category || 'Unknown';
-
-      if (!featureKey || !featureName) {
-        // Use hardcoded mappings for known feature IDs
-        const featureMappings: Record<string, { name: string; displayName: string; category: string }> = {
-          'bf015fcd-7da4-49fe-85b2-21da9e570ef5': {
-            name: 'properties_management',
-            displayName: 'Gestion des biens',
-            category: 'Core Features'
-          },
-          '958e71f4-3e10-4014-a943-6088ec54e9d9': {
-            name: 'units_management',
-            displayName: 'Gestion des lots',
-            category: 'Property Management'
-          },
-        };
-
-        const mapping = featureMappings[pf.feature_id] || {
-          name: pf.feature_id,
-          displayName: `Feature ${pf.feature_id.substring(0, 8)}`,
-          category: 'Unknown',
-        };
-
-        featureKey = featureKey || mapping.name;
-        featureName = featureName || mapping.displayName;
-        category = category !== 'Unknown' ? category : mapping.category;
-      }
+      // Use feature information from the database join - no hardcoded fallbacks needed
+      const featureKey = pf.feature_name || pf.feature_id;
+      const featureName = pf.feature_display_name || `Feature ${pf.feature_id.substring(0, 8)}`;
+      const featureDescription = pf.feature_description;
+      const category = pf.feature_category || 'Unknown';
 
       const feature = {
         id: pf.id,
@@ -244,7 +220,12 @@ export async function GET() {
     console.log('API Response:', {
       plans: finalResult.length,
       totalPlans: finalResult.length,
+      
     });
+
+    for (const plan of finalResult) {
+      console.log(`- ${plan.displayName}: ${plan.totalFeatures} features (${plan.enabledFeatures} enabled)`);
+    }
 
     return NextResponse.json({
       plans: finalResult,
