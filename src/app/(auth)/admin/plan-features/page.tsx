@@ -104,12 +104,16 @@ export default function PlanFeaturesAdminPage() {
 
   const plans = planFeaturesData?.plans || [];
 
-  const handleFeatureToggle = async (planId: string, featureKey: string, currentValue: boolean) => {
-    const updateKey = `${planId}-${featureKey}`;
+  // Calculate totals from the actual data
+  const totalPlans = planFeaturesData?.totalPlans || 0;
+  const totalFeatures = planFeaturesData?.totalPlanFeatureRecords || 0;
+
+  const handleFeatureToggle = async (planId: string, featureId: string, currentValue: boolean) => {
+    const updateKey = `${planId}-${featureId}`;
     setUpdatingFeatures(prev => new Set(prev).add(updateKey));
 
     try {
-      await updatePlanFeature(planId, featureKey, !currentValue);
+      await updatePlanFeature(planId, featureId, !currentValue); // Use featureId instead of featureKey
       toast.success(`Feature ${!currentValue ? 'enabled' : 'disabled'} successfully`);
       refetch();
     } catch (error: any) {
@@ -246,8 +250,8 @@ export default function PlanFeaturesAdminPage() {
       {/* Plans Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {plans.map((planData: any) => {
-          const totalFeatures = planData.features.length;
-          const enabledFeatures = planData.features.filter((f: any) => f.isEnabled).length;
+          const totalFeatures = planData.totalFeatures || planData.features.length;
+          const enabledFeatures = planData.enabledFeatures || planData.features.filter((f: any) => f.isEnabled).length;
           const enabledPercentage = totalFeatures > 0 ? Math.round((enabledFeatures / totalFeatures) * 100) : 0;
 
           return (
@@ -270,6 +274,9 @@ export default function PlanFeaturesAdminPage() {
                 <p className="text-sm text-gray-600">
                   {enabledPercentage}% des fonctionnalités activées
                 </p>
+                {planData.plan.description && (
+                  <p className="text-xs text-gray-500 mt-1">{planData.plan.description}</p>
+                )}
               </CardContent>
             </Card>
           );
@@ -345,17 +352,20 @@ export default function PlanFeaturesAdminPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {(features as any[]).map((feature: any) => {
-                          const updateKey = `${planData.plan.id}-${feature.featureKey}`;
+                          const updateKey = `${planData.plan.id}-${feature.featureId}`;
                           const isUpdating = updatingFeatures.has(updateKey);
 
                           return (
                             <div
-                              key={feature.featureKey}
+                              key={feature.featureId}
                               className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
                             >
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium text-sm">{feature.featureName}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {feature.featureId.substring(0, 8)}...
+                                  </Badge>
                                   {feature.isEnabled ? (
                                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                                   ) : (
@@ -365,6 +375,17 @@ export default function PlanFeaturesAdminPage() {
                                 {feature.featureDescription && (
                                   <p className="text-xs text-gray-500 mt-1">{feature.featureDescription}</p>
                                 )}
+                                {feature.limits && (
+                                  <div className="mt-2">
+                                    <p className="text-xs text-blue-600 font-medium">Limits:</p>
+                                    <pre className="text-xs text-gray-600 bg-gray-50 p-1 rounded mt-1 overflow-x-auto">
+                                      {JSON.stringify(feature.limits, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Créé: {new Date(feature.createdAt).toLocaleDateString('fr-FR')}
+                                </p>
                               </div>
                               <div className="flex items-center gap-2">
                                 {isUpdating ? (
@@ -373,7 +394,7 @@ export default function PlanFeaturesAdminPage() {
                                   <Switch
                                     checked={feature.isEnabled}
                                     onCheckedChange={(checked) =>
-                                      handleFeatureToggle(planData.plan.id, feature.featureKey, feature.isEnabled)
+                                      handleFeatureToggle(planData.plan.id, feature.featureId, feature.isEnabled)
                                     }
                                     disabled={isUpdating}
                                   />
