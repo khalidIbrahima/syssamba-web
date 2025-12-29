@@ -78,36 +78,95 @@ export async function GET() {
       description: string | null;
     }> = [];
 
-    for (const planId of planIds) {
-      try {
-        const plan = await db.selectOne<{
-          id: string;
-          name: string;
-          display_name: string;
-          description: string | null;
-        }>('plans', {
-          eq: { id: planId },
-        });
+    // First, try to get all plans at once (might work better with RLS)
+    let allPlans: Array<{
+      id: string;
+      name: string;
+      display_name: string;
+      description: string | null;
+    }> = [];
 
-        if (plan) {
-          plansInfo.push(plan);
-        } else {
-          console.log(`Plan ${planId} not found, creating placeholder`);
+    try {
+      console.log('Attempting to fetch all plans...');
+      allPlans = await db.select<{
+        id: string;
+        name: string;
+        display_name: string;
+        description: string | null;
+      }>('plans', {
+        orderBy: { column: 'created_at', ascending: false },
+      });
+      console.log(`Successfully fetched ${allPlans.length} plans`);
+    } catch (error) {
+      console.log('Failed to fetch all plans:', error);
+      allPlans = [];
+    }
+
+    // Now process each plan ID and match with available plan data
+    for (const planId of planIds) {
+      const foundPlan = allPlans.find(p => p.id === planId);
+
+      if (foundPlan) {
+        plansInfo.push(foundPlan);
+        console.log(`Found plan ${planId}: ${foundPlan.name} (${foundPlan.display_name})`);
+      } else {
+        // Try individual lookup as fallback
+        try {
+          console.log(`Plan ${planId} not in bulk results, trying individual lookup...`);
+          const plan = await db.selectOne<{
+            id: string;
+            name: string;
+            display_name: string;
+            description: string | null;
+          }>('plans', {
+            eq: { id: planId },
+          });
+
+          if (plan) {
+            plansInfo.push(plan);
+            console.log(`Found plan ${planId} via individual lookup: ${plan.name} (${plan.display_name})`);
+          } else {
+            throw new Error('Plan not found');
+          }
+        } catch (individualError) {
+          console.log(`Plan ${planId} not accessible, creating placeholder:`, individualError);
+
+          // Create meaningful placeholder names based on common plan naming patterns
+          let displayName = `Plan ${planId.substring(0, 8)}`;
+          let name = `plan_${planId.substring(0, 8)}`;
+
+          // Try to infer plan name from common patterns or from plan_features data
+          const planFeaturesForThisPlan = planFeatures.filter(pf => pf.plan_id === planId);
+          if (planFeaturesForThisPlan.length > 0) {
+            // Look at the limits to infer plan type
+            const limits = planFeaturesForThisPlan[0].limits;
+            if (limits && typeof limits === 'object') {
+              if ('max_properties' in limits) {
+                const maxProps = limits.max_properties;
+                if (maxProps === 5) {
+                  displayName = 'Freemium Plan';
+                  name = 'freemium';
+                } else if (maxProps === 25) {
+                  displayName = 'Starter Plan';
+                  name = 'starter';
+                } else if (maxProps === 100) {
+                  displayName = 'Professional Plan';
+                  name = 'professional';
+                } else if (maxProps === -1 || maxProps > 100) {
+                  displayName = 'Enterprise Plan';
+                  name = 'enterprise';
+                }
+              }
+            }
+          }
+
           plansInfo.push({
             id: planId,
-            name: `plan-${planId.substring(0, 8)}`,
-            display_name: `Plan ${planId.substring(0, 8)}`,
-            description: 'Plan information not accessible',
+            name: name,
+            display_name: displayName,
+            description: 'Plan inferred from plan_features data',
           });
         }
-      } catch (error) {
-        console.log(`Error fetching plan ${planId}:`, error);
-        plansInfo.push({
-          id: planId,
-          name: `plan-${planId.substring(0, 8)}`,
-          display_name: `Plan ${planId.substring(0, 8)}`,
-          description: 'Plan information not accessible',
-        });
       }
     }
 
