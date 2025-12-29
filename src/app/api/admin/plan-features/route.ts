@@ -66,29 +66,25 @@ export async function GET() {
 
     console.log('Found plan_features relationships:', planFeatures.length);
 
-    // Get unique plan IDs from plan_features
+    // Get unique plan IDs and feature IDs
     const planIds = [...new Set(planFeatures.map(pf => pf.plan_id))];
+    const featureIds = [...new Set(planFeatures.map(pf => pf.feature_id))];
+
     console.log('Unique plan IDs found:', planIds.length, planIds);
+    console.log('Unique feature IDs found:', featureIds.length, featureIds);
 
-    // Get plan information for these IDs
-    const plansInfo: Array<{
+    // Try to get plan information
+    const plansMap = new Map<string, {
       id: string;
       name: string;
       display_name: string;
       description: string | null;
-    }> = [];
+    }>();
 
-    // First, try to get all plans at once (might work better with RLS)
-    let allPlans: Array<{
-      id: string;
-      name: string;
-      display_name: string;
-      description: string | null;
-    }> = [];
-
+    // First try to get all plans at once
     try {
       console.log('Attempting to fetch all plans...');
-      allPlans = await db.select<{
+      const allPlans = await db.select<{
         id: string;
         name: string;
         display_name: string;
@@ -96,23 +92,17 @@ export async function GET() {
       }>('plans', {
         orderBy: { column: 'created_at', ascending: false },
       });
+
+      allPlans.forEach(plan => plansMap.set(plan.id, plan));
       console.log(`Successfully fetched ${allPlans.length} plans`);
     } catch (error) {
-      console.log('Failed to fetch all plans:', error);
-      allPlans = [];
+      console.log('Failed to fetch all plans, trying individual lookups:', error);
     }
 
-    // Now process each plan ID and match with available plan data
+    // Fill in missing plans with individual lookups or inference
     for (const planId of planIds) {
-      const foundPlan = allPlans.find(p => p.id === planId);
-
-      if (foundPlan) {
-        plansInfo.push(foundPlan);
-        console.log(`Found plan ${planId}: ${foundPlan.name} (${foundPlan.display_name})`);
-      } else {
-        // Try individual lookup as fallback
+      if (!plansMap.has(planId)) {
         try {
-          console.log(`Plan ${planId} not in bulk results, trying individual lookup...`);
           const plan = await db.selectOne<{
             id: string;
             name: string;
@@ -123,46 +113,42 @@ export async function GET() {
           });
 
           if (plan) {
-            plansInfo.push(plan);
-            console.log(`Found plan ${planId} via individual lookup: ${plan.name} (${plan.display_name})`);
+            plansMap.set(planId, plan);
+            console.log(`Found plan ${planId}: ${plan.name} (${plan.display_name})`);
           } else {
             throw new Error('Plan not found');
           }
-        } catch (individualError) {
-          console.log(`Plan ${planId} not accessible, creating placeholder:`, individualError);
+        } catch (error) {
+          console.log(`Plan ${planId} not accessible, creating inferred data`);
 
-          // Create meaningful placeholder names based on common plan naming patterns
+          // Infer plan name from limits
+          const planFeaturesForThisPlan = planFeatures.filter(pf => pf.plan_id === planId);
           let displayName = `Plan ${planId.substring(0, 8)}`;
           let name = `plan_${planId.substring(0, 8)}`;
 
-          // Try to infer plan name from common patterns or from plan_features data
-          const planFeaturesForThisPlan = planFeatures.filter(pf => pf.plan_id === planId);
           if (planFeaturesForThisPlan.length > 0) {
-            // Look at the limits to infer plan type
             const limits = planFeaturesForThisPlan[0].limits;
-            if (limits && typeof limits === 'object') {
-              if ('max_properties' in limits) {
-                const maxProps = limits.max_properties;
-                if (maxProps === 5) {
-                  displayName = 'Freemium Plan';
-                  name = 'freemium';
-                } else if (maxProps === 25) {
-                  displayName = 'Starter Plan';
-                  name = 'starter';
-                } else if (maxProps === 100) {
-                  displayName = 'Professional Plan';
-                  name = 'professional';
-                } else if (maxProps === -1 || maxProps > 100) {
-                  displayName = 'Enterprise Plan';
-                  name = 'enterprise';
-                }
+            if (limits && typeof limits === 'object' && 'max_properties' in limits) {
+              const maxProps = limits.max_properties;
+              if (maxProps === 5) {
+                displayName = 'Freemium Plan';
+                name = 'freemium';
+              } else if (maxProps === 25) {
+                displayName = 'Starter Plan';
+                name = 'starter';
+              } else if (maxProps === 100) {
+                displayName = 'Professional Plan';
+                name = 'professional';
+              } else if (maxProps === -1 || maxProps > 100) {
+                displayName = 'Enterprise Plan';
+                name = 'enterprise';
               }
             }
           }
 
-          plansInfo.push({
+          plansMap.set(planId, {
             id: planId,
-            name: name,
+            name,
             display_name: displayName,
             description: 'Plan inferred from plan_features data',
           });
@@ -170,15 +156,169 @@ export async function GET() {
       }
     }
 
-    console.log('Retrieved plan info for:', plansInfo.length, 'plans');
+    // Try to get feature information
+    const featuresMap = new Map<string, {
+      id: string;
+      name: string;
+      display_name: string;
+      description: string | null;
+      category: string;
+    }>();
 
-    // Group plan_features by plan
-    const result = plansInfo.map(plan => {
-      const planFeaturesForPlan = planFeatures.filter(pf => pf.plan_id === plan.id);
+    // First try to get all features at once
+    try {
+      console.log('Attempting to fetch all features...');
+      const allFeatures = await db.select<{
+        id: string;
+        name: string;
+        display_name: string;
+        description: string | null;
+        category: string;
+      }>('features', {
+        orderBy: { column: 'category', ascending: true },
+      });
 
-      // Create feature objects from plan_features data
-      const featuresWithStatus = planFeaturesForPlan.map(pf => {
-        // Try to map known feature IDs to names (from inspection data)
+      allFeatures.forEach(feature => featuresMap.set(feature.id, feature));
+      console.log(`Successfully fetched ${allFeatures.length} features`);
+    } catch (error) {
+      console.log('Failed to fetch all features, using mappings:', error);
+    }
+
+    // Fill in missing features with mappings
+    for (const featureId of featureIds) {
+      if (!featuresMap.has(featureId)) {
+        // Use hardcoded mappings for known feature IDs
+        const featureMappings: Record<string, { name: string; displayName: string; category: string; description?: string }> = {
+          'bf015fcd-7da4-49fe-85b2-21da9e570ef5': {
+            name: 'properties_management',
+            displayName: 'Gestion des biens',
+            category: 'Core Features',
+            description: 'Manage properties and real estate assets'
+          },
+          '958e71f4-3e10-4014-a943-6088ec54e9d9': {
+            name: 'units_management',
+            displayName: 'Gestion des lots',
+            category: 'Property Management',
+            description: 'Manage individual units within properties'
+          },
+        };
+
+        const mapping = featureMappings[featureId];
+        if (mapping) {
+          featuresMap.set(featureId, {
+            id: featureId,
+            name: mapping.name,
+            display_name: mapping.displayName,
+            description: mapping.description || null,
+            category: mapping.category,
+          });
+        } else {
+          // Create placeholder for unknown features
+          featuresMap.set(featureId, {
+            id: featureId,
+            name: featureId,
+            display_name: `Feature ${featureId.substring(0, 8)}`,
+            description: null,
+            category: 'Unknown',
+          });
+        }
+      }
+    }
+
+    // Now combine all the data
+    const planFeaturesWithDetails = planFeatures.map(pf => ({
+      ...pf,
+      plan_name: plansMap.get(pf.plan_id)?.name || null,
+      plan_display_name: plansMap.get(pf.plan_id)?.display_name || null,
+      plan_description: plansMap.get(pf.plan_id)?.description || null,
+      feature_name: featuresMap.get(pf.feature_id)?.name || null,
+      feature_display_name: featuresMap.get(pf.feature_id)?.display_name || null,
+      feature_description: featuresMap.get(pf.feature_id)?.description || null,
+      feature_category: featuresMap.get(pf.feature_id)?.category || null,
+    }));
+
+    console.log('Found plan_features with details:', planFeaturesWithDetails.length);
+
+    // Group by plan and enrich with inferred data when joins fail
+    const result = new Map<string, {
+      id: string;
+      name: string;
+      displayName: string;
+      description: string | null;
+      features: Array<{
+        id: string;
+        featureId: string;
+        featureKey: string;
+        featureName: string;
+        featureDescription: string | null;
+        category: string;
+        isEnabled: boolean;
+        limits: any;
+        createdAt: string;
+      }>;
+      featuresByCategory: Record<string, any[]>;
+      totalFeatures: number;
+      enabledFeatures: number;
+    }>();
+
+    planFeaturesWithDetails.forEach(pf => {
+      const planId = pf.plan_id;
+
+      if (!result.has(planId)) {
+        // Determine plan information - use joined data if available, otherwise infer
+        let planName = pf.plan_name;
+        let planDisplayName = pf.plan_display_name;
+        let planDescription = pf.plan_description;
+
+        if (!planName || !planDisplayName) {
+          // Infer plan name from limits data
+          let inferredDisplayName = `Plan ${planId.substring(0, 8)}`;
+          let inferredName = `plan_${planId.substring(0, 8)}`;
+
+          if (pf.limits && typeof pf.limits === 'object' && 'max_properties' in pf.limits) {
+            const maxProps = pf.limits.max_properties;
+            if (maxProps === 5) {
+              inferredDisplayName = 'Freemium Plan';
+              inferredName = 'freemium';
+            } else if (maxProps === 25) {
+              inferredDisplayName = 'Starter Plan';
+              inferredName = 'starter';
+            } else if (maxProps === 100) {
+              inferredDisplayName = 'Professional Plan';
+              inferredName = 'professional';
+            } else if (maxProps === -1 || maxProps > 100) {
+              inferredDisplayName = 'Enterprise Plan';
+              inferredName = 'enterprise';
+            }
+          }
+
+          planName = planName || inferredName;
+          planDisplayName = planDisplayName || inferredDisplayName;
+          planDescription = planDescription || 'Plan information loaded from plan_features data';
+        }
+
+        result.set(planId, {
+          id: planId,
+          name: planName,
+          displayName: planDisplayName,
+          description: planDescription,
+          features: [],
+          featuresByCategory: {},
+          totalFeatures: 0,
+          enabledFeatures: 0,
+        });
+      }
+
+      const plan = result.get(planId)!;
+
+      // Determine feature information - use joined data if available, otherwise use mappings
+      let featureKey = pf.feature_name;
+      let featureName = pf.feature_display_name;
+      let featureDescription = pf.feature_description;
+      let category = pf.feature_category || 'Unknown';
+
+      if (!featureKey || !featureName) {
+        // Use hardcoded mappings for known feature IDs
         const featureMappings: Record<string, { name: string; displayName: string; category: string }> = {
           'bf015fcd-7da4-49fe-85b2-21da9e570ef5': {
             name: 'properties_management',
@@ -190,68 +330,65 @@ export async function GET() {
             displayName: 'Gestion des lots',
             category: 'Property Management'
           },
-          // Add more mappings as needed
         };
 
-        const featureInfo = featureMappings[pf.feature_id] || {
+        const mapping = featureMappings[pf.feature_id] || {
           name: pf.feature_id,
           displayName: `Feature ${pf.feature_id.substring(0, 8)}`,
           category: 'Unknown',
         };
 
-        return {
-          id: pf.id,
-          featureId: pf.feature_id,
-          featureKey: featureInfo.name,
-          featureName: featureInfo.displayName,
-          featureDescription: pf.limits ? `Limits: ${JSON.stringify(pf.limits)}` : null,
-          category: featureInfo.category,
-          isEnabled: pf.is_enabled,
-          planFeatureId: pf.id,
-          limits: pf.limits,
-          createdAt: pf.created_at,
-        };
-      });
+        featureKey = featureKey || mapping.name;
+        featureName = featureName || mapping.displayName;
+        category = category !== 'Unknown' ? category : mapping.category;
+      }
 
-      // Group features by category
-      const featuresByCategory = featuresWithStatus.reduce((acc, feature) => {
-        if (!acc[feature.category]) {
-          acc[feature.category] = [];
-        }
-        acc[feature.category].push(feature);
-        return acc;
-      }, {} as Record<string, typeof featuresWithStatus>);
-
-      return {
-        plan: {
-          id: plan.id,
-          name: plan.name,
-          displayName: plan.display_name,
-          description: plan.description,
-        },
-        features: featuresWithStatus,
-        featuresByCategory,
-        totalFeatures: featuresWithStatus.length,
-        enabledFeatures: featuresWithStatus.filter(f => f.isEnabled).length,
+      const feature = {
+        id: pf.id,
+        featureId: pf.feature_id,
+        featureKey: featureKey,
+        featureName: featureName,
+        featureDescription: featureDescription,
+        category: category,
+        isEnabled: pf.is_enabled,
+        limits: pf.limits,
+        createdAt: pf.created_at,
       };
+
+      plan.features.push(feature);
+
+      // Group by category
+      if (!plan.featuresByCategory[category]) {
+        plan.featuresByCategory[category] = [];
+      }
+      plan.featuresByCategory[category].push(feature);
     });
 
-    console.log(`Organized into ${result.length} plans with features`);
-    result.forEach(plan => {
-      console.log(`- ${plan.plan.displayName}: ${plan.totalFeatures} features (${plan.enabledFeatures} enabled)`);
+    // Calculate totals for each plan
+    const finalResult = Array.from(result.values()).map(plan => ({
+      ...plan,
+      totalFeatures: plan.features.length,
+      enabledFeatures: plan.features.filter(f => f.isEnabled).length,
+    }));
+
+    console.log('Retrieved plan info for:', plansMap.size, 'plans');
+
+    // Group plan_features by plan
+    console.log(`Organized into ${finalResult.length} plans with features`);
+    finalResult.forEach(plan => {
+      console.log(`- ${plan.displayName}: ${plan.totalFeatures} features (${plan.enabledFeatures} enabled)`);
     });
 
     console.log('API Response:', {
-      plans: result.length,
-      totalPlans: result.length,
-      totalFeatures: planFeatures.length,
+      plans: finalResult.length,
+      totalPlans: finalResult.length,
     });
 
     return NextResponse.json({
-      plans: result,
-      totalPlans: result.length,
-      totalFeatures: planFeatures.length,
-      totalPlanFeatureRecords: planFeatures.length,
+      plans: finalResult,
+      totalPlans: finalResult.length,
+      totalFeatures: planFeaturesWithDetails.length,
+      totalPlanFeatureRecords: planFeaturesWithDetails.length,
     });
 
   } catch (error) {
