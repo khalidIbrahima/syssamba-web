@@ -21,6 +21,7 @@ const createPlanFeatureSchema = z.object({
  * GET /api/admin/plan-features
  * Get all plan features with their current status for all plans
  */
+// API endpoint to get feature mappings and object relationships
 export async function GET() {
   try {
     const { userId } = await checkAuth();

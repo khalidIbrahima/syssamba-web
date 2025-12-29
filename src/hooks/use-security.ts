@@ -11,6 +11,22 @@ import { usePlan } from './use-plan';
 import { useAccess } from './use-access';
 import { useUser } from './use-user';
 
+// Hook to fetch feature mappings from API
+function useFeatureMappings() {
+  return useQuery({
+    queryKey: ['features'],
+    queryFn: async () => {
+      const response = await fetch('/api/features');
+      if (!response.ok) {
+        throw new Error('Failed to fetch features');
+      }
+      const data = await response.json();
+      return data;
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+}
+
 export interface SecurityCheckOptions {
   featureKey?: string;
   objectType?: string;
@@ -43,11 +59,12 @@ async function checkSecurityAPI(options: SecurityCheckOptions): Promise<{
 
 export function useSecurity() {
   const { plan, isLoading: planLoading } = usePlan();
-  const { 
-    hasFeature, 
-    hasPermission, 
+  const { data: featureMappings, isLoading: mappingsLoading } = useFeatureMappings();
+  const {
+    hasFeature,
+    hasPermission,
     canAccessObject,
-    isLoading: accessLoading 
+    isLoading: accessLoading
   } = useAccess();
   const { user, isLoaded: userLoaded } = useUser();
 
@@ -83,17 +100,8 @@ export function useSecurity() {
     objectType: string,
     action: 'read' | 'create' | 'edit' | 'delete' | 'viewAll'
   ): boolean => {
-    // Level 1: Check if feature is enabled (map object type to feature)
-    const featureMap: Record<string, string> = {
-      Property: 'properties_management',
-      Unit: 'units_management',
-      Tenant: 'tenants_full',
-      Lease: 'leases_full',
-      Payment: 'payments_all_methods',
-      Task: 'tasks_full',
-    };
-
-    const featureKey = featureMap[objectType];
+    // Level 1: Check if feature is enabled (map object type to feature using dynamic mappings)
+    const featureKey = featureMappings?.mappings?.objectToFeature?.[objectType];
     if (featureKey && !hasFeature(featureKey)) {
       return false;
     }
@@ -145,7 +153,7 @@ export function useSecurity() {
     canAccessObject,
     
     // Loading states
-    isLoading: planLoading || accessLoading || !userLoaded,
+    isLoading: planLoading || accessLoading || mappingsLoading || !userLoaded,
     
     // Context
     plan,

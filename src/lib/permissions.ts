@@ -10,59 +10,9 @@ export type SupportLevel = 'community' | 'email' | 'priority_email' | 'phone_24_
 
 export type ExtranetTenantType = 'limited' | 'unlimited';
 
+// Dynamic PlanFeatures interface - features are read from database
 export interface PlanFeatures {
-  // Core features
-  dashboard: boolean;
-  properties_management: boolean;
-  units_management: boolean;
-  
-  // Tenants
-  tenants_basic?: boolean;
-  tenants_full?: boolean;
-  
-  // Leases
-  leases_basic?: boolean;
-  leases_full?: boolean;
-  
-  // Payments
-  payments_manual_entry?: boolean;
-  payments_all_methods?: boolean;
-  receipt_generation: boolean;
-  wave_orange_payment_link: boolean;
-  
-  // Tasks
-  basic_tasks?: boolean;
-  tasks_full?: boolean;
-  
-  // Notifications
-  email_notifications: boolean;
-  sms_notifications: boolean;
-  
-  // Extranet
-  extranet_tenant: ExtranetTenantType;
-  custom_extranet_domain: boolean;
-  full_white_label?: boolean;
-  white_label_option?: boolean;
-  
-  // Accounting
-  accounting_sycoda_basic?: boolean;
-  accounting_sycoda_full?: boolean;
-  dsf_export: boolean;
-  bank_sync: boolean;
-  
-  // Advanced features
-  electronic_signature: boolean;
-  mobile_offline_edl: boolean;
-  reports_basic?: boolean;
-  reports_advanced?: boolean;
-  copropriete_module?: boolean;
-  marketplace_services?: boolean;
-  api_access?: boolean;
-  dedicated_support?: boolean;
-  on_premise_option?: boolean;
-  
-  // Support
-  support: SupportLevel;
+  [featureKey: string]: boolean | string | undefined;
 }
 
 export interface PlanDefinition {
@@ -129,52 +79,29 @@ export async function canAccessFeature(plan: PlanName, feature: keyof PlanFeatur
 }
 
 // Legacy function for backward compatibility (async, reads from database)
+// Feature mappings are now read from the database via API
 export async function canAccess(feature: string, plan: string): Promise<boolean> {
   const planName = plan as PlanName;
 
-  // Map legacy feature names to new feature keys
-  const featureMap: Record<string, keyof PlanFeatures> = {
-    'properties': 'properties_management',
-    'properties_management': 'properties_management',
-    'units': 'units_management',
-    'units_management': 'units_management',
-    'tenants': 'tenants_full',
-    'tenants_basic': 'tenants_basic',
-    'tenants_full': 'tenants_full',
-    'leases': 'leases_full',
-    'leases_basic': 'leases_basic',
-    'leases_full': 'leases_full',
-    'payments': 'payments_all_methods',
-    'payments_manual_entry': 'payments_manual_entry',
-    'payments_all_methods': 'payments_all_methods',
-    'accounting': 'accounting_sycoda_full',
-    'accounting_basic': 'accounting_sycoda_basic',
-    'accounting_full': 'accounting_sycoda_full',
-    'tasks': 'tasks_full',
-    'basic_tasks': 'basic_tasks',
-    'tasks_full': 'tasks_full',
-    'notifications': 'email_notifications',
-    'email_notifications': 'email_notifications',
-    'sms_notifications': 'sms_notifications',
-    'extranet': 'extranet_tenant',
-    'custom_domain': 'custom_extranet_domain',
-    'white_label': 'white_label_option',
-    'full_white_label': 'full_white_label',
-    'dsf_export': 'dsf_export',
-    'bank_sync': 'bank_sync',
-    'electronic_signature': 'electronic_signature',
-    'mobile_offline_edl': 'mobile_offline_edl',
-    'wave_orange_payment_link': 'wave_orange_payment_link',
-    'reports_basic': 'reports_basic',
-    'reports_advanced': 'reports_advanced',
-    'copropriete_module': 'copropriete_module',
-    'marketplace_services': 'marketplace_services',
-    'api_access': 'api_access',
-    'priority_support': 'dedicated_support',
-  };
+  try {
+    // Fetch feature mappings from API
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/features`);
+    if (!response.ok) {
+      console.error('Failed to fetch feature mappings');
+      return false;
+    }
 
-  const featureKey = featureMap[feature] || feature as keyof PlanFeatures;
-  return await canAccessFeature(planName, featureKey);
+    const data = await response.json();
+    const legacyMappings = data.mappings?.legacyMappings || {};
+
+    // Map legacy feature name to current feature key
+    const featureKey = legacyMappings[feature] || feature;
+
+    return await canAccessFeature(planName, featureKey);
+  } catch (error) {
+    console.error('Error in canAccess function:', error);
+    return false;
+  }
 }
 
 // Check if limit is exceeded
@@ -213,7 +140,8 @@ export async function isUsersLimitExceeded(
 // Get support level for plan (async, reads from database)
 export async function getSupportLevel(plan: PlanName): Promise<SupportLevel> {
   const planDef = await getPlanFromDB(plan);
-  return planDef?.features.support || 'community';
+  const supportLevel = planDef?.features.support as SupportLevel;
+  return supportLevel || 'community';
 }
 
 // Check if plan has unlimited extranet tenants (async, reads from database)
