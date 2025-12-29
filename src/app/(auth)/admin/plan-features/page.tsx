@@ -255,10 +255,10 @@ export default function PlanFeaturesAdminPage() {
           const enabledPercentage = totalFeatures > 0 ? Math.round((enabledFeatures / totalFeatures) * 100) : 0;
 
           return (
-            <Card key={planData.plan.id}>
+            <Card key={planData.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{planData.plan.displayName}</CardTitle>
+                  <CardTitle className="text-lg">{planData.displayName}</CardTitle>
                   <Badge variant="outline" className="text-xs">
                     {enabledFeatures}/{totalFeatures}
                   </Badge>
@@ -274,8 +274,8 @@ export default function PlanFeaturesAdminPage() {
                 <p className="text-sm text-gray-600">
                   {enabledPercentage}% des fonctionnalités activées
                 </p>
-                {planData.plan.description && (
-                  <p className="text-xs text-gray-500 mt-1">{planData.plan.description}</p>
+                {planData.description && (
+                  <p className="text-xs text-gray-500 mt-1">{planData.description}</p>
                 )}
               </CardContent>
             </Card>
@@ -287,19 +287,19 @@ export default function PlanFeaturesAdminPage() {
       <Tabs defaultValue={plans[0]?.plan.id} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           {plans.map((planData: any) => (
-            <TabsTrigger key={planData.plan.id} value={planData.plan.id} className="text-xs">
-              {planData.plan.displayName}
+            <TabsTrigger key={planData.id} value={planData.id} className="text-xs">
+              {planData.displayName}
             </TabsTrigger>
           ))}
         </TabsList>
 
         {plans.map((planData: any) => (
-          <TabsContent key={planData.plan.id} value={planData.plan.id} className="space-y-4">
+          <TabsContent key={planData.id} value={planData.id} className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5" />
-                  Fonctionnalités du plan {planData.plan.displayName}
+                  Fonctionnalités du plan {planData.displayName}
                 </CardTitle>
                 <CardDescription>
                   Gérez les fonctionnalités disponibles pour ce plan d'abonnement
@@ -324,11 +324,11 @@ export default function PlanFeaturesAdminPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleBulkEnable(planData.plan.id, category)}
-                            disabled={bulkUpdating === planData.plan.id}
+                            onClick={() => handleBulkEnable(planData.id, category)}
+                            disabled={bulkUpdating === planData.id}
                             className="text-xs"
                           >
-                            {bulkUpdating === planData.plan.id ? (
+                            {bulkUpdating === planData.id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
                               'Tout activer'
@@ -337,11 +337,11 @@ export default function PlanFeaturesAdminPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleBulkDisable(planData.plan.id, category)}
-                            disabled={bulkUpdating === planData.plan.id}
+                            onClick={() => handleBulkDisable(planData.id, category)}
+                            disabled={bulkUpdating === planData.id}
                             className="text-xs"
                           >
-                            {bulkUpdating === planData.plan.id ? (
+                            {bulkUpdating === planData.id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
                               'Tout désactiver'
@@ -352,7 +352,7 @@ export default function PlanFeaturesAdminPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {(features as any[]).map((feature: any) => {
-                          const updateKey = `${planData.plan.id}-${feature.featureId}`;
+                          const updateKey = `${planData.id}-${feature.featureId}`;
                           const isUpdating = updatingFeatures.has(updateKey);
 
                           return (
@@ -394,7 +394,7 @@ export default function PlanFeaturesAdminPage() {
                                   <Switch
                                     checked={feature.isEnabled}
                                     onCheckedChange={(checked) =>
-                                      handleFeatureToggle(planData.plan.id, feature.featureId, feature.isEnabled)
+                                      handleFeatureToggle(planData.id, feature.featureId, feature.isEnabled)
                                     }
                                     disabled={isUpdating}
                                   />
