@@ -14,6 +14,7 @@
     "db:migrate-plans": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/migrate-plans.ts",
     "migrate:to-supabase": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/migrate-to-supabase.ts",
     "update-geocoordinates": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/update-geocoordinates.ts",
+    "seed:plan-features": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/seed-plan-features.ts",
     "dev:simple": "next dev",
     "build:simple": "cross-env NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=dummy_pk_test NEXT_PUBLIC_APP_URL=http://localhost:3000 next build",
     "clean-cache": "node scripts/clean-cache.js",

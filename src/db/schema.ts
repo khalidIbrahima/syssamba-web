@@ -28,6 +28,40 @@ export const plans = pgTable('plans', {
   idxPlansName: index('idx_plans_name').on(table.name),
 }));
 
+// Features table - defines available features
+export const features = pgTable('features', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(), // Feature key (e.g., "properties.view")
+  displayName: text('display_name').notNull(), // Human readable name
+  description: text('description'), // Feature description
+  category: text('category').notNull(), // Category (Core Features, Property Management, etc.)
+  icon: text('icon'), // Icon name/class
+  isActive: boolean('is_active').default(true), // Whether feature is active
+  isPremium: boolean('is_premium').default(false), // Whether it's a premium feature
+  isBeta: boolean('is_beta').default(false), // Whether it's in beta
+  requiredPlan: text('required_plan'), // Minimum plan required (freemium, starter, etc.)
+  sortOrder: integer('sort_order').default(0), // Display order within category
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  idxFeaturesName: index('idx_features_name').on(table.name),
+  idxFeaturesCategory: index('idx_features_category').on(table.category),
+}));
+
+// Plan-Features junction table - links plans to features with enable/disable status
+export const planFeatures = pgTable('plan_features', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  planId: uuid('plan_id').references(() => plans.id, { onDelete: 'cascade' }).notNull(),
+  featureName: text('feature_name').notNull(), // References features.name
+  isEnabled: boolean('is_enabled').default(true), // Whether feature is enabled for this plan
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  idxPlanFeaturesPlan: index('idx_plan_features_plan').on(table.planId),
+  idxPlanFeaturesFeature: index('idx_plan_features_feature').on(table.featureName),
+  uniquePlanFeature: uniqueIndex('unique_plan_feature').on(table.planId, table.featureName),
+}));
+
 // Organizations table - cœur du multi-tenant
 // Note: planId and limits are stored in subscriptions and plans tables
 export const organizations = pgTable('organizations', {

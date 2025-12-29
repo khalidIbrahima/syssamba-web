@@ -93,9 +93,14 @@ async function bulkUpdatePlanFeatures(planId: string, features: Array<{ featureK
 }
 
 export default function PlanFeaturesAdminPage() {
-  const { data: planFeaturesData, isLoading, refetch } = useDataQuery(['plan-features-admin'], getPlanFeatures);
+  const { data: planFeaturesData, isLoading, error, refetch } = useDataQuery(['plan-features-admin'], getPlanFeatures);
   const [updatingFeatures, setUpdatingFeatures] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState<string | null>(null);
+
+  // Debug logging
+  console.log('Plan Features Data:', planFeaturesData);
+  console.log('Loading:', isLoading);
+  console.log('Error:', error);
 
   const plans = planFeaturesData?.plans || [];
 
@@ -185,6 +190,35 @@ export default function PlanFeaturesAdminPage() {
         <div className="flex items-center gap-3">
           <Loader2 className="h-6 w-6 animate-spin" />
           <span>Chargement des fonctionnalités...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error('Plan features error:', error);
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Erreur lors du chargement des données</p>
+          <p className="text-gray-600 text-sm">{error.message}</p>
+          <Button onClick={() => refetch()} className="mt-4">
+            Réessayer
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!planFeaturesData || plans.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-gray-600 mb-2">Aucune donnée de plan trouvée</p>
+          <p className="text-gray-500 text-sm">Vérifiez que des plans existent dans la base de données</p>
+          <Button onClick={() => refetch()} className="mt-4">
+            Actualiser
+          </Button>
         </div>
       </div>
     );

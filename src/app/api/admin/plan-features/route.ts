@@ -42,59 +42,77 @@ export async function GET() {
 
     // Check if user is super-admin
     const userIsSuperAdmin = await isSuperAdmin(user.id);
+    console.log('User ID:', user.id, 'Is Super Admin:', userIsSuperAdmin);
 
     if (!userIsSuperAdmin) {
+      console.log('Access denied: User is not a super admin');
       return NextResponse.json(
-        { error: 'Forbidden: Super-admin or Global Administrator access required' },
+        { error: 'Forbidden: Super-admin access required' },
         { status: 403 }
       );
     }
 
-    // Get all plans with their features from JSONB
+    // Get all plans
     const plans = await db.select<{
       id: string;
       name: string;
       display_name: string;
       description: string | null;
-      features: any; // JSONB field containing features object
     }>('plans', {
       filter: { is_active: true },
       orderBy: { column: 'created_at', ascending: true },
     });
 
-    // For now, we'll create a mock features list based on what we know exists
-    // TODO: Create proper features and plan_features tables
-    const mockFeatures = [
-      { id: '1', name: 'properties_management', display_name: 'Gestion des biens', description: 'Créer, modifier et supprimer des biens immobiliers', category: 'Core Features' },
-      { id: '2', name: 'units_management', display_name: 'Gestion des lots', description: 'Gérer les lots et unités dans les biens', category: 'Property Management' },
-      { id: '3', name: 'tenants_management', display_name: 'Gestion des locataires', description: 'Gérer les informations des locataires', category: 'Property Management' },
-      { id: '4', name: 'leases_management', display_name: 'Gestion des baux', description: 'Créer et gérer les contrats de location', category: 'Property Management' },
-      { id: '5', name: 'payments_tracking', display_name: 'Suivi des paiements', description: 'Enregistrer et suivre les paiements', category: 'Financial' },
-      { id: '6', name: 'accounting_basic', display_name: 'Comptabilité de base', description: 'Fonctionnalités comptables de base', category: 'Financial' },
-      { id: '7', name: 'tasks_management', display_name: 'Gestion des tâches', description: 'Créer et assigner des tâches', category: 'Core Features' },
-      { id: '8', name: 'messaging_system', display_name: 'Système de messagerie', description: 'Communication interne et externe', category: 'Communication' },
-      { id: '9', name: 'reports_basic', display_name: 'Rapports de base', description: 'Générer des rapports simples', category: 'Reporting' },
-      { id: '10', name: 'user_management', display_name: 'Gestion des utilisateurs', description: 'Gérer les comptes utilisateur', category: 'Administration' },
-    ];
+    console.log('Found plans:', plans.length);
 
-    const features = mockFeatures;
+    // Get all features from features table
+    const features = await db.select<{
+      id: string;
+      name: string;
+      display_name: string;
+      description: string | null;
+      category: string;
+      is_active: boolean;
+    }>('features', {
+      filter: { is_active: true },
+      orderBy: { column: 'category', ascending: true },
+    });
 
-    // Organize data by plan and feature
+    console.log('Found features:', features.length);
+
+    // Get all plan_features relationships
+    const planFeatures = await db.select<{
+      id: string;
+      plan_id: string;
+      feature_name: string;
+      is_enabled: boolean;
+      created_at: string;
+      updated_at: string;
+    }>('plan_features', {
+      orderBy: { column: 'created_at', ascending: true },
+    });
+
+    console.log('Found plan_features relationships:', planFeatures.length);
+
+    // Organize data by plan and feature using plan_features junction table
     const result = plans.map(plan => {
-      // Get features from JSONB field (for now, assume it's an object with feature keys as boolean values)
-      const planFeatures = plan.features || {};
+      // Get plan_features relationships for this plan
+      const planFeatureRelations = planFeatures.filter(pf => pf.plan_id === plan.id);
 
       const featuresWithStatus = features.map(feature => {
-        const isEnabled = Boolean(planFeatures[feature.name]); // Check if feature key exists and is truthy
+        // Find the relationship in plan_features table
+        const relation = planFeatureRelations.find(pf => pf.feature_name === feature.name);
+        const isEnabled = relation ? relation.is_enabled : false;
+
         return {
-          id: `${plan.id}-${feature.name}`, // Generate composite ID
+          id: relation?.id || `${plan.id}-${feature.name}`, // Use real ID if exists, otherwise generate
           featureId: feature.id,
           featureKey: feature.name,
           featureName: feature.display_name,
           featureDescription: feature.description,
           category: feature.category,
           isEnabled: isEnabled,
-          planFeatureId: `${plan.id}-${feature.name}`, // Generate composite ID
+          planFeatureId: relation?.id || null, // Real plan_feature ID or null
         };
       });
 
@@ -117,6 +135,12 @@ export async function GET() {
         features: featuresWithStatus,
         featuresByCategory,
       };
+    });
+
+    console.log('API Response:', {
+      plans: result.length,
+      totalPlans: plans.length,
+      totalFeatures: features.length,
     });
 
     return NextResponse.json({
@@ -170,11 +194,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createPlanFeatureSchema.parse(body);
 
-    // Check if plan exists and get current features
-    const plan = await db.selectOne<{
-      id: string;
-      features: any;
-    }>('plans', {
+    // Check if plan exists
+    const plan = await db.selectOne<{ id: string }>('plans', {
       eq: { id: validatedData.planId },
     });
 
@@ -185,28 +206,68 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update the features JSONB field
-    const currentFeatures = plan.features || {};
-    const updatedFeatures = {
-      ...currentFeatures,
-      [validatedData.featureKey]: validatedData.isEnabled,
-    };
-
-    await db.updateOne(
-      'plans',
-      {
-        features: updatedFeatures,
-        updated_at: new Date(),
-      },
-      { id: validatedData.planId }
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: 'Plan feature updated successfully',
-      planFeatureId: `${validatedData.planId}-${validatedData.featureKey}`,
-      isEnabled: validatedData.isEnabled,
+    // Check if feature exists
+    const feature = await db.selectOne<{ id: string }>('features', {
+      eq: { name: validatedData.featureKey },
     });
+
+    if (!feature) {
+      return NextResponse.json(
+        { error: 'Feature not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if plan_feature relationship already exists
+    const existingRelation = await db.selectOne<{
+      id: string;
+      is_enabled: boolean;
+    }>('plan_features', {
+      eq: {
+        plan_id: validatedData.planId,
+        feature_name: validatedData.featureKey,
+      },
+    });
+
+    if (existingRelation) {
+      // Update existing relationship
+      await db.updateOne(
+        'plan_features',
+        {
+          is_enabled: validatedData.isEnabled,
+          updated_at: new Date(),
+        },
+        { id: existingRelation.id }
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: 'Plan feature updated successfully',
+        planFeatureId: existingRelation.id,
+        isEnabled: validatedData.isEnabled,
+      });
+    } else {
+      // Create new relationship
+      const newRelation = await db.insertOne('plan_features', {
+        plan_id: validatedData.planId,
+        feature_name: validatedData.featureKey,
+        is_enabled: validatedData.isEnabled,
+      });
+
+      if (!newRelation) {
+        return NextResponse.json(
+          { error: 'Failed to create plan feature relationship' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Plan feature created successfully',
+        planFeatureId: newRelation.id,
+        isEnabled: validatedData.isEnabled,
+      });
+    }
 
   } catch (error) {
     console.error('Error creating/updating plan feature:', error);
@@ -268,11 +329,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Check if plan exists and get current features
-    const plan = await db.selectOne<{
-      id: string;
-      features: any;
-    }>('plans', {
+    // Check if plan exists
+    const plan = await db.selectOne<{ id: string }>('plans', {
       eq: { id: planId },
     });
 
@@ -284,8 +342,6 @@ export async function PUT(request: NextRequest) {
     }
 
     const results = [];
-    const currentFeatures = plan.features || {};
-    const updatedFeatures = { ...currentFeatures };
 
     // Process each feature update
     for (const featureUpdate of features) {
@@ -295,31 +351,63 @@ export async function PUT(request: NextRequest) {
         continue; // Skip invalid entries
       }
 
-      // For now, we accept all feature keys since we have a mock list
-      // In production, you would validate against the features table
-      const currentValue = Boolean(currentFeatures[featureKey]);
+      // Check if feature exists
+      const feature = await db.selectOne<{ id: string }>('features', {
+        eq: { name: featureKey },
+      });
 
-      if (currentValue !== isEnabled) {
-        updatedFeatures[featureKey] = isEnabled;
-        results.push({
-          featureKey,
-          action: 'updated',
-          isEnabled,
-          planFeatureId: `${planId}-${featureKey}`,
-        });
+      if (!feature) {
+        console.warn(`Feature ${featureKey} not found, skipping`);
+        continue; // Skip if feature doesn't exist
       }
-    }
 
-    // Update the plan with new features
-    if (results.length > 0) {
-      await db.updateOne(
-        'plans',
-        {
-          features: updatedFeatures,
-          updated_at: new Date(),
+      // Check if plan_feature relationship already exists
+      const existingRelation = await db.selectOne<{
+        id: string;
+        is_enabled: boolean;
+      }>('plan_features', {
+        eq: {
+          plan_id: planId,
+          feature_name: featureKey,
         },
-        { id: planId }
-      );
+      });
+
+      if (existingRelation) {
+        // Update existing relationship if value changed
+        if (existingRelation.is_enabled !== isEnabled) {
+          await db.updateOne(
+            'plan_features',
+            {
+              is_enabled: isEnabled,
+              updated_at: new Date(),
+            },
+            { id: existingRelation.id }
+          );
+
+          results.push({
+            featureKey,
+            action: 'updated',
+            isEnabled,
+            planFeatureId: existingRelation.id,
+          });
+        }
+      } else {
+        // Create new relationship
+        const newRelation = await db.insertOne('plan_features', {
+          plan_id: planId,
+          feature_name: featureKey,
+          is_enabled: isEnabled,
+        });
+
+        if (newRelation) {
+          results.push({
+            featureKey,
+            action: 'created',
+            isEnabled,
+            planFeatureId: newRelation.id,
+          });
+        }
+      }
     }
 
     return NextResponse.json({
