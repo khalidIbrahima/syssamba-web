@@ -27,10 +27,21 @@ export async function GET() {
     }
 
     if (!user.organizationId) {
-      return NextResponse.json(
-        { error: 'User has no organization' },
-        { status: 404 }
-      );
+      // Return freemium plan for users without organization
+      const planName = 'freemium';
+      const limits = await getPlanLimits(planName);
+      const definition = await getPlanDefinition(planName);
+
+      return NextResponse.json({
+        plan: planName,
+        limits,
+        definition,
+        currentUsage: {
+          lots: 0,
+          users: 1, // Current user counts as 1
+          extranetTenants: 0,
+        },
+      });
     }
 
     // Get active subscription for the organization

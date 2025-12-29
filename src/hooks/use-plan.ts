@@ -51,9 +51,11 @@ async function getOrganizationPlan(): Promise<{
         throw new Error('Unauthorized: Please sign in to continue');
       }
       
-      // For 404 (Not Found), user might not have an organization yet - use fallback
+      // For 404 (Not Found), user might not have an organization yet - API handles this gracefully now
       if (response.status === 404) {
-        console.warn('[usePlan] Organization not found, using freemium fallback');
+        console.log('[usePlan] User has no organization, API returned freemium data');
+        // The API now returns freemium data directly, so this shouldn't happen
+        // But keeping fallback just in case
         const plan: PlanName = 'freemium';
         const limits = await getPlanLimits(plan);
         const definition = await getPlanDefinition(plan);
@@ -63,7 +65,7 @@ async function getOrganizationPlan(): Promise<{
           definition,
           currentUsage: {
             lots: 0,
-            users: 0,
+            users: 1, // Current user
             extranetTenants: 0,
           },
         };
