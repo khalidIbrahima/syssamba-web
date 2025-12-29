@@ -211,21 +211,20 @@ export async function GET() {
       enabledFeatures: plan.features.filter(f => f.isEnabled).length,
     }));
 
-    // Group plan_features by plan
+    // Debug: Check display names
+    console.log('=== DEBUG: Plan Display Names ===');
+    finalResult.forEach(plan => {
+      console.log(`Plan ID: ${plan.id}`);
+      console.log(`Plan Name: ${plan.name}`);
+      console.log(`Plan Display Name: ${plan.displayName}`);
+      console.log(`Plan Description: ${plan.description}`);
+      console.log('---');
+    });
+
     console.log(`Organized into ${finalResult.length} plans with features`);
     finalResult.forEach(plan => {
       console.log(`- ${plan.displayName}: ${plan.totalFeatures} features (${plan.enabledFeatures} enabled)`);
     });
-
-    console.log('API Response:', {
-      plans: finalResult.length,
-      totalPlans: finalResult.length,
-      
-    });
-
-    for (const plan of finalResult) {
-      console.log(`- ${plan.displayName}: ${plan.totalFeatures} features (${plan.enabledFeatures} enabled)`);
-    }
 
     return NextResponse.json({
       plans: finalResult,

@@ -128,7 +128,7 @@ export default function PlanFeaturesAdminPage() {
   };
 
   const handleBulkEnable = async (planId: string, category: string) => {
-    const plan = plans.find((p: any) => p.plan.id === planId);
+    const plan = plans.find((p: any) => p.id === planId);
     if (!plan) return;
 
     const categoryFeatures = plan.featuresByCategory[category] || [];
@@ -155,7 +155,7 @@ export default function PlanFeaturesAdminPage() {
   };
 
   const handleBulkDisable = async (planId: string, category: string) => {
-    const plan = plans.find((p: any) => p.plan.id === planId);
+    const plan = plans.find((p: any) => p.id === planId);
     if (!plan) return;
 
     const categoryFeatures = plan.featuresByCategory[category] || [];
