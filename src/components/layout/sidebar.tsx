@@ -21,6 +21,7 @@ import {
   Settings,
   ChevronRight,
   Shield,
+  Zap,
 } from 'lucide-react';
 import { usePlan } from '@/hooks/use-plan';
 import { useAccess } from '@/hooks/use-access';
@@ -150,13 +151,21 @@ const navigationItems: NavigationItem[] = [
     featureKey: 'messaging',
     permission: 'canSendMessages' as const,
   },
-  { 
-    name: 'Paramètres', 
-    href: '/settings', 
-    icon: Settings, 
+  {
+    name: 'Paramètres',
+    href: '/settings',
+    icon: Settings,
     badge: null,
     featureKey: null,
     permission: 'canViewSettings' as const,
+  },
+  {
+    name: 'Fonctionnalités par plan',
+    href: '/admin/plan-features',
+    icon: Zap,
+    badge: null,
+    featureKey: null, // Admin only feature
+    permission: 'canViewSettings' as const, // Only for admins
   },
 ];
 
