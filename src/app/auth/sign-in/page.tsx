@@ -175,7 +175,9 @@ export default function SignInPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-xl mb-4">
-            <Key className="h-8 w-8 text-white" />
+            <span suppressHydrationWarning>
+              <Key className="h-8 w-8 text-white" />
+            </span>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Bienvenue sur SysSamba</h1>
           <p className="text-white/90">
@@ -216,7 +218,9 @@ export default function SignInPage() {
             <div>
               <Label htmlFor="email">Email ou téléphone</Label>
               <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <span suppressHydrationWarning>
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                </span>
                 <Input
                   id="email"
                   type="text"
@@ -239,7 +243,9 @@ export default function SignInPage() {
             <div>
               <Label htmlFor="password">Mot de passe</Label>
               <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <span suppressHydrationWarning>
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                </span>
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -256,7 +262,9 @@ export default function SignInPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  <span suppressHydrationWarning>
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </span>
                 </button>
               </div>
             </div>
@@ -357,7 +365,9 @@ export default function SignInPage() {
 
           <div className="space-y-4">
             <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+              <span suppressHydrationWarning>
+                <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+              </span>
               <div>
                 <p className="font-medium text-sm text-gray-900">Conforme SYSCOHADA</p>
                 <p className="text-xs text-gray-600">
@@ -367,7 +377,9 @@ export default function SignInPage() {
             </div>
 
             <div className="flex items-start gap-3">
-              <Smartphone className="h-5 w-5 text-[#00D4AA] mt-0.5 flex-shrink-0" />
+              <span suppressHydrationWarning>
+                <Smartphone className="h-5 w-5 text-[#00D4AA] mt-0.5 flex-shrink-0" />
+              </span>
               <div>
                 <p className="font-medium text-sm text-gray-900">Mobile-first</p>
                 <p className="text-xs text-gray-600">
@@ -377,7 +389,9 @@ export default function SignInPage() {
             </div>
 
             <div className="flex items-start gap-3">
-              <CreditCard className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+              <span suppressHydrationWarning>
+                <CreditCard className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+              </span>
               <div>
                 <p className="font-medium text-sm text-gray-900">Paiements Wave & Orange Money</p>
                 <p className="text-xs text-gray-600">
