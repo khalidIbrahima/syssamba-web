@@ -130,10 +130,10 @@ export default function SignInPage() {
       
       if (isAdmin) {
         // Admin/Super-admin - always go to /admin
-        const redirectParam = new URLSearchParams(window.location.search).get('redirect');
-        if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('/auth')) {
-          redirectUrl = redirectParam;
-        } else {
+          const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+          if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('/auth')) {
+            redirectUrl = redirectParam;
+          } else {
           redirectUrl = '/admin'; // Default page for admin users
         }
       } else if (!hasOrganization) {

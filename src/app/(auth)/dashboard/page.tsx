@@ -22,6 +22,7 @@ import { useAccess } from '@/hooks/use-access';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { PageLoader } from '@/components/ui/page-loader';
 import { usePageAccess } from '@/hooks/use-page-access';
+import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import Link from 'next/link';
 import { useUser } from '@/hooks/use-user';
@@ -39,6 +40,7 @@ async function getDashboardData() {
 
 export default function DashboardPage() {
   const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
+  const { isSuperAdmin } = useSuperAdmin();
   const { user } = useUser();
   const { data, isLoading } = useDataQuery(['dashboard-data'], getDashboardData);
 
@@ -47,18 +49,21 @@ export default function DashboardPage() {
     return <PageLoader message="Vérification des accès..." />;
   }
 
-  // Check access: user needs either canViewAllProperties OR canRead access on Property
-  const hasViewAllAccess = canAccessFeature('dashboard', 'canViewAllProperties');
-  const hasReadAccess = canAccessObject('Property', 'read');
-  
-  if (!hasViewAllAccess && !hasReadAccess) {
-    return (
-      <AccessDenied
-        featureName="Tableau de bord"
-        requiredPlan="starter"
-        icon="shield"
-      />
-    );
+  // Super admins bypass permission checks
+  if (!isSuperAdmin) {
+    // Check access: user needs either canViewAllProperties OR canRead access on Property
+    const hasViewAllAccess = canAccessFeature('dashboard', 'canViewAllProperties');
+    const hasReadAccess = canAccessObject('Property', 'read');
+    
+    if (!hasViewAllAccess && !hasReadAccess) {
+      return (
+        <AccessDenied
+          featureName="Tableau de bord"
+          requiredPlan="starter"
+          icon="shield"
+        />
+      );
+    }
   }
 
   if (isLoading) {

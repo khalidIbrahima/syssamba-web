@@ -59,7 +59,7 @@ export async function GET() {
       .from('plan_features')
       .select('*')
       .order('created_at', { ascending: true });
-    
+
     if (pfError) {
       console.error('Error fetching plan features:', pfError);
       return NextResponse.json(
@@ -67,7 +67,7 @@ export async function GET() {
         { status: 500 }
       );
     }
-    
+
     if (!pfData || pfData.length === 0) {
       console.log('No plan features found');
       return NextResponse.json({
@@ -166,12 +166,12 @@ export async function GET() {
       }
       
       return {
-        id: pf.id,
-        plan_id: pf.plan_id,
-        feature_id: pf.feature_id,
-        is_enabled: pf.is_enabled,
-        limits: pf.limits,
-        created_at: pf.created_at,
+      id: pf.id,
+      plan_id: pf.plan_id,
+      feature_id: pf.feature_id,
+      is_enabled: pf.is_enabled,
+      limits: pf.limits,
+      created_at: pf.created_at,
         // Access joined data directly as objects
         plan_name: plans?.name || null,
         plan_display_name: plans?.display_name || null,

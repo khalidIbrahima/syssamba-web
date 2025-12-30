@@ -179,12 +179,8 @@ function SidebarContent() {
    * Check if a sub-item should be visible based on its permissions
    */
   const canAccessSubItem = (subItem: SubItem): boolean => {
-    // Super admins can see all sub-items
+    // Super admins bypass all checks
     if (isSuperAdmin) {
-      // Still check features if required
-      if (subItem.featureKey) {
-        return isFeatureEnabled(subItem.featureKey);
-      }
       return true;
     }
 
@@ -225,15 +221,11 @@ function SidebarContent() {
   };
 
   // Filter navigation items based on access
+  // Super admins can see all items
   const filteredNavigation = navigationItems
     .filter((item) => {
-      // Super admins can see all items (bypass permission checks)
+      // Super admins bypass all checks
       if (isSuperAdmin) {
-        // Still check features if required
-        if (item.featureKey) {
-          return isFeatureEnabled(item.featureKey);
-        }
-        // If no feature key, show item for super admin
         return true;
       }
 

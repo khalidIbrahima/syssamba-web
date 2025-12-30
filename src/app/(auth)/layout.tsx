@@ -44,7 +44,7 @@ export default async function AuthLayout({
         // Super admin: always allow access to admin pages
         // If not on admin page, redirect to /admin
         if (!isAdminPage) {
-          redirect('/admin');
+            redirect('/admin');
         }
         // If already on admin pages, allow access
       } else {
