@@ -290,7 +290,13 @@ export default function PaymentsPage() {
       feature="rent_collection"
       showUpgrade={true}
     >
-      <div className="space-y-6">
+      <PermissionGate
+        objectType="Payment"
+        action="read"
+        showDenied={true}
+        deniedMessage="Vous n'avez pas la permission de voir les paiements."
+      >
+        <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

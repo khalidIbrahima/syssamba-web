@@ -493,13 +493,19 @@ export default function TasksPage() {
       feature="maintenance_requests"
       showUpgrade={true}
     >
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
+      <PermissionGate
+        objectType="Task"
+        action="read"
+        showDenied={true}
+        deniedMessage="Vous n'avez pas la permission de voir les tâches."
       >
-        <div className="space-y-6">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

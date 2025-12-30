@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkAuth } from '@/lib/auth';
+import { checkAuth } from '@/lib/auth-helpers';
 import { isSuperAdmin } from '@/lib/super-admin';
 import { getProfileObjectPermissions } from '@/lib/profiles';
 import { db } from '@/lib/db';

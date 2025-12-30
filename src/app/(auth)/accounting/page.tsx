@@ -155,7 +155,13 @@ export default function AccountingPage() {
       feature="accounting"
       showUpgrade={true}
     >
-      <div className="space-y-6">
+      <PermissionGate
+        objectType="JournalEntry"
+        action="read"
+        showDenied={true}
+        deniedMessage="Vous n'avez pas la permission de voir la comptabilité."
+      >
+        <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
