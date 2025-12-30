@@ -11,6 +11,7 @@ import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { PageLoader } from '@/components/ui/page-loader';
 import { usePageAccess } from '@/hooks/use-page-access';
+import { FeatureGate } from '@/components/features/FeatureGate';
 import { format, parseISO, isAfter, isBefore, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -26,26 +27,12 @@ async function getLeases() {
 }
 
 export default function LeasesPage() {
-  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
+  const { isLoading: isAccessLoading } = usePageAccess();
   const { data: leases, isLoading } = useDataQuery(['leases'], getLeases);
 
   // Wait for access data to load
-  if (isAccessLoading) {
-    return <PageLoader message="Vérification des accès..." />;
-  }
-
-  // Check access: user needs either canViewAllLeases OR canRead access
-  const hasViewAllAccess = canAccessFeature('leases_basic', 'canViewAllLeases');
-  const hasReadAccess = canAccessObject('Lease', 'read');
-  
-  if (!hasViewAllAccess && !hasReadAccess) {
-    return (
-      <AccessDenied
-        featureName="Gestion des baux"
-        requiredPlan="premium"
-        icon="lock"
-      />
-    );
+  if (isAccessLoading || isLoading) {
+    return <PageLoader message="Chargement..." />;
   }
 
   // Calculate statistics from real data
@@ -91,7 +78,11 @@ export default function LeasesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <FeatureGate
+      feature="lease_management"
+      showUpgrade={true}
+    >
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Baux</h1>
@@ -273,5 +264,6 @@ export default function LeasesPage() {
         </CardContent>
       </Card>
     </div>
+    </FeatureGate>
   );
 }

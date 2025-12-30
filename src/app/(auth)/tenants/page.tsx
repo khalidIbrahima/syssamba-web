@@ -42,6 +42,7 @@ import { PageLoader } from '@/components/ui/page-loader';
 import { useDataQuery } from '@/hooks/use-query';
 import { useOrganization } from '@/hooks/use-organization';
 import { AccessDenied } from '@/components/ui/access-denied';
+import { FeatureGate } from '@/components/features/FeatureGate';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -75,24 +76,11 @@ export default function TenantsPage() {
   const { data: tenants, isLoading } = useDataQuery(['tenants'], getTenants);
 
   // Wait for access data to load
-  if (isAccessLoading) {
-    return <PageLoader message="Vérification des accès..." />;
+  if (isAccessLoading || isLoading) {
+    return <PageLoader message="Chargement..." />;
   }
 
-  // Check access: user needs either canViewAllTenants OR canRead access
-  const hasViewAllAccess = canAccessFeature('tenants_basic', 'canViewAllTenants');
-  const hasReadAccess = canAccessObject('Tenant', 'read');
   const canCreate = canAccessObject('Tenant', 'create');
-  
-  if (!hasViewAllAccess && !hasReadAccess) {
-    return (
-      <AccessDenied
-        featureName="Gestion des locataires"
-        requiredPlan="starter"
-        icon="shield"
-      />
-    );
-  }
 
   // Calculate statistics
   // Active tenants: tenants with active lease (not expired, not null)
@@ -244,7 +232,11 @@ export default function TenantsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <FeatureGate
+      feature="tenant_management"
+      showUpgrade={true}
+    >
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -647,5 +639,6 @@ export default function TenantsPage() {
         />
       )}
     </div>
+    </FeatureGate>
   );
 }

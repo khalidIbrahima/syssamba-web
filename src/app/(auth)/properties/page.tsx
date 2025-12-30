@@ -27,6 +27,7 @@ import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { AccessDeniedAction } from '@/components/ui/access-denied-action';
 import { PageLoader } from '@/components/ui/page-loader';
+import { FeatureGate } from '@/components/features/FeatureGate';
 
 // Fetch properties from API
 async function getProperties() {
@@ -41,7 +42,7 @@ async function getProperties() {
 }
 
 export default function PropertiesPage() {
-  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
+  const { canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const [currentPage, setCurrentPage] = useState(1);
   const [propertyType, setPropertyType] = useState('all');
   const [city, setCity] = useState('all');
@@ -53,24 +54,11 @@ export default function PropertiesPage() {
   const totalPages = Math.ceil(totalProperties / itemsPerPage);
 
   // Wait for access data to load
-  if (isAccessLoading) {
-    return <PageLoader message="Vérification des accès..." />;
+  if (isAccessLoading || isLoading) {
+    return <PageLoader message="Chargement..." />;
   }
 
-  // Check access: user needs either canViewAllProperties OR canRead access
-  const hasViewAllAccess = canAccessFeature('properties_management', 'canViewAllProperties');
-  const hasReadAccess = canAccessObject('Property', 'read');
   const canCreate = canAccessObject('Property', 'create');
-  
-  if (!hasViewAllAccess && !hasReadAccess) {
-    return (
-      <AccessDenied
-        featureName="Gestion des biens"
-        requiredPlan="starter"
-        icon="shield"
-      />
-    );
-  }
 
   const getOccupancyBadge = (rate: number) => {
     if (rate === 100) {
@@ -90,7 +78,11 @@ export default function PropertiesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <FeatureGate
+      feature="property_management"
+      showUpgrade={true}
+    >
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -298,5 +290,6 @@ export default function PropertiesPage() {
         </div>
       </div>
     </div>
+    </FeatureGate>
   );
 }

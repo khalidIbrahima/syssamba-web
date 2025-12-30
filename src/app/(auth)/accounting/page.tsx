@@ -41,6 +41,7 @@ import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { PageLoader } from '@/components/ui/page-loader';
 import { usePageAccess } from '@/hooks/use-page-access';
+import { FeatureGate } from '@/components/features/FeatureGate';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -80,7 +81,7 @@ async function getBalanceEvolution() {
 }
 
 export default function AccountingPage() {
-  const { canAccessFeature, isLoading: isAccessLoading } = usePageAccess();
+  const { isLoading: isAccessLoading } = usePageAccess();
   const [currentPage, setCurrentPage] = useState(1);
   const [accountFilter, setAccountFilter] = useState<string>('all');
   
@@ -90,20 +91,8 @@ export default function AccountingPage() {
   );
 
   // Wait for access data to load
-  if (isAccessLoading) {
-    return <PageLoader message="Vérification des accès..." />;
-  }
-
-  // Double vérification : Plan (feature) + Rôle (permission)
-  // Doit être après tous les hooks pour respecter les Rules of Hooks
-  if (!canAccessFeature('accounting_sycoda_basic', 'canViewAccounting')) {
-    return (
-      <AccessDenied
-        featureName="Comptabilité"
-        requiredPlan="premium"
-        icon="lock"
-      />
-    );
+  if (isAccessLoading || isLoading) {
+    return <PageLoader message="Chargement..." />;
   }
 
 
@@ -161,7 +150,11 @@ export default function AccountingPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <FeatureGate
+      feature="accounting"
+      showUpgrade={true}
+    >
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -510,5 +503,6 @@ export default function AccountingPage() {
         </div>
       </div>
     </div>
+    </FeatureGate>
   );
 }

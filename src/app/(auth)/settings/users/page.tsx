@@ -61,6 +61,7 @@ import { useAccess } from '@/hooks/use-access';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { PageLoader } from '@/components/ui/page-loader';
 import { usePageAccess } from '@/hooks/use-page-access';
+import { FeatureGate } from '@/components/features/FeatureGate';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -232,9 +233,9 @@ export default function UsersPage() {
   // Get plan features
   const planFeatures = planFeaturesData?.features || [];
 
-  // Wait for access data to load
-  if (isAccessLoading) {
-    return <PageLoader message="Vérification des accès..." />;
+  // Wait for access and data to load
+  if (isAccessLoading || isLoading || profilesLoading) {
+    return <PageLoader message="Chargement..." />;
   }
   
   // Group features by category
@@ -407,18 +408,6 @@ export default function UsersPage() {
     }
   }, [editingUser, setUserValue]);
 
-  // Check access using same criteria as sidebar
-  // Doit être après TOUS les hooks (y compris useForm, useEffect, etc.) pour respecter les Rules of Hooks
-  if (!canPerformAction('canViewSettings')) {
-    return (
-      <AccessDenied
-        featureName="Gestion des utilisateurs"
-        requiredPermission="canViewSettings"
-        icon="lock"
-      />
-    );
-  }
-
   const invitationMethod = watch('invitationMethod');
   const roleName = watchRole('name');
 
@@ -557,7 +546,11 @@ export default function UsersPage() {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <FeatureGate
+      feature="multi_user"
+      showUpgrade={true}
+    >
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -1471,5 +1464,6 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </FeatureGate>
   );
 }

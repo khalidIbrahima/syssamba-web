@@ -55,6 +55,7 @@ import { AccessDenied } from '@/components/ui/access-denied';
 import { AccessDeniedAction } from '@/components/ui/access-denied-action';
 import { PageLoader } from '@/components/ui/page-loader';
 import { usePageAccess } from '@/hooks/use-page-access';
+import { FeatureGate } from '@/components/features/FeatureGate';
 import { format, parseISO, isToday, isTomorrow, isPast, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -276,7 +277,7 @@ function SortableTaskCard({ task }: { task: any }) {
 }
 
 export default function TasksPage() {
-  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
+  const { canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const { organizationId, isLoading: isLoadingOrg } = useOrganization();
   const { userId } = useAuth();
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
@@ -285,8 +286,8 @@ export default function TasksPage() {
   const queryClient = useQueryClient();
 
   // Wait for access data to load
-  if (isAccessLoading) {
-    return <PageLoader message="Vérification des accès..." />;
+  if (isAccessLoading || isLoading) {
+    return <PageLoader message="Chargement..." />;
   }
 
   // Enable real-time updates for tasks
@@ -332,22 +333,8 @@ export default function TasksPage() {
     };
   }, [tasks]);
 
-  // Check access: user needs either canViewAllTasks OR canRead access
-  // Doit être après tous les hooks pour respecter les Rules of Hooks
-  const hasViewAllAccess = canAccessFeature('basic_tasks', 'canViewAllTasks');
-  const hasReadAccess = canAccessObject('Task', 'read');
   const canCreate = canAccessObject('Task', 'create');
   const canEdit = canAccessObject('Task', 'edit');
-  
-  if (!hasViewAllAccess && !hasReadAccess) {
-    return (
-      <AccessDenied
-        featureName="Gestion des tâches"
-        requiredPlan="starter"
-        icon="lock"
-      />
-    );
-  }
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -501,13 +488,17 @@ export default function TasksPage() {
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+    <FeatureGate
+      feature="maintenance_requests"
+      showUpgrade={true}
     >
-      <div className="space-y-6">
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -644,5 +635,6 @@ export default function TasksPage() {
         </DragOverlay>
       </div>
     </DndContext>
+    </FeatureGate>
   );
 }

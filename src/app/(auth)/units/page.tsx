@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { usePlan } from '@/hooks/use-plan';
 import { usePageAccess } from '@/hooks/use-page-access';
+import { FeatureGate } from '@/components/features/FeatureGate';
 import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { AccessDeniedAction } from '@/components/ui/access-denied-action';
@@ -88,7 +89,7 @@ const statusLabels = {
 };
 
 export default function UnitsPage() {
-  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
+  const { canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('all');
@@ -103,25 +104,11 @@ export default function UnitsPage() {
   const { data: units, isLoading } = useDataQuery(['units'], getUnits);
 
   // Wait for access data to load
-  if (isAccessLoading) {
-    return <PageLoader message="Vérification des accès..." />;
+  if (isAccessLoading || isLoading) {
+    return <PageLoader message="Chargement..." />;
   }
 
-  // Check access: user needs either canViewAllUnits OR canRead access
-  // Doit être après tous les hooks pour respecter les Rules of Hooks
-  const hasViewAllAccess = canAccessFeature('units_management', 'canViewAllUnits');
-  const hasReadAccess = canAccessObject('Unit', 'read');
   const canCreate = canAccessObject('Unit', 'create');
-  
-  if (!hasViewAllAccess && !hasReadAccess) {
-    return (
-      <AccessDenied
-        featureName="Gestion des lots"
-        requiredPlan="starter"
-        icon="shield"
-      />
-    );
-  }
 
   const filteredUnits = units?.filter((unit: any) => {
     const matchesSearch = 
@@ -176,7 +163,11 @@ export default function UnitsPage() {
   const unpaidCount = 0; // Would need to calculate from payments
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <FeatureGate
+      feature="property_management"
+      showUpgrade={true}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Main Content */}
       <div className="lg:col-span-2 space-y-6">
         {/* Header */}
@@ -648,5 +639,6 @@ export default function UnitsPage() {
         </Card>
       </div>
     </div>
+    </FeatureGate>
   );
 }

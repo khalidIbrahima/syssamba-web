@@ -3,6 +3,7 @@
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { AppLoaderWrapper } from '@/components/layout/app-loader-wrapper';
+import { FeatureProvider } from '@/contexts/FeatureContext';
 
 /**
  * Client-side wrapper for authenticated content
@@ -11,15 +12,17 @@ import { AppLoaderWrapper } from '@/components/layout/app-loader-wrapper';
 export function AuthContent({ children }: { children: React.ReactNode }) {
   return (
     <AppLoaderWrapper>
-      <div className="min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className="lg:pl-64">
-          <Header />
-          <main className="py-6 px-4 sm:px-6 lg:px-8 bg-gray-50">
-            {children}
-          </main>
+      <FeatureProvider>
+        <div className="min-h-screen bg-gray-50">
+          <Sidebar />
+          <div className="lg:pl-64">
+            <Header />
+            <main className="py-6 px-4 sm:px-6 lg:px-8 bg-gray-50">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </FeatureProvider>
     </AppLoaderWrapper>
   );
 }
