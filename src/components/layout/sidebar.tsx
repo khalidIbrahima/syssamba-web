@@ -170,10 +170,14 @@ function SidebarContent() {
   const { limits, currentUsage, plan, definition } = usePlan();
   const { canAccessFeature, canPerformAction, canAccessObject } = useAccess();
   const { isFeatureEnabled } = useFeatures();
+  const { isSuperAdmin } = useSuperAdmin();
   
   // Check if user is organization admin (can edit Organization)
   // Org admins manage their own organization and should see all sidebar items
   const isOrgAdmin = canAccessObject('Organization', 'edit');
+  
+  // Alias for backward compatibility
+  const isAdmin = isOrgAdmin;
 
   /**
    * Check if a sub-item should be visible based on its permissions
