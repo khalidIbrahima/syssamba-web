@@ -54,26 +54,30 @@ export async function GET() {
         const featureItems: Array<{ text: string; included: boolean }> = [];
         
         // Add limits as features
-        if (plan.lots_limit !== null && plan.lots_limit !== undefined) {
-          featureItems.push({
-            text: `Lots: ${plan.lots_limit === -1 ? 'Illimité' : plan.lots_limit}`,
-            included: true,
-          });
-        }
+        // If limit is null, undefined, or -1, it means unlimited
+        const lotsLimit = plan.lots_limit === null || plan.lots_limit === undefined || plan.lots_limit === -1 
+          ? 'Illimité' 
+          : plan.lots_limit.toString();
+        featureItems.push({
+          text: `Lots: ${lotsLimit}`,
+          included: true,
+        });
         
-        if (plan.users_limit !== null && plan.users_limit !== undefined) {
-          featureItems.push({
-            text: `Utilisateurs: ${plan.users_limit === -1 ? 'Illimité' : plan.users_limit}`,
-            included: true,
-          });
-        }
+        const usersLimit = plan.users_limit === null || plan.users_limit === undefined || plan.users_limit === -1 
+          ? 'Illimité' 
+          : plan.users_limit.toString();
+        featureItems.push({
+          text: `Utilisateurs: ${usersLimit}`,
+          included: true,
+        });
         
-        if (plan.extranet_tenants_limit !== null && plan.extranet_tenants_limit !== undefined) {
-          featureItems.push({
-            text: `Intranet locataires: ${plan.extranet_tenants_limit === -1 ? 'Illimité' : plan.extranet_tenants_limit}`,
-            included: true,
-          });
-        }
+        const extranetLimit = plan.extranet_tenants_limit === null || plan.extranet_tenants_limit === undefined || plan.extranet_tenants_limit === -1 
+          ? 'Illimité' 
+          : plan.extranet_tenants_limit.toString();
+        featureItems.push({
+          text: `Intranet locataires: ${extranetLimit}`,
+          included: true,
+        });
 
         // Add enabled features (only show enabled features on pricing page)
         featuresList.forEach(feature => {
