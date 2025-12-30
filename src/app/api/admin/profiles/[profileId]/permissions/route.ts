@@ -10,18 +10,26 @@ import { db } from '@/lib/db';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { profileId: string } }
+  { params }: { params: Promise<{ profileId: string }> }
 ) {
   try {
-    const { userId, isSuperAdmin: userIsSuperAdmin } = await checkAuth();
-    if (!userId || !userIsSuperAdmin) {
+    const { userId } = await checkAuth();
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      );
+    }
+
+    const userIsSuperAdmin = await isSuperAdmin(userId);
+    if (!userIsSuperAdmin) {
       return NextResponse.json(
         { error: 'Accès refusé. Super-admin requis.' },
         { status: 403 }
       );
     }
 
-    const { profileId } = params;
+    const { profileId } = await params;
 
     if (!profileId) {
       return NextResponse.json(
