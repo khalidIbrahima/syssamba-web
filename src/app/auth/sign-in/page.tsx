@@ -120,24 +120,25 @@ export default function SignInPage() {
       // Determine redirect based on user's organization status
       let redirectUrl: string;
       
-      // Check if user is super-admin
+      // Check if user is super-admin or has admin role
       const isSuperAdmin = data.isSuperAdmin || false;
+      const isAdmin = data.user?.role === 'admin' || isSuperAdmin;
       
       // Check if user has an organization and if it's configured
       const hasOrganization = data.hasOrganization || data.user?.organizationId;
       const isOrganizationConfigured = data.organizationConfigured !== false;
       
-      if (isSuperAdmin) {
-        // Super-admin without organization should select one
-        if (!hasOrganization) {
+      if (isAdmin) {
+        // Admin/Super-admin without organization should select one (for super-admin)
+        if (isSuperAdmin && !hasOrganization) {
           redirectUrl = '/admin/select-organization';
         } else {
-          // Super-admin with organization - go to /admin (default page) or custom redirect
+          // Admin/Super-admin - go to /admin or custom redirect
           const redirectParam = new URLSearchParams(window.location.search).get('redirect');
           if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('/auth')) {
             redirectUrl = redirectParam;
           } else {
-            redirectUrl = '/admin'; // Default page for super admin
+            redirectUrl = '/admin'; // Default page for admin users
           }
         }
       } else if (!hasOrganization) {

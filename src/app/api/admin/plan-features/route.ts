@@ -53,58 +53,140 @@ export async function GET() {
       );
     }
 
-    // Use Supabase's built-in join capability to fetch plan_features with related data
-    const { data: planFeaturesWithDetails, error } = await supabaseAdmin
+    // Manual query approach to bypass RLS/join issues
+    // Step 1: Get all plan_features
+    const { data: pfData, error: pfError } = await supabaseAdmin
       .from('plan_features')
-      .select(`
-        id,
-        plan_id,
-        feature_id,
-        is_enabled,
-        limits,
-        created_at,
-        plans (
-          id,
-          name,
-          display_name,
-          description
-        ),
-        features (
-        id,
-          name,
-          display_name,
-          description,
-          category
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching plan features with joins:', error);
+    
+    if (pfError) {
+      console.error('Error fetching plan features:', pfError);
       return NextResponse.json(
         { error: 'Failed to fetch plan features data' },
         { status: 500 }
       );
     }
-
-    console.log('Fetched plan_features with joined data:', planFeaturesWithDetails?.length || 0);
+    
+    if (!pfData || pfData.length === 0) {
+      console.log('No plan features found');
+      return NextResponse.json({
+        plans: [],
+        totalPlans: 0,
+        totalFeatures: 0,
+        totalPlanFeatureRecords: 0,
+      });
+    }
+    
+    // Step 2: Get unique plan IDs and feature IDs
+    const planIds = [...new Set(pfData.map((pf: any) => pf.plan_id))];
+    const featureIds = [...new Set(pfData.map((pf: any) => pf.feature_id))];
+    
+    console.log('Plan IDs to fetch:', planIds.length);
+    console.log('Feature IDs to fetch:', featureIds.length);
+    
+    // Step 3: Fetch ALL plans (not just filtered by IDs to test RLS)
+    console.log('=== FETCHING PLANS ===');
+    console.log('Plan IDs needed:', planIds);
+    
+    const { data: plansData, error: plansError } = await supabaseAdmin
+      .from('plans')
+      .select('*');
+    
+    if (plansError) {
+      console.error('❌ Error fetching plans:', plansError);
+    }
+    
+    console.log('✅ Fetched plans:', plansData?.length || 0);
+    if (plansData && plansData.length > 0) {
+      console.log('Sample plan data:', JSON.stringify(plansData[0], null, 2));
+    } else {
+      console.log('⚠️  NO PLANS DATA RETURNED - Possible RLS issue');
+    }
+    
+    // Step 4: Fetch ALL features (not just filtered by IDs to test RLS)
+    console.log('=== FETCHING FEATURES ===');
+    console.log('Feature IDs needed:', featureIds);
+    
+    const { data: featuresData, error: featuresError } = await supabaseAdmin
+      .from('features')
+      .select('*');
+    
+    if (featuresError) {
+      console.error('❌ Error fetching features:', featuresError);
+    }
+    
+    console.log('✅ Fetched features:', featuresData?.length || 0);
+    if (featuresData && featuresData.length > 0) {
+      console.log('Sample feature data:', JSON.stringify(featuresData[0], null, 2));
+    } else {
+      console.log('⚠️  NO FEATURES DATA RETURNED - Possible RLS issue');
+    }
+    
+    // Step 5: Create lookup maps for efficient joining
+    const plansMap = new Map((plansData || []).map((p: any) => [p.id, p]));
+    const featuresMap = new Map((featuresData || []).map((f: any) => [f.id, f]));
+    
+    // Step 6: Combine the data manually
+    const planFeaturesWithDetails = pfData.map((pf: any) => ({
+      ...pf,
+      plans: plansMap.get(pf.plan_id) || null,
+      features: featuresMap.get(pf.feature_id) || null,
+    }));
+    
+    console.log('Combined plan_features with joins:', planFeaturesWithDetails?.length || 0);
+    
+    // Debug: Log the first record to see the structure
+    if (planFeaturesWithDetails && planFeaturesWithDetails.length > 0) {
+      console.log('=== SAMPLE RECORD STRUCTURE ===');
+      console.log(JSON.stringify(planFeaturesWithDetails[0], null, 2));
+      console.log('=== PLANS OBJECT ===');
+      console.log('Type:', typeof planFeaturesWithDetails[0].plans);
+      console.log('Value:', planFeaturesWithDetails[0].plans);
+      console.log('=== FEATURES OBJECT ===');
+      console.log('Type:', typeof planFeaturesWithDetails[0].features);
+      console.log('Value:', planFeaturesWithDetails[0].features);
+    }
 
     // Transform the nested Supabase response to flat structure
-    const flattenedPlanFeatures = planFeaturesWithDetails?.map(pf => ({
-      id: pf.id,
-      plan_id: pf.plan_id,
-      feature_id: pf.feature_id,
-      is_enabled: pf.is_enabled,
-      limits: pf.limits,
-      created_at: pf.created_at,
-      plan_name: pf.plans?.[0]?.name || null,
-      plan_display_name: pf.plans?.[0]?.display_name || null,
-      plan_description: pf.plans?.[0]?.description || null,
-      feature_name: pf.features?.[0]?.name || null,
-      feature_display_name: pf.features?.[0]?.display_name || null,
-      feature_description: pf.features?.[0]?.description || null,
-      feature_category: pf.features?.[0]?.category || null,
-    })) || [];
+    // Note: Supabase joins return objects (not arrays) for many-to-one relationships
+    const flattenedPlanFeatures = planFeaturesWithDetails?.map((pf, index) => {
+      const plans = pf.plans as any;
+      const features = pf.features as any;
+      
+      // Debug first record transformation
+      if (index === 0) {
+        console.log('=== FIRST RECORD TRANSFORMATION ===');
+        console.log('Raw plans:', plans);
+        console.log('Raw features:', features);
+        console.log('plan_name:', plans?.name);
+        console.log('plan_display_name:', plans?.display_name);
+        console.log('feature_name:', features?.name);
+        console.log('feature_display_name:', features?.display_name);
+      }
+      
+      return {
+        id: pf.id,
+        plan_id: pf.plan_id,
+        feature_id: pf.feature_id,
+        is_enabled: pf.is_enabled,
+        limits: pf.limits,
+        created_at: pf.created_at,
+        // Access joined data directly as objects
+        plan_name: plans?.name || null,
+        plan_display_name: plans?.display_name || null,
+        plan_description: plans?.description || null,
+        feature_name: features?.name || null,
+        feature_display_name: features?.display_name || null,
+        feature_description: features?.description || null,
+        feature_category: features?.category || null,
+      };
+    }) || [];
+    
+    console.log('=== FLATTENED FIRST RECORD ===');
+    if (flattenedPlanFeatures.length > 0) {
+      console.log(JSON.stringify(flattenedPlanFeatures[0], null, 2));
+    }
 
     // Group by plan and enrich with inferred data when joins fail
     const result = new Map<string, {
@@ -213,12 +295,18 @@ export async function GET() {
     }));
 
     // Debug: Check display names
-    console.log('=== DEBUG: Plan Display Names ===');
+    console.log('=== DEBUG: Plan and Feature Display Names ===');
     finalResult.forEach(plan => {
       console.log(`Plan ID: ${plan.id}`);
       console.log(`Plan Name: ${plan.name}`);
       console.log(`Plan Display Name: ${plan.displayName}`);
       console.log(`Plan Description: ${plan.description}`);
+      console.log(`Sample Features (first 2):`);
+      plan.features.slice(0, 2).forEach(feature => {
+        console.log(`  - Feature Name: ${feature.featureName}`);
+        console.log(`    Feature Key: ${feature.featureKey}`);
+        console.log(`    Category: ${feature.category}`);
+      });
       console.log('---');
     });
 
