@@ -12,6 +12,7 @@ import {
   Globe,
   LogOut,
   Zap,
+  DollarSign,
 } from 'lucide-react';
 import { useAccess } from '@/hooks/use-access';
 import { AccessDenied } from '@/components/ui/access-denied';
@@ -122,22 +123,41 @@ export default function AdminPage() {
         </Card>
 
         {isSuperAdmin && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Zap className="h-5 w-5 mr-2" />
-                Fonctionnalités par Plan
-              </CardTitle>
-              <CardDescription>
-                Gérez les fonctionnalités disponibles pour chaque plan d'abonnement
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full" asChild>
-                <Link href="/admin/plan-features">Configurer les plans</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Zap className="h-5 w-5 mr-2" />
+                  Fonctionnalités par Plan
+                </CardTitle>
+                <CardDescription>
+                  Gérez les fonctionnalités disponibles pour chaque plan d'abonnement
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/admin/plan-features">Configurer les plans</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <DollarSign className="h-5 w-5 mr-2" />
+                  Plans d'Abonnement
+                </CardTitle>
+                <CardDescription>
+                  Gérez les plans, leurs prix et leurs limites
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/admin/plans">Gérer les plans</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </>
         )}
 
         <Card>

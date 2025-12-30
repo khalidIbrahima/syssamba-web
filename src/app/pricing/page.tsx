@@ -211,6 +211,7 @@ export default function PricingPage() {
     if (price === 'Sur devis' || price === 'custom') return 'Sur devis';
     if (price === '0') return '0 FCFA /mois';
     const numPrice = parseInt(price.replace(/,/g, ''));
+    if (isNaN(numPrice)) return 'Sur devis';
     const displayPrice = isAnnual && numPrice > 0 ? Math.round(numPrice * 0.8) : numPrice;
     return `${displayPrice.toLocaleString('fr-FR')} FCFA /mois`;
   };
@@ -320,11 +321,11 @@ export default function PricingPage() {
 
         {/* Pricing Cards */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="flex flex-wrap justify-center items-start gap-6">
             {plans.map((plan, index) => (
               <Card
                 key={index}
-                className={`relative ${plan.popular ? 'ring-2 ring-orange-500 shadow-xl' : 'shadow-lg'}`}
+                className={`relative w-full max-w-xs mx-auto ${plan.popular ? 'ring-2 ring-orange-500 shadow-xl' : 'shadow-lg'}`}
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -337,15 +338,15 @@ export default function PricingPage() {
                 <CardHeader className="text-center pb-4">
                   <CardTitle className="text-xl font-bold">{plan.displayName}</CardTitle>
                   <CardDescription className="text-sm">{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <div className="text-3xl font-bold text-gray-900">
+                  <div className="mt-4 flex items-center justify-center">
+                    <div className="text-3xl font-bold text-gray-900 text-center">
                       {formatPrice(isAnnual ? plan.priceYearly : plan.priceMonthly, isAnnual)}
                     </div>
                   </div>
                 </CardHeader>
 
-                <CardContent>
-                  <ul className="space-y-3 mb-6">
+                <CardContent className="text-center">
+                  <ul className="space-y-3 mb-6 text-left">
                     {plan.features.map((feature, featureIndex) => (
                       <li key={featureIndex} className="flex items-start">
                         {feature.included ? (

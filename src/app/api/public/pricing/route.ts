@@ -97,9 +97,13 @@ export async function GET() {
           name: plan.name,
           displayName: plan.display_name || plan.name,
           description: planData?.description || plan.display_name || '',
-          priceMonthly: prices.monthly !== null ? Math.round(prices.monthly).toString() : '0',
-          priceYearly: prices.yearly !== null ? Math.round(prices.yearly).toString() : '0',
-          priceType: prices.monthly === null ? 'custom' : 'fixed',
+          priceMonthly: prices.monthly !== null && prices.monthly !== undefined 
+            ? Math.round(prices.monthly).toString() 
+            : (prices.monthly === null ? 'Sur devis' : '0'),
+          priceYearly: prices.yearly !== null && prices.yearly !== undefined 
+            ? Math.round(prices.yearly).toString() 
+            : (prices.yearly === null ? 'Sur devis' : '0'),
+          priceType: prices.monthly === null || prices.monthly === undefined ? 'custom' : 'fixed',
           features: featureItems,
           limits: {
             lots: plan.lots_limit,

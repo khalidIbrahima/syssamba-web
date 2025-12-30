@@ -126,6 +126,26 @@ async function getAllFeatures() {
   return data.features || [];
 }
 
+// Update a specific plan_feature record by ID
+async function updatePlanFeatureRecord(planFeatureId: string, updates: { isEnabled?: boolean; limits?: any }) {
+  const response = await fetch('/api/admin/plan-features', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      planFeatureId,
+      ...updates,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update plan feature record');
+  }
+
+  return response.json();
+}
+
 type ViewMode = 'matrix' | 'list' | 'stats';
 
 export default function PlanFeaturesAdminPage() {
@@ -148,6 +168,22 @@ export default function PlanFeaturesAdminPage() {
   const [newFeatureDisplayName, setNewFeatureDisplayName] = useState('');
   const [newFeatureDescription, setNewFeatureDescription] = useState('');
   const [newFeatureCategory, setNewFeatureCategory] = useState('');
+
+  // Edit plan_feature record dialog state
+  const [editPlanFeatureDialogOpen, setEditPlanFeatureDialogOpen] = useState(false);
+  const [editingPlanFeature, setEditingPlanFeature] = useState<any>(null);
+  const [editingIsEnabled, setEditingIsEnabled] = useState(false);
+  const [editingLimits, setEditingLimits] = useState<{
+    max_properties?: string;
+    max_users?: string;
+    max_units?: string;
+    max_tenants?: string;
+    max_leases?: string;
+    max_tasks?: string;
+    max_payments?: string;
+    [key: string]: string | undefined;
+  }>({});
+  const [savingPlanFeature, setSavingPlanFeature] = useState(false);
 
   // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -174,7 +210,7 @@ export default function PlanFeaturesAdminPage() {
       featureName: string;
       featureDescription: string | null;
       category: string;
-      plans: Map<string, { isEnabled: boolean; limits: any }>;
+      plans: Map<string, { isEnabled: boolean; limits: any; planFeatureId: string }>;
     }>();
 
     plans.forEach((plan: any) => {
@@ -193,6 +229,7 @@ export default function PlanFeaturesAdminPage() {
         featureData.plans.set(plan.id, {
           isEnabled: feature.isEnabled,
           limits: feature.limits,
+          planFeatureId: feature.id, // Store the plan_feature record ID
         });
       });
     });
@@ -498,6 +535,68 @@ export default function PlanFeaturesAdminPage() {
     URL.revokeObjectURL(url);
     
     toast.success('Configuration exportée');
+  };
+
+  // Open edit dialog for a plan_feature record
+  const openEditPlanFeatureDialog = (planId: string, featureId: string) => {
+    const plan = plans.find((p: any) => p.id === planId);
+    if (!plan) return;
+
+    const feature = plan.features.find((f: any) => f.featureId === featureId);
+    if (!feature) return;
+
+    setEditingPlanFeature(feature);
+    setEditingIsEnabled(feature.isEnabled);
+    
+    // Parse limits from JSON to form fields
+    const limits = feature.limits || {};
+    const limitsForm: any = {};
+    Object.keys(limits).forEach(key => {
+      const value = limits[key];
+      // Convert to string, handling null/undefined
+      limitsForm[key] = value === null || value === undefined ? '' : String(value);
+    });
+    setEditingLimits(limitsForm);
+    
+    setEditPlanFeatureDialogOpen(true);
+  };
+
+  // Handle saving plan_feature record
+  const handleSavePlanFeature = async () => {
+    if (!editingPlanFeature) return;
+
+    setSavingPlanFeature(true);
+
+    try {
+      // Transform form fields to JSON
+      const limits: any = {};
+      Object.keys(editingLimits).forEach(key => {
+        const value = editingLimits[key];
+        if (value && value.trim() !== '') {
+          // Try to parse as number, otherwise keep as string
+          const numValue = Number(value);
+          limits[key] = isNaN(numValue) ? value : numValue;
+        }
+      });
+
+      // Only include limits if there are any values
+      const limitsToSave = Object.keys(limits).length > 0 ? limits : null;
+
+      await updatePlanFeatureRecord(editingPlanFeature.id, {
+        isEnabled: editingIsEnabled,
+        limits: limitsToSave,
+      });
+
+      toast.success('Enregistrement plan_feature mis à jour avec succès');
+      setEditPlanFeatureDialogOpen(false);
+      setEditingPlanFeature(null);
+      setEditingLimits({});
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || 'Échec de la mise à jour');
+    } finally {
+      setSavingPlanFeature(false);
+    }
   };
 
   if (isLoading) {
@@ -897,17 +996,28 @@ export default function PlanFeaturesAdminPage() {
                                         <Loader2 className="h-5 w-5 animate-spin" />
                                       ) : (
                                         <>
-                                          <Switch
-                                            checked={planFeature?.isEnabled || false}
-                                            onCheckedChange={() =>
-                                              handleFeatureToggle(
-                                                planData.id,
-                                                feature.featureId,
-                                                planFeature?.isEnabled || false
-                                              )
-                                            }
-                                            disabled={isUpdating}
-                                          />
+                                          <div className="flex items-center gap-1">
+                                            <Switch
+                                              checked={planFeature?.isEnabled || false}
+                                              onCheckedChange={() =>
+                                                handleFeatureToggle(
+                                                  planData.id,
+                                                  feature.featureId,
+                                                  planFeature?.isEnabled || false
+                                                )
+                                              }
+                                              disabled={isUpdating}
+                                            />
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-6 w-6 p-0"
+                                              onClick={() => openEditPlanFeatureDialog(planData.id, feature.featureId)}
+                                              title="Éditer l'enregistrement plan_feature"
+                                            >
+                                              <Settings className="h-3 w-3 text-gray-400" />
+                                            </Button>
+                                          </div>
                                           {planFeature?.isEnabled ? (
                                             <CheckCircle2 className="h-4 w-4 text-green-600" />
                                           ) : (
@@ -1038,17 +1148,28 @@ export default function PlanFeaturesAdminPage() {
                               {isUpdating ? (
                                 <Loader2 className="h-5 w-5 animate-spin" />
                               ) : (
-                                <Switch
-                                  checked={planFeatureData?.isEnabled || false}
-                                  onCheckedChange={() =>
-                                    handleFeatureToggle(
-                                      planData.id,
-                                      feature.featureId,
-                                      planFeatureData?.isEnabled || false
-                                    )
-                                  }
-                                  disabled={isUpdating}
-                                />
+                                <>
+                                  <Switch
+                                    checked={planFeatureData?.isEnabled || false}
+                                    onCheckedChange={() =>
+                                      handleFeatureToggle(
+                                        planData.id,
+                                        feature.featureId,
+                                        planFeatureData?.isEnabled || false
+                                      )
+                                    }
+                                    disabled={isUpdating}
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => openEditPlanFeatureDialog(planData.id, feature.featureId)}
+                                    title="Éditer l'enregistrement plan_feature"
+                                  >
+                                    <Settings className="h-3 w-3 text-gray-400" />
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -1382,6 +1503,268 @@ export default function PlanFeaturesAdminPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Plan Feature Record Dialog */}
+      <Dialog open={editPlanFeatureDialogOpen} onOpenChange={setEditPlanFeatureDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Éditer l'enregistrement Plan Feature</DialogTitle>
+            <DialogDescription>
+              {editingPlanFeature && (
+                <>
+                  Modifier les paramètres pour{' '}
+                  <strong>{plans.find((p: any) => p.features.some((f: any) => f.id === editingPlanFeature.id))?.displayName}</strong>
+                  {' - '}
+                  <strong>{editingPlanFeature.featureName}</strong>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingPlanFeature && (
+            <div className="space-y-4 mt-4">
+              {/* Plan and Feature Info */}
+              <div className="p-4 bg-gray-50 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">Plan:</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {plans.find((p: any) => p.features.some((f: any) => f.id === editingPlanFeature.id))?.displayName}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">Fonctionnalité:</span>
+                  <span className="text-sm font-semibold text-gray-900">{editingPlanFeature.featureName}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-600">ID:</span>
+                  <span className="text-xs font-mono text-gray-500">{editingPlanFeature.id}</span>
+                </div>
+              </div>
+
+              {/* Is Enabled */}
+              <div className="space-y-2">
+                <Label htmlFor="is-enabled" className="flex items-center justify-between">
+                  <span>Activé</span>
+                  <Switch
+                    id="is-enabled"
+                    checked={editingIsEnabled}
+                    onCheckedChange={setEditingIsEnabled}
+                    disabled={savingPlanFeature}
+                  />
+                </Label>
+                <p className="text-xs text-gray-500">
+                  Détermine si cette fonctionnalité est activée pour ce plan
+                </p>
+              </div>
+
+              {/* Limits (Form Fields) */}
+              <div className="space-y-4">
+                <Label>Limites spécifiques</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="space-y-2">
+                    <Label htmlFor="limit-max-properties" className="text-sm font-medium">
+                      Max Propriétés
+                    </Label>
+                    <Input
+                      id="limit-max-properties"
+                      type="number"
+                      placeholder="Illimité"
+                      value={editingLimits.max_properties || ''}
+                      onChange={(e) => setEditingLimits(prev => ({ ...prev, max_properties: e.target.value }))}
+                      disabled={savingPlanFeature}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="limit-max-users" className="text-sm font-medium">
+                      Max Utilisateurs
+                    </Label>
+                    <Input
+                      id="limit-max-users"
+                      type="number"
+                      placeholder="Illimité"
+                      value={editingLimits.max_users || ''}
+                      onChange={(e) => setEditingLimits(prev => ({ ...prev, max_users: e.target.value }))}
+                      disabled={savingPlanFeature}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="limit-max-units" className="text-sm font-medium">
+                      Max Lots/Unités
+                    </Label>
+                    <Input
+                      id="limit-max-units"
+                      type="number"
+                      placeholder="Illimité"
+                      value={editingLimits.max_units || ''}
+                      onChange={(e) => setEditingLimits(prev => ({ ...prev, max_units: e.target.value }))}
+                      disabled={savingPlanFeature}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="limit-max-tenants" className="text-sm font-medium">
+                      Max Locataires
+                    </Label>
+                    <Input
+                      id="limit-max-tenants"
+                      type="number"
+                      placeholder="Illimité"
+                      value={editingLimits.max_tenants || ''}
+                      onChange={(e) => setEditingLimits(prev => ({ ...prev, max_tenants: e.target.value }))}
+                      disabled={savingPlanFeature}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="limit-max-leases" className="text-sm font-medium">
+                      Max Contrats
+                    </Label>
+                    <Input
+                      id="limit-max-leases"
+                      type="number"
+                      placeholder="Illimité"
+                      value={editingLimits.max_leases || ''}
+                      onChange={(e) => setEditingLimits(prev => ({ ...prev, max_leases: e.target.value }))}
+                      disabled={savingPlanFeature}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="limit-max-tasks" className="text-sm font-medium">
+                      Max Tâches
+                    </Label>
+                    <Input
+                      id="limit-max-tasks"
+                      type="number"
+                      placeholder="Illimité"
+                      value={editingLimits.max_tasks || ''}
+                      onChange={(e) => setEditingLimits(prev => ({ ...prev, max_tasks: e.target.value }))}
+                      disabled={savingPlanFeature}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="limit-max-payments" className="text-sm font-medium">
+                      Max Paiements
+                    </Label>
+                    <Input
+                      id="limit-max-payments"
+                      type="number"
+                      placeholder="Illimité"
+                      value={editingLimits.max_payments || ''}
+                      onChange={(e) => setEditingLimits(prev => ({ ...prev, max_payments: e.target.value }))}
+                      disabled={savingPlanFeature}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="limit-custom-key" className="text-sm font-medium">
+                    Limite personnalisée (clé)
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="limit-custom-key"
+                      placeholder="ex: max_documents"
+                      value={editingLimits._customKey || ''}
+                      onChange={(e) => setEditingLimits(prev => ({ ...prev, _customKey: e.target.value }))}
+                      disabled={savingPlanFeature}
+                      className="flex-1"
+                    />
+                    <Input
+                      id="limit-custom-value"
+                      type="number"
+                      placeholder="Valeur"
+                      value={editingLimits._customValue || ''}
+                      onChange={(e) => setEditingLimits(prev => ({ ...prev, _customValue: e.target.value }))}
+                      disabled={savingPlanFeature}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const key = editingLimits._customKey;
+                        const value = editingLimits._customValue;
+                        if (key && value) {
+                          setEditingLimits(prev => {
+                            const newLimits = { ...prev };
+                            newLimits[key] = value;
+                            delete newLimits._customKey;
+                            delete newLimits._customValue;
+                            return newLimits;
+                          });
+                        }
+                      }}
+                      disabled={savingPlanFeature || !editingLimits._customKey || !editingLimits._customValue}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <p className="text-xs text-gray-500">
+                  Laissez les champs vides pour aucune limite. Les valeurs numériques seront converties automatiquement en JSON.
+                </p>
+                
+                {/* Display current limits as JSON preview */}
+                {Object.keys(editingLimits).filter(k => !k.startsWith('_')).length > 0 && (
+                  <div className="p-3 bg-gray-100 rounded-lg">
+                    <Label className="text-xs font-medium text-gray-600 mb-1 block">Aperçu JSON:</Label>
+                    <pre className="text-xs font-mono text-gray-700 overflow-x-auto">
+                      {JSON.stringify(
+                        Object.fromEntries(
+                          Object.entries(editingLimits)
+                            .filter(([k]) => !k.startsWith('_'))
+                            .map(([k, v]) => [k, v && v.trim() ? (isNaN(Number(v)) ? v : Number(v)) : null])
+                            .filter(([_, v]) => v !== null && v !== '')
+                        ),
+                        null,
+                        2
+                      )}
+                    </pre>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={handleSavePlanFeature}
+                  disabled={savingPlanFeature}
+                  className="flex-1 bg-gray-900 hover:bg-gray-800"
+                >
+                  {savingPlanFeature ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Enregistrer
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setEditPlanFeatureDialogOpen(false);
+                    setEditingPlanFeature(null);
+                    setEditingLimits({});
+                  }}
+                  variant="outline"
+                  disabled={savingPlanFeature}
+                >
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

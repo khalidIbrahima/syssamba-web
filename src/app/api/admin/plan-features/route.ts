@@ -17,6 +17,12 @@ const createPlanFeatureSchema = z.object({
   isEnabled: z.boolean().default(true),
 });
 
+const updatePlanFeatureRecordSchema = z.object({
+  planFeatureId: z.string().uuid('Invalid plan feature ID'),
+  isEnabled: z.boolean().optional(),
+  limits: z.record(z.string(), z.any()).optional(), // JSONB field for limits
+});
+
 /**
  * GET /api/admin/plan-features
  * Get all plan features with their current status for all plans
@@ -611,6 +617,110 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     console.error('Error bulk updating plan features:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH /api/admin/plan-features
+ * Update a specific plan_feature record by ID
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const { userId } = await checkAuth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is super-admin
+    const userIsSuperAdmin = await isSuperAdmin(user.id);
+
+    if (!userIsSuperAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Super-admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const validatedData = updatePlanFeatureRecordSchema.parse(body);
+
+    // Check if plan_feature record exists
+    const existingRecord = await db.selectOne<{
+      id: string;
+      plan_id: string;
+      feature_id: string;
+      is_enabled: boolean;
+      limits: any;
+    }>('plan_features', {
+      eq: { id: validatedData.planFeatureId },
+    });
+
+    if (!existingRecord) {
+      return NextResponse.json(
+        { error: 'Plan feature record not found' },
+        { status: 404 }
+      );
+    }
+
+    // Build update object with only provided fields
+    const updateData: any = {};
+    if (validatedData.isEnabled !== undefined) {
+      updateData.is_enabled = validatedData.isEnabled;
+    }
+    if (validatedData.limits !== undefined) {
+      updateData.limits = validatedData.limits;
+    }
+
+    // Update the record
+    await db.updateOne(
+      'plan_features',
+      updateData,
+      { id: validatedData.planFeatureId }
+    );
+
+    // Fetch updated record
+    const updatedRecord = await db.selectOne<{
+      id: string;
+      plan_id: string;
+      feature_id: string;
+      is_enabled: boolean;
+      limits: any;
+    }>('plan_features', {
+      eq: { id: validatedData.planFeatureId },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Plan feature record updated successfully',
+      planFeature: updatedRecord,
+    });
+
+  } catch (error) {
+    console.error('Error updating plan feature record:', error);
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid data', details: error.issues },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
