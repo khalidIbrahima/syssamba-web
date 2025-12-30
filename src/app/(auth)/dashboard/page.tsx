@@ -22,7 +22,6 @@ import { useAccess } from '@/hooks/use-access';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { PageLoader } from '@/components/ui/page-loader';
 import { usePageAccess } from '@/hooks/use-page-access';
-import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import Link from 'next/link';
 import { useUser } from '@/hooks/use-user';
@@ -40,7 +39,6 @@ async function getDashboardData() {
 
 export default function DashboardPage() {
   const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
-  const { isSuperAdmin } = useSuperAdmin();
   const { user } = useUser();
   const { data, isLoading } = useDataQuery(['dashboard-data'], getDashboardData);
 
@@ -49,8 +47,11 @@ export default function DashboardPage() {
     return <PageLoader message="Vérification des accès..." />;
   }
 
-  // Super admins bypass permission checks
-  if (!isSuperAdmin) {
+  // Organization admins (can edit Organization) bypass permission checks
+  // They manage their own organization and should have full access
+  const isOrgAdmin = canAccessObject('Organization', 'edit');
+  
+  if (!isOrgAdmin) {
     // Check access: user needs either canViewAllProperties OR canRead access on Property
     const hasViewAllAccess = canAccessFeature('dashboard', 'canViewAllProperties');
     const hasReadAccess = canAccessObject('Property', 'read');

@@ -7,7 +7,6 @@
 
 import React, { ReactNode } from 'react';
 import { useProfilePermissions } from '@/contexts/ProfilePermissionsContext';
-import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,7 +38,6 @@ export function PermissionGate({
   deniedMessage,
 }: PermissionGateProps) {
   const { canAccessObject, isLoading, profileName } = useProfilePermissions();
-  const { isSuperAdmin } = useSuperAdmin();
 
   if (isLoading) {
     return (
@@ -49,8 +47,10 @@ export function PermissionGate({
     );
   }
 
-  // Super admins bypass all permission checks
-  const hasAccess = isSuperAdmin || canAccessObject(objectType, action);
+  // Organization admins (can edit Organization) bypass permission checks
+  // They manage their own organization and should have full access
+  const isOrgAdmin = canAccessObject('Organization', 'edit');
+  const hasAccess = isOrgAdmin || canAccessObject(objectType, action);
 
   if (!hasAccess) {
     if (fallback) {

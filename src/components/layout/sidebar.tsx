@@ -170,17 +170,17 @@ function SidebarContent() {
   const { limits, currentUsage, plan, definition } = usePlan();
   const { canAccessFeature, canPerformAction, canAccessObject } = useAccess();
   const { isFeatureEnabled } = useFeatures();
-  const { isSuperAdmin } = useSuperAdmin();
   
-  // Check if user is admin (can edit Organization)
-  const isAdmin = canAccessObject('Organization', 'edit');
+  // Check if user is organization admin (can edit Organization)
+  // Org admins manage their own organization and should see all sidebar items
+  const isOrgAdmin = canAccessObject('Organization', 'edit');
 
   /**
    * Check if a sub-item should be visible based on its permissions
    */
   const canAccessSubItem = (subItem: SubItem): boolean => {
-    // Super admins bypass all checks
-    if (isSuperAdmin) {
+    // Organization admins bypass all checks (they manage their own org)
+    if (isOrgAdmin) {
       return true;
     }
 
@@ -221,11 +221,11 @@ function SidebarContent() {
   };
 
   // Filter navigation items based on access
-  // Super admins can see all items
+  // Organization admins can see all items (they manage their own org)
   const filteredNavigation = navigationItems
     .filter((item) => {
-      // Super admins bypass all checks
-      if (isSuperAdmin) {
+      // Organization admins bypass all checks (they manage their own org)
+      if (isOrgAdmin) {
         return true;
       }
 
