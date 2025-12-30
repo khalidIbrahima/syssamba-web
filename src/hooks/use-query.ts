@@ -7,6 +7,7 @@ export function useDataQuery<T>(
   options?: {
     enabled?: boolean;
     staleTime?: number;
+    gcTime?: number; // React Query v5: renamed from cacheTime
     refetchInterval?: number;
   }
 ) {
@@ -14,6 +15,7 @@ export function useDataQuery<T>(
     queryKey: key,
     queryFn,
     staleTime: options?.staleTime || 5 * 60 * 1000, // 5 minutes default
+    gcTime: options?.gcTime, // Garbage collection time
     refetchInterval: options?.refetchInterval,
     enabled: options?.enabled !== false,
   });
