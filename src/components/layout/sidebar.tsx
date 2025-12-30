@@ -25,6 +25,7 @@ import {
 import { usePlan } from '@/hooks/use-plan';
 import { useAccess } from '@/hooks/use-access';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
+import { useFeatures } from '@/contexts/FeatureContext';
 import type { ObjectType } from '@/lib/salesforce-inspired-security';
 
 // Type definitions for navigation items with tab-based permissions
@@ -55,7 +56,7 @@ const navigationItems: NavigationItem[] = [
     href: '/dashboard', 
     icon: LayoutDashboard, 
     badge: null,
-    featureKey: 'dashboard',
+    featureKey: null, // Dashboard available to all
     permission: 'canViewAllProperties' as const, // Dashboard accessible if can view properties
   },
   { 
@@ -63,7 +64,7 @@ const navigationItems: NavigationItem[] = [
     href: '/properties', 
     icon: Building2, 
     badge: null,
-    featureKey: 'properties_management',
+    featureKey: 'property_management',
     permission: 'canViewAllProperties' as const,
   },
   { 
@@ -71,7 +72,7 @@ const navigationItems: NavigationItem[] = [
     href: '/units', 
     icon: Home, 
     badge: null,
-    featureKey: 'units_management',
+    featureKey: 'property_management', // Same as properties
     permission: 'canViewAllUnits' as const,
   },
   { 
@@ -79,7 +80,7 @@ const navigationItems: NavigationItem[] = [
     href: '/tenants', 
     icon: Users, 
     badge: null,
-    featureKey: 'tenants_basic',
+    featureKey: 'tenant_management',
     permission: 'canViewAllTenants' as const,
   },
   { 
@@ -87,7 +88,7 @@ const navigationItems: NavigationItem[] = [
     href: '/owners', 
     icon: UserCircle, 
     badge: null,
-    featureKey: null, // No specific feature requirement
+    featureKey: 'property_management', // Related to property management
     permission: 'canViewAllProperties' as const, // Owners accessible if can view properties
   },
   { 
@@ -95,7 +96,7 @@ const navigationItems: NavigationItem[] = [
     href: '/leases', 
     icon: FileText, 
     badge: null,
-    featureKey: 'leases_basic',
+    featureKey: 'lease_management',
     permission: 'canViewAllLeases' as const,
   },
   { 
@@ -103,7 +104,7 @@ const navigationItems: NavigationItem[] = [
     href: '/payments', 
     icon: CreditCard, 
     badge: 5,
-    featureKey: 'payments_manual_entry',
+    featureKey: 'rent_collection',
     permission: 'canViewAllPayments' as const,
     subItems: [
       { 
@@ -122,7 +123,7 @@ const navigationItems: NavigationItem[] = [
         objectType: 'Payment',
         objectAction: 'read',
         // Optional: Can require additional permission for owner transfers
-        // featureKey: 'payments_all_methods', // Example: requires higher plan feature
+        // featureKey: 'owner_payments', // Example: requires higher plan feature
       },
     ]
   },
@@ -131,7 +132,7 @@ const navigationItems: NavigationItem[] = [
     href: '/accounting', 
     icon: Calculator, 
     badge: null,
-    featureKey: 'accounting_sycoda_basic',
+    featureKey: 'accounting',
     permission: 'canViewAccounting' as const,
   },
   { 
@@ -139,7 +140,7 @@ const navigationItems: NavigationItem[] = [
     href: '/tasks', 
     icon: CheckSquare, 
     badge: 12,
-    featureKey: 'basic_tasks',
+    featureKey: 'maintenance_requests',
     permission: 'canViewAllTasks' as const,
   },
   { 
@@ -155,7 +156,7 @@ const navigationItems: NavigationItem[] = [
     href: '/settings',
     icon: Settings,
     badge: null,
-    featureKey: null,
+    featureKey: null, // Settings available to all
     permission: 'canViewSettings' as const,
   },
 ];
@@ -167,7 +168,8 @@ function SidebarContent() {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const { limits, currentUsage, plan, definition } = usePlan();
-  const { canAccessFeature, canPerformAction, canAccessObject, hasFeature } = useAccess();
+  const { canAccessFeature, canPerformAction, canAccessObject } = useAccess();
+  const { isFeatureEnabled } = useFeatures();
   const { isSuperAdmin } = useSuperAdmin();
   
   // Check if user is admin (can edit Organization)
@@ -178,7 +180,7 @@ function SidebarContent() {
    */
   const canAccessSubItem = (subItem: SubItem): boolean => {
     // If sub-item has a feature requirement, check it first
-    if (subItem.featureKey && !hasFeature(subItem.featureKey)) {
+    if (subItem.featureKey && !isFeatureEnabled(subItem.featureKey)) {
       return false;
     }
 
@@ -232,7 +234,7 @@ function SidebarContent() {
       // If feature is required, check both feature and permission
       if (item.featureKey) {
         // First check if feature is enabled in plan - if not, don't show item
-        if (!hasFeature(item.featureKey)) {
+        if (!isFeatureEnabled(item.featureKey)) {
           return false;
         }
         
