@@ -47,7 +47,12 @@ import {
   Building2,
   Filter,
   LogOut,
+  Grid3x3,
+  List,
+  Info,
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { useDataQuery } from '@/hooks/use-query';
 import { toast } from 'sonner';
 import { AccessDenied } from '@/components/ui/access-denied';
@@ -103,6 +108,30 @@ async function getOrganizations(): Promise<Organization[]> {
   return data.organizations || [];
 }
 
+// Fetch permissions for a profile
+async function getProfilePermissions(profileId: string) {
+  const response = await fetch(`/api/admin/profiles/${profileId}/permissions`, {
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch profile permissions');
+  }
+  const data = await response.json();
+  return data.permissions || [];
+}
+
+interface ProfilePermission {
+  id: string;
+  profileId: string;
+  objectType: string;
+  accessLevel: 'None' | 'Read' | 'ReadWrite' | 'All';
+  canCreate: boolean;
+  canRead: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canViewAll: boolean;
+}
+
 export default function ProfilesPage() {
   const router = useRouter();
   const { canPerformAction, canAccessObject } = useAccess();
@@ -124,6 +153,9 @@ export default function ProfilesPage() {
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileDescription, setNewProfileDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'permissions'>('list');
+  const [permissionsData, setPermissionsData] = useState<Record<string, ProfilePermission[]>>({});
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
 
   // Fetch organizations for super admin
   const { data: organizations } = useDataQuery(
@@ -137,6 +169,31 @@ export default function ProfilesPage() {
     ['profiles', selectedOrganizationId || 'all', showAll.toString()],
     () => getProfiles(selectedOrganizationId, showAll && !!isSuperAdmin)
   );
+
+  // Fetch permissions for all profiles when in permissions view
+  useEffect(() => {
+    if (viewMode === 'permissions' && profiles && profiles.length > 0) {
+      setIsLoadingPermissions(true);
+      Promise.all(
+        profiles.map(async (profile: Profile) => {
+          try {
+            const permissions = await getProfilePermissions(profile.id);
+            return { profileId: profile.id, permissions };
+          } catch (error) {
+            console.error(`Error fetching permissions for profile ${profile.id}:`, error);
+            return { profileId: profile.id, permissions: [] };
+          }
+        })
+      ).then((results) => {
+        const permissionsMap: Record<string, ProfilePermission[]> = {};
+        results.forEach(({ profileId, permissions }) => {
+          permissionsMap[profileId] = permissions;
+        });
+        setPermissionsData(permissionsMap);
+        setIsLoadingPermissions(false);
+      });
+    }
+  }, [viewMode, profiles]);
 
   // Check access: Super admin OR can edit Profile object OR canViewSettings
   const canEditProfile = canAccessObject('Profile', 'edit');
@@ -281,14 +338,36 @@ export default function ProfilesPage() {
                   {profiles?.length || 0} profil(s) configuré(s)
                 </CardDescription>
               </div>
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Rechercher un profil..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="flex items-center gap-4">
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Rechercher un profil..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
+                  >
+                    <List className="h-4 w-4 mr-2" />
+                    Liste
+                  </Button>
+                  <Button
+                    variant={viewMode === 'permissions' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('permissions')}
+                    className={viewMode === 'permissions' ? 'bg-white shadow-sm' : ''}
+                  >
+                    <Grid3x3 className="h-4 w-4 mr-2" />
+                    Permissions
+                  </Button>
+                </div>
               </div>
             </div>
             {isSuperAdmin && (
@@ -338,7 +417,7 @@ export default function ProfilesPage() {
             <div className="text-center py-12 text-gray-500">
               {searchQuery ? 'Aucun profil trouvé' : 'Aucun profil configuré'}
             </div>
-          ) : (
+          ) : viewMode === 'list' ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -428,6 +507,142 @@ export default function ProfilesPage() {
                 ))}
               </TableBody>
             </Table>
+          ) : (
+            // Permissions Matrix View
+            <div className="space-y-4">
+              {isLoadingPermissions ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Chargement des permissions...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 sticky left-0 bg-gray-50 z-10 min-w-[200px]">
+                              Profil / Objet
+                            </th>
+                            {['Property', 'Unit', 'Tenant', 'Lease', 'Payment', 'Task', 'Message', 'JournalEntry', 'User', 'Organization', 'Profile'].map((objectType) => (
+                              <th key={objectType} className="px-3 py-3 text-center text-xs font-medium text-gray-700 min-w-[100px]">
+                                {objectType}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {filteredProfiles.map((profile: Profile) => {
+                            const permissions = permissionsData[profile.id] || [];
+                            const permissionsMap = new Map(permissions.map(p => [p.objectType, p]));
+                            
+                            return (
+                              <tr key={profile.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 sticky left-0 bg-white z-10 border-r">
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-gray-400" />
+                                    <div>
+                                      <div className="font-medium text-sm text-gray-900">{profile.name}</div>
+                                      {profile.description && (
+                                        <div className="text-xs text-gray-500">{profile.description}</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                {['Property', 'Unit', 'Tenant', 'Lease', 'Payment', 'Task', 'Message', 'JournalEntry', 'User', 'Organization', 'Profile'].map((objectType) => {
+                                  const perm = permissionsMap.get(objectType);
+                                  if (!perm) {
+                                    return (
+                                      <td key={objectType} className="px-3 py-3 text-center">
+                                        <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                                          None
+                                        </Badge>
+                                      </td>
+                                    );
+                                  }
+                                  
+                                  const getAccessLevelBadge = (level: string) => {
+                                    switch (level) {
+                                      case 'All':
+                                        return <Badge className="bg-green-100 text-green-800 border-green-200">All</Badge>;
+                                      case 'ReadWrite':
+                                        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">RW</Badge>;
+                                      case 'Read':
+                                        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">R</Badge>;
+                                      case 'None':
+                                        return <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">None</Badge>;
+                                      default:
+                                        return <Badge variant="outline">{level}</Badge>;
+                                    }
+                                  };
+                                  
+                                  return (
+                                    <td key={objectType} className="px-3 py-3 text-center">
+                                      <div className="flex flex-col items-center gap-1">
+                                        {getAccessLevelBadge(perm.accessLevel)}
+                                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                                          {perm.canCreate && <span className="text-green-600" title="Create">C</span>}
+                                          {perm.canRead && <span className="text-blue-600" title="Read">R</span>}
+                                          {perm.canEdit && <span className="text-orange-600" title="Edit">E</span>}
+                                          {perm.canDelete && <span className="text-red-600" title="Delete">D</span>}
+                                          {perm.canViewAll && <span className="text-purple-600" title="View All">V</span>}
+                                        </div>
+                                      </div>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="flex items-center gap-6 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Légende:</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1">
+                        <Badge className="bg-green-100 text-green-800 border-green-200">All</Badge>
+                        <span>Accès complet</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-200">RW</Badge>
+                        <span>Lecture/Écriture</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">R</Badge>
+                        <span>Lecture seule</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-green-600 font-semibold">C</span>
+                        <span>Create</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-blue-600 font-semibold">R</span>
+                        <span>Read</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-orange-600 font-semibold">E</span>
+                        <span>Edit</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-red-600 font-semibold">D</span>
+                        <span>Delete</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-purple-600 font-semibold">V</span>
+                        <span>View All</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
