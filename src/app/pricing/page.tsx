@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,16 +23,42 @@ import {
   Mail,
   MapPin,
   ChevronDown,
+  Loader2,
 } from 'lucide-react';
 
-const plans = [
+interface PlanFeature {
+  text: string;
+  included: boolean;
+}
+
+interface PricingPlan {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  priceMonthly: string;
+  priceYearly: string;
+  priceType: 'fixed' | 'custom';
+  features: PlanFeature[];
+  limits: {
+    lots: number | null;
+    users: number | null;
+    extranetTenants: number | null;
+  };
+  isActive: boolean;
+  popular?: boolean;
+}
+
+// Fallback plans in case API fails
+const fallbackPlans: PricingPlan[] = [
   {
-    name: 'Starter',
+    id: '',
+    name: 'starter',
+    displayName: 'Starter',
     description: 'Parfait pour débuter',
     priceMonthly: '0',
-    priceAnnual: '0',
-    cta: 'Essai gratuit',
-    ctaColor: 'default',
+    priceYearly: '0',
+    priceType: 'fixed',
     features: [
       { text: 'Lots: 1', included: true },
       { text: 'Utilisateurs: 1', included: true },
@@ -43,15 +69,18 @@ const plans = [
       { text: 'Paiements Wave/Orange', included: true },
       { text: 'Comptabilité SYSCOHADA', included: false },
     ],
+    limits: { lots: 1, users: 1, extranetTenants: 5 },
+    isActive: true,
     popular: false,
   },
   {
-    name: 'Essentiel',
+    id: '',
+    name: 'essentiel',
+    displayName: 'Essentiel',
     description: 'Pour les petites agences',
-    priceMonthly: '15,000',
-    priceAnnual: '12,000',
-    cta: 'Choisir ce plan',
-    ctaColor: 'default',
+    priceMonthly: '15000',
+    priceYearly: '12000',
+    priceType: 'fixed',
     features: [
       { text: 'Lots: 25', included: true },
       { text: 'Utilisateurs: 3', included: true },
@@ -62,15 +91,18 @@ const plans = [
       { text: 'Génération DGF', included: true },
       { text: 'Support prioritaire', included: true },
     ],
+    limits: { lots: 25, users: 3, extranetTenants: 25 },
+    isActive: true,
     popular: false,
   },
   {
-    name: 'Agence',
+    id: '',
+    name: 'agency',
+    displayName: 'Agence',
     description: 'Pour les agences établies',
-    priceMonthly: '35,000',
-    priceAnnual: '28,000',
-    cta: 'Choisir ce plan',
-    ctaColor: 'orange',
+    priceMonthly: '35000',
+    priceYearly: '28000',
+    priceType: 'fixed',
     features: [
       { text: 'Lots: 100', included: true },
       { text: 'Utilisateurs: 10', included: true },
@@ -81,15 +113,18 @@ const plans = [
       { text: 'API complète', included: true },
       { text: 'Formation incluse', included: true },
     ],
+    limits: { lots: 100, users: 10, extranetTenants: 100 },
+    isActive: true,
     popular: true,
   },
   {
-    name: 'Syndic',
+    id: '',
+    name: 'syndic',
+    displayName: 'Syndic',
     description: 'Pour les syndics',
-    priceMonthly: '50,000',
-    priceAnnual: '40,000',
-    cta: 'Choisir ce plan',
-    ctaColor: 'default',
+    priceMonthly: '50000',
+    priceYearly: '40000',
+    priceType: 'fixed',
     features: [
       { text: 'Lots: 300', included: true },
       { text: 'Utilisateurs: 25', included: true },
@@ -100,15 +135,18 @@ const plans = [
       { text: 'Assemblées générales', included: true },
       { text: 'Support dédié', included: true },
     ],
+    limits: { lots: 300, users: 25, extranetTenants: 300 },
+    isActive: true,
     popular: false,
   },
   {
-    name: 'Enterprise',
+    id: '',
+    name: 'enterprise',
+    displayName: 'Enterprise',
     description: 'Marque blanche',
-    priceMonthly: 'Sur devis',
-    priceAnnual: 'Sur devis',
-    cta: 'Nous contacter',
-    ctaColor: 'green',
+    priceMonthly: 'custom',
+    priceYearly: 'custom',
+    priceType: 'custom',
     features: [
       { text: 'Lots: Illimité', included: true },
       { text: 'Utilisateurs: Illimité', included: true },
@@ -119,6 +157,8 @@ const plans = [
       { text: 'Support 24/7', included: true },
       { text: 'Déploiement dédié', included: true },
     ],
+    limits: { lots: null, users: null, extranetTenants: null },
+    isActive: true,
     popular: false,
   },
 ];
@@ -141,14 +181,63 @@ const faqs = [
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(true);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchPlans() {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/public/pricing');
+        if (!response.ok) {
+          throw new Error('Failed to fetch plans');
+        }
+        const data = await response.json();
+        setPlans(data.plans || []);
+      } catch (err) {
+        console.error('Error fetching plans:', err);
+        setError('Erreur lors du chargement des plans');
+        // Use fallback plans if API fails
+        setPlans(fallbackPlans);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchPlans();
+  }, []);
 
   const formatPrice = (price: string, isAnnual: boolean) => {
-    if (price === 'Sur devis') return price;
+    if (price === 'Sur devis' || price === 'custom') return 'Sur devis';
     if (price === '0') return '0 FCFA /mois';
     const numPrice = parseInt(price.replace(/,/g, ''));
-    const monthlyPrice = isAnnual ? Math.round(numPrice * 0.8) : numPrice;
-    return `${monthlyPrice.toLocaleString('fr-FR')} FCFA /mois`;
+    const displayPrice = isAnnual && numPrice > 0 ? Math.round(numPrice * 0.8) : numPrice;
+    return `${displayPrice.toLocaleString('fr-FR')} FCFA /mois`;
   };
+
+  const getCtaText = (plan: PricingPlan) => {
+    if (plan.priceType === 'custom' || plan.name.toLowerCase() === 'enterprise' || plan.name.toLowerCase() === 'enterprise') {
+      return 'Nous contacter';
+    }
+    return 'Essai gratuit';
+  };
+
+  const getCtaColor = (plan: PricingPlan) => {
+    if (plan.popular) return 'orange';
+    if (plan.priceType === 'custom') return 'green';
+    return 'default';
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Chargement des plans...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -246,11 +335,11 @@ export default function PricingPage() {
                 )}
 
                 <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-xl font-bold">{plan.name}</CardTitle>
+                  <CardTitle className="text-xl font-bold">{plan.displayName}</CardTitle>
                   <CardDescription className="text-sm">{plan.description}</CardDescription>
                   <div className="mt-4">
                     <div className="text-3xl font-bold text-gray-900">
-                      {formatPrice(plan.priceMonthly, isAnnual)}
+                      {formatPrice(isAnnual ? plan.priceYearly : plan.priceMonthly, isAnnual)}
                     </div>
                   </div>
                 </CardHeader>
@@ -273,17 +362,17 @@ export default function PricingPage() {
 
                   <Button
                     className={`w-full ${
-                      plan.ctaColor === 'orange'
+                      getCtaColor(plan) === 'orange'
                         ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                        : plan.ctaColor === 'green'
+                        : getCtaColor(plan) === 'green'
                         ? 'bg-green-600 hover:bg-green-700 text-white'
                         : 'bg-blue-600 hover:bg-blue-700 text-white'
                     }`}
                     size="lg"
                     asChild
                   >
-                    <Link href={plan.name === 'Enterprise' ? '/contact' : '/auth/sign-up'}>
-                      {plan.cta}
+                    <Link href={plan.priceType === 'custom' || plan.name.toLowerCase() === 'enterprise' ? '/contact' : '/auth/sign-up'}>
+                      {getCtaText(plan)}
                     </Link>
                   </Button>
                 </CardContent>
