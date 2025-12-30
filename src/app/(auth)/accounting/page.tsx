@@ -39,6 +39,8 @@ import { usePlan } from '@/hooks/use-plan';
 import { useAccess } from '@/hooks/use-access';
 import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
+import { PageLoader } from '@/components/ui/page-loader';
+import { usePageAccess } from '@/hooks/use-page-access';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -78,7 +80,7 @@ async function getBalanceEvolution() {
 }
 
 export default function AccountingPage() {
-  const { canAccessFeature } = useAccess();
+  const { canAccessFeature, isLoading: isAccessLoading } = usePageAccess();
   const [currentPage, setCurrentPage] = useState(1);
   const [accountFilter, setAccountFilter] = useState<string>('all');
   
@@ -86,6 +88,11 @@ export default function AccountingPage() {
     ['journal-entries', currentPage.toString(), accountFilter],
     () => getJournalEntries(currentPage, accountFilter === 'all' ? undefined : accountFilter)
   );
+
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
 
   // Double vérification : Plan (feature) + Rôle (permission)
   // Doit être après tous les hooks pour respecter les Rules of Hooks

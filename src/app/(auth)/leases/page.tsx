@@ -9,6 +9,8 @@ import { usePlan } from '@/hooks/use-plan';
 import { useAccess } from '@/hooks/use-access';
 import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
+import { PageLoader } from '@/components/ui/page-loader';
+import { usePageAccess } from '@/hooks/use-page-access';
 import { format, parseISO, isAfter, isBefore, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -24,11 +26,15 @@ async function getLeases() {
 }
 
 export default function LeasesPage() {
-  const { canAccessFeature, canAccessObject } = useAccess();
+  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const { data: leases, isLoading } = useDataQuery(['leases'], getLeases);
 
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
+
   // Check access: user needs either canViewAllLeases OR canRead access
-  // Doit être après tous les hooks pour respecter les Rules of Hooks
   const hasViewAllAccess = canAccessFeature('leases_basic', 'canViewAllLeases');
   const hasReadAccess = canAccessObject('Lease', 'read');
   

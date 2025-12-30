@@ -20,8 +20,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 
 export default function AdminPage() {
-  const { canPerformAction, canAccessObject } = useAccess();
-  const { isSuperAdmin } = useSuperAdmin();
+  const { canPerformAction, canAccessObject, isLoading: isAccessLoading } = useAccess();
+  const { isSuperAdmin, isLoading: isSuperAdminLoading } = useSuperAdmin();
   const { signOut } = useAuth();
   const router = useRouter();
 
@@ -33,6 +33,18 @@ export default function AdminPage() {
       console.error('Logout error:', error);
     }
   };
+
+  // Wait for data to load before checking access
+  if (isAccessLoading || isSuperAdminLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+          <p className="text-sm text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Check if user has admin access (can edit Organization)
   const isAdmin = canAccessObject('Organization', 'edit');

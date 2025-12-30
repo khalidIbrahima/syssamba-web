@@ -15,10 +15,16 @@ import { Loader2 } from 'lucide-react';
  */
 export function AppLoader({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
+  const [minLoadTimeElapsed, setMinLoadTimeElapsed] = useState(false);
   
   // Ensure component is mounted on client side
   useEffect(() => {
     setIsMounted(true);
+    // Ensure minimum load time of 500ms to prevent flash
+    const minTimer = setTimeout(() => {
+      setMinLoadTimeElapsed(true);
+    }, 500);
+    return () => clearTimeout(minTimer);
   }, []);
 
   // Use hooks - they require QueryClientProvider to be in the component tree
@@ -27,21 +33,29 @@ export function AppLoader({ children }: { children: React.ReactNode }) {
   const { isLoading: isAccessLoading } = useAccess();
   const { isLoading: isOrganizationLoading } = useOrganization();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [dataReady, setDataReady] = useState(false);
 
-  // Track if this is the initial load
+  // Track when data is actually loaded
   useEffect(() => {
     if (isMounted && !isPlanLoading && !isAccessLoading && !isOrganizationLoading) {
-      // Add a small delay to ensure smooth transition
-      const timer = setTimeout(() => {
-        setIsInitialLoad(false);
-      }, 300);
-      return () => clearTimeout(timer);
+      setDataReady(true);
     }
   }, [isMounted, isPlanLoading, isAccessLoading, isOrganizationLoading]);
 
+  // Only hide loader when BOTH data is ready AND minimum time has elapsed
+  useEffect(() => {
+    if (dataReady && minLoadTimeElapsed) {
+      // Add a small transition delay
+      const timer = setTimeout(() => {
+        setIsInitialLoad(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [dataReady, minLoadTimeElapsed]);
+
   // Show loading screen while data is being fetched or component is not mounted
   // Use suppressHydrationWarning to ignore differences caused by browser extensions (e.g., Dark Reader)
-  const isLoading = !isMounted || isInitialLoad || isPlanLoading || isAccessLoading || isOrganizationLoading;
+  const isLoading = !isMounted || isInitialLoad || isPlanLoading || isAccessLoading || isOrganizationLoading || !dataReady || !minLoadTimeElapsed;
   
   if (isLoading) {
     return (

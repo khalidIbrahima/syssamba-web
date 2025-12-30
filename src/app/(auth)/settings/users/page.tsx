@@ -59,6 +59,8 @@ import { useDataQuery } from '@/hooks/use-query';
 import { usePlan } from '@/hooks/use-plan';
 import { useAccess } from '@/hooks/use-access';
 import { AccessDenied } from '@/components/ui/access-denied';
+import { PageLoader } from '@/components/ui/page-loader';
+import { usePageAccess } from '@/hooks/use-page-access';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -170,38 +172,10 @@ type CreateRoleFormValues = z.infer<typeof createRoleSchema>;
 
 // Role definitions with descriptions
 const roleDefinitions = [
-  {
-    role: 'admin',
-    label: 'Administrateur',
-    color: 'bg-red-100 text-red-800 border-red-200',
-    description: 'Accès complet à toutes les fonctionnalités',
-    keywords: ['Tous les accès', 'Gestion complète'],
-  },
-  {
-    role: 'agent',
-    label: 'Gestionnaire',
-    color: 'bg-blue-100 text-blue-800 border-blue-200',
-    description: 'Gestion des biens et locataires',
-    keywords: ['Biens', 'Locataires', 'Contrats'],
-  },
-  {
-    role: 'accountant',
-    label: 'Agent',
-    color: 'bg-green-100 text-green-800 border-green-200',
-    description: 'Visites et prospection',
-    keywords: ['Visites', 'Prospects'],
-  },
-  {
-    role: 'viewer',
-    label: 'Comptable',
-    color: 'bg-purple-100 text-purple-800 border-purple-200',
-    description: 'Comptabilité et finances',
-    keywords: ['Comptabilité', 'Paiements'],
-  },
 ];
 
 export default function UsersPage() {
-  const { canPerformAction } = useAccess();
+  const { canPerformAction, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const { limits, plan } = usePlan();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
@@ -249,7 +223,6 @@ export default function UsersPage() {
   const users = data?.users || [];
   const invitations = data?.invitations || [];
   const totalCount = data?.totalCount || 0;
-  const { canAccessObject } = useAccess();
   const stats = statsData?.stats || { activeUsers: 0, extranetTenants: 0, roleCounts: {} };
   const planInfo = statsData?.plan || { usersLimit: 15, extranetTenantsLimit: 100, customDomain: null };
   const activities = activitiesData?.activities || [];
@@ -258,6 +231,11 @@ export default function UsersPage() {
 
   // Get plan features
   const planFeatures = planFeaturesData?.features || [];
+
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
   
   // Group features by category
   const featuresByCategory = planFeatures.reduce((acc: any, feature: any) => {

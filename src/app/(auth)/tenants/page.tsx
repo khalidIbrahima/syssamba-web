@@ -37,7 +37,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { usePlan } from '@/hooks/use-plan';
-import { useAccess } from '@/hooks/use-access';
+import { usePageAccess } from '@/hooks/use-page-access';
+import { PageLoader } from '@/components/ui/page-loader';
 import { useDataQuery } from '@/hooks/use-query';
 import { useOrganization } from '@/hooks/use-organization';
 import { AccessDenied } from '@/components/ui/access-denied';
@@ -59,7 +60,7 @@ async function getTenants() {
 }
 
 export default function TenantsPage() {
-  const { canAccessFeature } = useAccess();
+  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const { limits, currentUsage } = usePlan();
   const { organizationId } = useOrganization();
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,9 +74,12 @@ export default function TenantsPage() {
 
   const { data: tenants, isLoading } = useDataQuery(['tenants'], getTenants);
 
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
+
   // Check access: user needs either canViewAllTenants OR canRead access
-  // Doit être après tous les hooks pour respecter les Rules of Hooks
-  const { canAccessObject } = useAccess();
   const hasViewAllAccess = canAccessFeature('tenants_basic', 'canViewAllTenants');
   const hasReadAccess = canAccessObject('Tenant', 'read');
   const canCreate = canAccessObject('Tenant', 'create');

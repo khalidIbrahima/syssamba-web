@@ -53,6 +53,8 @@ import { useOrganization } from '@/hooks/use-organization';
 import { useAuth } from '@/hooks/use-auth';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { AccessDeniedAction } from '@/components/ui/access-denied-action';
+import { PageLoader } from '@/components/ui/page-loader';
+import { usePageAccess } from '@/hooks/use-page-access';
 import { format, parseISO, isToday, isTomorrow, isPast, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -274,13 +276,18 @@ function SortableTaskCard({ task }: { task: any }) {
 }
 
 export default function TasksPage() {
-  const { canAccessFeature, canAccessObject } = useAccess();
+  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const { organizationId, isLoading: isLoadingOrg } = useOrganization();
   const { userId } = useAuth();
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeId, setActiveId] = useState<string | null>(null);
   const { data: tasks, isLoading } = useDataQuery(['tasks'], getTasks);
   const queryClient = useQueryClient();
+
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
 
   // Enable real-time updates for tasks
   // Pass only organizationId to listen to all tasks in the organization

@@ -129,17 +129,12 @@ export default function SignInPage() {
       const isOrganizationConfigured = data.organizationConfigured !== false;
       
       if (isAdmin) {
-        // Admin/Super-admin without organization should select one (for super-admin)
-        if (isSuperAdmin && !hasOrganization) {
-          redirectUrl = '/admin/select-organization';
+        // Admin/Super-admin - always go to /admin
+        const redirectParam = new URLSearchParams(window.location.search).get('redirect');
+        if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('/auth')) {
+          redirectUrl = redirectParam;
         } else {
-          // Admin/Super-admin - go to /admin or custom redirect
-          const redirectParam = new URLSearchParams(window.location.search).get('redirect');
-          if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('/auth')) {
-            redirectUrl = redirectParam;
-          } else {
-            redirectUrl = '/admin'; // Default page for admin users
-          }
+          redirectUrl = '/admin'; // Default page for admin users
         }
       } else if (!hasOrganization) {
         // Regular user: no organization - redirect to setup

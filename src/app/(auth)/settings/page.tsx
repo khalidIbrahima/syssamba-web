@@ -8,13 +8,19 @@ import { Settings, Users, CreditCard, Globe, Shield, Bell, UserCog } from 'lucid
 import { usePlan } from '@/hooks/use-plan';
 import { useAccess } from '@/hooks/use-access';
 import { AccessDenied } from '@/components/ui/access-denied';
+import { PageLoader } from '@/components/ui/page-loader';
+import { usePageAccess } from '@/hooks/use-page-access';
 
 export default function SettingsPage() {
-  const { canPerformAction } = useAccess();
+  const { canPerformAction, isLoading: isAccessLoading } = usePageAccess();
   const { plan, limits } = usePlan();
 
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
+
   // Check access using same criteria as sidebar
-  // Doit être après tous les hooks pour respecter les Rules of Hooks
   if (!canPerformAction('canViewSettings')) {
     return (
       <AccessDenied

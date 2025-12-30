@@ -20,6 +20,8 @@ import {
 import { useDataQuery } from '@/hooks/use-query';
 import { useAccess } from '@/hooks/use-access';
 import { AccessDenied } from '@/components/ui/access-denied';
+import { PageLoader } from '@/components/ui/page-loader';
+import { usePageAccess } from '@/hooks/use-page-access';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import Link from 'next/link';
 import { useUser } from '@/hooks/use-user';
@@ -36,13 +38,16 @@ async function getDashboardData() {
 }
 
 export default function DashboardPage() {
-  const { canAccessFeature } = useAccess();
+  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const { user } = useUser();
   const { data, isLoading } = useDataQuery(['dashboard-data'], getDashboardData);
 
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
+
   // Check access: user needs either canViewAllProperties OR canRead access on Property
-  // Doit être après tous les hooks pour respecter les Rules of Hooks
-  const { canAccessObject } = useAccess();
   const hasViewAllAccess = canAccessFeature('dashboard', 'canViewAllProperties');
   const hasReadAccess = canAccessObject('Property', 'read');
   

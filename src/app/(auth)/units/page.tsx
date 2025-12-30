@@ -49,10 +49,11 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { usePlan } from '@/hooks/use-plan';
-import { useAccess } from '@/hooks/use-access';
+import { usePageAccess } from '@/hooks/use-page-access';
 import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { AccessDeniedAction } from '@/components/ui/access-denied-action';
+import { PageLoader } from '@/components/ui/page-loader';
 import dynamic from 'next/dynamic';
 
 // Dynamically import the map component to avoid SSR issues
@@ -87,7 +88,7 @@ const statusLabels = {
 };
 
 export default function UnitsPage() {
-  const { canAccessFeature, canAccessObject } = useAccess();
+  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [cityFilter, setCityFilter] = useState('all');
@@ -100,6 +101,11 @@ export default function UnitsPage() {
   const itemsPerPage = 5;
 
   const { data: units, isLoading } = useDataQuery(['units'], getUnits);
+
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
 
   // Check access: user needs either canViewAllUnits OR canRead access
   // Doit être après tous les hooks pour respecter les Rules of Hooks

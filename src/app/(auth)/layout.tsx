@@ -41,17 +41,12 @@ export default async function AuthLayout({
       const userIsSuperAdmin = await isSuperAdmin(user.id);
 
       if (userIsSuperAdmin) {
-        // Super admin: special handling for organization selection
+        // Super admin: always allow access to admin pages
+        // If not on admin page, redirect to /admin
         if (!isAdminPage) {
-          // If no organization selected, redirect to select organization
-          if (!user.organizationId) {
-            redirect('/admin/select-organization');
-          } else {
-            // If organization selected, redirect to /admin (default page)
-            redirect('/admin');
-          }
+          redirect('/admin');
         }
-        // If already on admin pages (including select-organization), allow access
+        // If already on admin pages, allow access
       } else {
         // Regular user: if no organization, redirect to setup
         // If user has organization, allow access (don't redirect to setup)

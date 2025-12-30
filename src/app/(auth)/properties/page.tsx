@@ -22,10 +22,11 @@ import {
   Filter,
 } from 'lucide-react';
 import { usePlan } from '@/hooks/use-plan';
-import { useAccess } from '@/hooks/use-access';
+import { usePageAccess } from '@/hooks/use-page-access';
 import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { AccessDeniedAction } from '@/components/ui/access-denied-action';
+import { PageLoader } from '@/components/ui/page-loader';
 
 // Fetch properties from API
 async function getProperties() {
@@ -40,7 +41,7 @@ async function getProperties() {
 }
 
 export default function PropertiesPage() {
-  const { canAccessFeature, canAccessObject } = useAccess();
+  const { canAccessFeature, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const [currentPage, setCurrentPage] = useState(1);
   const [propertyType, setPropertyType] = useState('all');
   const [city, setCity] = useState('all');
@@ -51,8 +52,12 @@ export default function PropertiesPage() {
   const itemsPerPage = 6;
   const totalPages = Math.ceil(totalProperties / itemsPerPage);
 
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
+
   // Check access: user needs either canViewAllProperties OR canRead access
-  // Doit être après tous les hooks pour respecter les Rules of Hooks
   const hasViewAllAccess = canAccessFeature('properties_management', 'canViewAllProperties');
   const hasReadAccess = canAccessObject('Property', 'read');
   const canCreate = canAccessObject('Property', 'create');

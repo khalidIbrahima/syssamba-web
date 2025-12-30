@@ -60,6 +60,8 @@ import { useAccess } from '@/hooks/use-access';
 import { useTabPermission } from '@/hooks/use-tab-permission';
 import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
+import { PageLoader } from '@/components/ui/page-loader';
+import { usePageAccess } from '@/hooks/use-page-access';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -112,10 +114,15 @@ async function getTenantPayments(params: {
 }
 
 export default function PaymentsPage() {
-  const { canAccessFeature } = useAccess();
+  const { canAccessFeature, isLoading: isAccessLoading } = usePageAccess();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('tenant-payments');
+
+  // Wait for access data to load
+  if (isAccessLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
 
   // Check tab permissions
   const canAccessTenantPayments = useTabPermission({
