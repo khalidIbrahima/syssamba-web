@@ -42,6 +42,7 @@ import { AccessDenied } from '@/components/ui/access-denied';
 import { PageLoader } from '@/components/ui/page-loader';
 import { usePageAccess } from '@/hooks/use-page-access';
 import { FeatureGate } from '@/components/features/FeatureGate';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -503,6 +504,7 @@ export default function AccountingPage() {
         </div>
       </div>
     </div>
+      </PermissionGate>
     </FeatureGate>
   );
 }

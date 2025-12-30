@@ -43,6 +43,7 @@ import { useDataQuery } from '@/hooks/use-query';
 import { useOrganization } from '@/hooks/use-organization';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { FeatureGate } from '@/components/features/FeatureGate';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -236,32 +237,49 @@ export default function TenantsPage() {
       feature="tenant_management"
       showUpgrade={true}
     >
-      <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Annuaire des Locataires</h1>
-          <p className="text-gray-600 mt-1">
-            {isLoading ? (
-              'Chargement...'
-            ) : (
-              `Gérez vos ${totalTenants} locataire${totalTenants > 1 ? 's' : ''} avec recherche et filtres avancés`
-            )}
-          </p>
+      <PermissionGate
+        objectType="Tenant"
+        action="read"
+        showDenied={true}
+        deniedMessage="Vous n'avez pas la permission de voir les locataires."
+      >
+        <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Annuaire des Locataires</h1>
+            <p className="text-gray-600 mt-1">
+              {isLoading ? (
+                'Chargement...'
+              ) : (
+                `Gérez vos ${totalTenants} locataire${totalTenants > 1 ? 's' : ''} avec recherche et filtres avancés`
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Exporter
+            </Button>
+            <PermissionGate
+              objectType="Tenant"
+              action="create"
+              fallback={
+                <Button disabled title="Permission requise pour créer des locataires">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouveau locataire
+                </Button>
+              }
+            >
+              <Button asChild>
+                <Link href="/tenants/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouveau locataire
+                </Link>
+              </Button>
+            </PermissionGate>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Exporter
-          </Button>
-          <Button asChild>
-            <Link href="/tenants/new">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouveau locataire
-            </Link>
-          </Button>
-        </div>
-      </div>
 
       {/* Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -639,6 +657,7 @@ export default function TenantsPage() {
         />
       )}
     </div>
+      </PermissionGate>
     </FeatureGate>
   );
 }

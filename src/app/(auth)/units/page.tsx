@@ -51,6 +51,7 @@ import {
 import { usePlan } from '@/hooks/use-plan';
 import { usePageAccess } from '@/hooks/use-page-access';
 import { FeatureGate } from '@/components/features/FeatureGate';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { useDataQuery } from '@/hooks/use-query';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { AccessDeniedAction } from '@/components/ui/access-denied-action';
@@ -167,7 +168,13 @@ export default function UnitsPage() {
       feature="property_management"
       showUpgrade={true}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <PermissionGate
+        objectType="Unit"
+        action="read"
+        showDenied={true}
+        deniedMessage="Vous n'avez pas la permission de voir les lots."
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Main Content */}
       <div className="lg:col-span-2 space-y-6">
         {/* Header */}
@@ -185,25 +192,29 @@ export default function UnitsPage() {
               <Upload className="h-4 w-4 mr-2" />
               Importer
             </Button>
-            {canCreate ? (
+            <PermissionGate
+              objectType="Unit"
+              action="create"
+              fallback={
+                <AccessDeniedAction
+                  requiredPermission="Créer des lots"
+                  reason="permission"
+                  featureName="Gestion des lots"
+                >
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white" disabled>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nouveau lot
+                  </Button>
+                </AccessDeniedAction>
+              }
+            >
               <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Link href="/units/new">
                   <Plus className="h-4 w-4 mr-2" />
                   Nouveau lot
                 </Link>
               </Button>
-            ) : (
-              <AccessDeniedAction
-                requiredPermission="Créer des lots"
-                reason="permission"
-                featureName="Gestion des lots"
-              >
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white" disabled>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nouveau lot
-                </Button>
-              </AccessDeniedAction>
-            )}
+            </PermissionGate>
           </div>
         </div>
 
@@ -639,6 +650,7 @@ export default function UnitsPage() {
         </Card>
       </div>
     </div>
+      </PermissionGate>
     </FeatureGate>
   );
 }

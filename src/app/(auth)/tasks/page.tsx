@@ -56,6 +56,7 @@ import { AccessDeniedAction } from '@/components/ui/access-denied-action';
 import { PageLoader } from '@/components/ui/page-loader';
 import { usePageAccess } from '@/hooks/use-page-access';
 import { FeatureGate } from '@/components/features/FeatureGate';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { format, parseISO, isToday, isTomorrow, isPast, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -635,6 +636,7 @@ export default function TasksPage() {
         </DragOverlay>
       </div>
     </DndContext>
+      </PermissionGate>
     </FeatureGate>
   );
 }

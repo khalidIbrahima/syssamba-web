@@ -12,6 +12,7 @@ import { AccessDenied } from '@/components/ui/access-denied';
 import { PageLoader } from '@/components/ui/page-loader';
 import { usePageAccess } from '@/hooks/use-page-access';
 import { FeatureGate } from '@/components/features/FeatureGate';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 import { format, parseISO, isAfter, isBefore, addDays, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -82,18 +83,35 @@ export default function LeasesPage() {
       feature="lease_management"
       showUpgrade={true}
     >
-      <div className="space-y-6">
+      <PermissionGate
+        objectType="Lease"
+        action="read"
+        showDenied={true}
+        deniedMessage="Vous n'avez pas la permission de voir les baux."
+      >
+        <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Baux</h1>
           <p className="text-gray-600">Gérez vos contrats de location</p>
         </div>
-        <Button asChild>
-          <Link href="/leases/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouveau bail
-          </Link>
-        </Button>
+        <PermissionGate
+          objectType="Lease"
+          action="create"
+          fallback={
+            <Button disabled title="Permission requise pour créer des baux">
+              <Plus className="h-4 w-4 mr-2" />
+              Nouveau bail
+            </Button>
+          }
+        >
+          <Button asChild>
+            <Link href="/leases/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Nouveau bail
+            </Link>
+          </Button>
+        </PermissionGate>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -264,6 +282,7 @@ export default function LeasesPage() {
         </CardContent>
       </Card>
     </div>
+      </PermissionGate>
     </FeatureGate>
   );
 }

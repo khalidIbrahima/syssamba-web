@@ -28,6 +28,7 @@ import { AccessDenied } from '@/components/ui/access-denied';
 import { AccessDeniedAction } from '@/components/ui/access-denied-action';
 import { PageLoader } from '@/components/ui/page-loader';
 import { FeatureGate } from '@/components/features/FeatureGate';
+import { PermissionGate } from '@/components/permissions/PermissionGate';
 
 // Fetch properties from API
 async function getProperties() {
@@ -82,38 +83,48 @@ export default function PropertiesPage() {
       feature="property_management"
       showUpgrade={true}
     >
-      <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Building2 className="h-8 w-8 text-blue-600" />
-            Gestion des biens
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Gérez votre portefeuille immobilier
-          </p>
-        </div>
-        {canCreate ? (
-          <Link href="/properties/new">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-5 w-5 mr-2" />
-              Ajouter un bien
-            </Button>
-          </Link>
-        ) : (
-          <AccessDeniedAction
-            requiredPermission="Créer des biens"
-            reason="permission"
-            featureName="Gestion des biens"
+      <PermissionGate
+        objectType="Property"
+        action="read"
+        showDenied={true}
+        deniedMessage="Vous n'avez pas la permission de voir les biens immobiliers."
+      >
+        <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <Building2 className="h-8 w-8 text-blue-600" />
+              Gestion des biens
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Gérez votre portefeuille immobilier
+            </p>
+          </div>
+          <PermissionGate
+            objectType="Property"
+            action="create"
+            fallback={
+              <AccessDeniedAction
+                requiredPermission="Créer des biens"
+                reason="permission"
+                featureName="Gestion des biens"
+              >
+                <Button className="bg-blue-600 hover:bg-blue-700" disabled>
+                  <Plus className="h-5 w-5 mr-2" />
+                  Ajouter un bien
+                </Button>
+              </AccessDeniedAction>
+            }
           >
-            <Button className="bg-blue-600 hover:bg-blue-700" disabled>
-              <Plus className="h-5 w-5 mr-2" />
-              Ajouter un bien
-            </Button>
-          </AccessDeniedAction>
-        )}
-      </div>
+            <Link href="/properties/new">
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-5 w-5 mr-2" />
+                Ajouter un bien
+              </Button>
+            </Link>
+          </PermissionGate>
+        </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
@@ -290,6 +301,7 @@ export default function PropertiesPage() {
         </div>
       </div>
     </div>
+      </PermissionGate>
     </FeatureGate>
   );
 }
