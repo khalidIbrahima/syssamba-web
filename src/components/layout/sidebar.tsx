@@ -179,6 +179,15 @@ function SidebarContent() {
    * Check if a sub-item should be visible based on its permissions
    */
   const canAccessSubItem = (subItem: SubItem): boolean => {
+    // Super admins can see all sub-items
+    if (isSuperAdmin) {
+      // Still check features if required
+      if (subItem.featureKey) {
+        return isFeatureEnabled(subItem.featureKey);
+      }
+      return true;
+    }
+
     // If sub-item has a feature requirement, check it first
     if (subItem.featureKey && !isFeatureEnabled(subItem.featureKey)) {
       return false;
@@ -218,6 +227,16 @@ function SidebarContent() {
   // Filter navigation items based on access
   const filteredNavigation = navigationItems
     .filter((item) => {
+      // Super admins can see all items (bypass permission checks)
+      if (isSuperAdmin) {
+        // Still check features if required
+        if (item.featureKey) {
+          return isFeatureEnabled(item.featureKey);
+        }
+        // If no feature key, show item for super admin
+        return true;
+      }
+
       // Map permission to object type for access checking
       const permissionToObjectMap: Record<string, ObjectType> = {
         'canViewAllProperties': 'Property',
