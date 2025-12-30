@@ -171,10 +171,6 @@ const createRoleSchema = z.object({
 
 type CreateRoleFormValues = z.infer<typeof createRoleSchema>;
 
-// Role definitions with descriptions
-const roleDefinitions = [
-];
-
 export default function UsersPage() {
   const { canPerformAction, canAccessObject, isLoading: isAccessLoading } = usePageAccess();
   const { limits, plan } = usePlan();
@@ -1059,40 +1055,6 @@ export default function UsersPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="max-h-[600px] overflow-y-auto px-6 pb-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
-              {/* Default Roles */}
-              {roleDefinitions.map(roleDef => {
-                const count = stats.roleCounts[roleDef.role] || 0;
-                return (
-                  <div
-                    key={roleDef.role}
-                    className="group p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm bg-white transition-all duration-200"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <Badge className={`${roleDef.color} text-xs font-semibold px-2.5 py-1`}>
-                        {roleDef.label}
-                      </Badge>
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700">
-                          {count}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-700 mb-3 leading-relaxed">{roleDef.description}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {roleDef.keywords.map((keyword, idx) => (
-                        <span
-                          key={idx}
-                          className="text-xs px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md font-medium"
-                        >
-                          {keyword}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-
               {/* Custom Roles */}
               {customRoles.length > 0 && (
                 <>
