@@ -113,15 +113,23 @@ async function getOrganizations(params: {
 
 // Fetch all plans
 async function getPlans() {
-  const response = await fetch('/api/plans', {
-    credentials: 'include',
-  });
+  try {
+    const response = await fetch('/api/plans', {
+      credentials: 'include',
+    });
 
-  if (!response.ok) {
-    return [];
+    if (!response.ok) {
+      console.error('[getPlans] API error:', response.status, response.statusText);
+      return { plans: [], count: 0 };
+    }
+
+    const data = await response.json();
+    console.log('[getPlans] Received data:', data);
+    return data;
+  } catch (error) {
+    console.error('[getPlans] Fetch error:', error);
+    return { plans: [], count: 0 };
   }
-
-  return response.json();
 }
 
 export default function AdminOrganizationsPage() {
@@ -194,7 +202,7 @@ export default function AdminOrganizationsPage() {
     () => getOrganizations({ search, plan: planFilter || undefined, page })
   );
 
-  const { data: plansData } = useDataQuery(['plans'], getPlans);
+  const { data: plansData, isLoading: isLoadingPlans, error: plansError } = useDataQuery(['plans'], getPlans);
 
   const organizations = data?.organizations || [];
   const pagination = data?.pagination;
@@ -299,15 +307,29 @@ export default function AdminOrganizationsPage() {
             </div>
             <Select value={planFilter || "all"} onValueChange={(value) => setPlanFilter(value === "all" ? "" : value)}>
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrer par plan" />
+                <SelectValue placeholder={isLoadingPlans ? "Chargement..." : "Filtrer par plan"} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les plans</SelectItem>
-                {plansData?.plans?.map((plan: any) => (
-                  <SelectItem key={plan.id} value={plan.id}>
-                    {plan.displayName}
+                {isLoadingPlans ? (
+                  <SelectItem value="loading" disabled>
+                    Chargement des plans...
                   </SelectItem>
-                ))}
+                ) : plansError ? (
+                  <SelectItem value="error" disabled>
+                    Erreur de chargement
+                  </SelectItem>
+                ) : plansData?.plans && plansData.plans.length > 0 ? (
+                  plansData.plans.map((plan: any) => (
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.displayName}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="empty" disabled>
+                    Aucun plan disponible
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
