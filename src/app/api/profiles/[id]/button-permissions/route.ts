@@ -20,7 +20,7 @@ const updateButtonPermissionSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -50,7 +50,8 @@ export async function GET(
       );
     }
 
-    const profileId = params.id;
+    const { id } = await params;
+    const profileId = id;
 
     // Validate profileId is a valid UUID
     if (!profileId || profileId === 'null' || profileId === 'undefined') {
@@ -187,7 +188,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -217,7 +218,8 @@ export async function PUT(
       );
     }
 
-    const profileId = params.id;
+    const { id } = await params;
+    const profileId = id;
 
     // Validate profileId is a valid UUID
     if (!profileId || profileId === 'null' || profileId === 'undefined') {

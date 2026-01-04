@@ -1,0 +1,50 @@
+[33mc9e5440[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: implement dark mode, setup page protection, and UI improvements
+[33mc201194[m Fix: Corriger le chargement des plans dans la page admin organizations - Corriger le format de retour de getPlans() pour correspondre a l'API - Ajouter la gestion d'erreur et les logs de debug - Ajouter les etats de chargement dans le Select des plans
+[33mfa2b0fe[m feat: add admin plans management page and improve pricing page layout - Add admin plans page for super-admins to manage subscription plans - Center pricing page content and improve card layout - Fix super-admin access to admin plans page - Update API to use id instead of planId for plan updates
+[33m36d3da9[m Set limits to unlimited (IllimitÃ©) when not defined (null) in pricing API
+[33mcddbd1a[m Update pricing page to dynamically fetch plans and features from plan_features table
+[33m42695fc[m Fix: Add back isSuperAdmin for admin section visibility
+[33me9f9d10[m Fix: Allow Organization Admins to bypass permissions, not Global Super Admins
+[33mcd71173[m Allow super admins to bypass permission checks in sidebar and pages
+[33m98630c8[m Fix sidebar: Allow super admins to see all navigation items
+[33m8ad472d[m Fix Next.js route handler params: Await params Promise and fix isSuperAdmin check
+[33m09eac9e[m Fix build errors: Add missing PermissionGate opening tags and fix import path
+[33m44bcc75[m Implement profile-based permission gating for UI components and routes
+[33m00fcef9[m Add profile permissions matrix view to admin profiles page
+[33md579e7f[m Fix TypeScript build error: remove unused roleDefinitions array
+[33m86ff214[m Fix React Query v5 compatibility: rename cacheTime to gcTime
+[33m7355a36[m[33m ([m[1;31mmaster/master[m[33m, [m[1;31mmaster/HEAD[m[33m)[m Update sidebar navigation with FeatureContext for plan-based filtering
+[33mac6baea[m Add FeatureGate to all main pages
+[33m850fd0c[m feat: Fix loading state flash and improve user avatar
+[33m3c6d163[m feat: Complete plan features management and feature gating system
+[33m26af202[m Supprimer les donnÃ©es statiques et lire les fonctionnalitÃ©s depuis Supabase via API
+[33m93b5097[m Corriger les rÃ©fÃ©rences aux IDs de plan dans l'interface frontend
+[33m84ef6d4[m Supprimer les mappages codÃ©s en dur des fonctionnalitÃ©s
+[33mda99a52[m Corriger les erreurs d'hydratation React sur les icÃ´nes Lucide
+[33mc0a2a94[m Ajouter script SQL pour dÃ©sactiver RLS sur les tables de catalogue de plans
+[33m6d6c89e[m Corriger la rÃ©fÃ©rence Ã  l'ID du plan dans l'interface plan-features
+[33mee052cf[m Corriger l'erreur d'hydratation React causÃ©e par les extensions de navigateur
+[33m6f22277[m Corriger les rÃ©fÃ©rences frontend pour correspondre Ã  la nouvelle structure API
+[33m96fe09f[m Interroger plan_features avec les champs associÃ©s plan et feature
+[33m80796f7[m Afficher le nom du plan au lieu de l'ID dans l'interface des fonctionnalitÃ©s
+[33mf241f01[m Afficher tous les enregistrements plan_features groupÃ©s par plan
+[33m6a05700[m Corriger l'affichage des donnÃ©es des fonctionnalitÃ©s par plan
+[33mb23e201[m Corriger l'affichage des fonctionnalitÃ©s par plan
+[33mce38c73[m Corriger la gestion des utilisateurs sans organisation dans l'API plan
+[33mf94af48[m Corriger le chargement des fonctionnalitÃ©s par plan
+[33mc3b7253[m DÃ©placer la gestion des fonctionnalitÃ©s par plan vers le dashboard super admin
+[33m54a806e[m Ajouter l'interface d'administration pour gÃ©rer les fonctionnalitÃ©s par plan
+[33m8aa678d[m ImplÃ©menter les permissions par profil pour l'interface utilisateur
+[33m8fb1484[m CrÃ©er l'endpoint API manquant /api/organization/setup
+[33mb4eadbb[m RÃ©soudre l'erreur NEXT_REDIRECT dans le layout setup
+[33m17bb33f[m CrÃ©er l'endpoint API manquant /api/organization/plan
+[33me61689b[m AmÃ©liorer l'interactivitÃ© de l'avatar utilisateur
+[33mf1b0c05[m Corriger l'affichage des initiales dans l'avatar utilisateur
+[33m1b87b31[m Ajouter l'affichage du nom de l'organisation dans l'avatar de profil
+[33m922916a[m Ajouter l'avatar de profil avec informations utilisateur et bouton de dÃ©connexion
+[33m9443b03[m Exclure aussi le repertoire racine scripts
+[33m582aa4c[m Nettoyer tsconfig.json et exclure src/scripts
+[33mee49d7d[m Correction du type array dans le script
+[33m8b02c97[m Correction du type dans le script read-supabase-schema.ts
+[33m941a47e[m Nettoyage du code brise dans route-handler.ts
+[33m7fa4468[m Suppression de la configuration fetch invalide dans route-handler.ts

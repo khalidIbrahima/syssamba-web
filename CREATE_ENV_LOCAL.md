@@ -16,6 +16,11 @@ SOURCE_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/samba_one
 
 # Target : votre Supabase
 TARGET_DATABASE_URL=postgresql://postgres:[PASSWORD]@db.xxxxx.supabase.co:5432/postgres
+
+# System Logging
+# Set to 'true' to enable logging to Supabase
+# Set to 'false' or leave unset to disable (logs only to console in development)
+ENABLE_SYSTEM_LOGGING=false
 ```
 
 ## 🔧 Remplacez les valeurs
