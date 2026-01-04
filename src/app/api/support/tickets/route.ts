@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is organization admin (can edit Organization)
     // For now, we'll allow any authenticated user with an organization
-    if (!user.organization_id) {
+    if (!user.organizationId) {
       return NextResponse.json(
         { error: 'You must be part of an organization to create support tickets' },
         { status: 403 }
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       category: validatedData.category || null,
       type: validatedData.type || null,
       created_by: user.id,
-      organization_id: user.organization_id,
+      organization_id: user.organizationId,
       tags: validatedData.tags,
       attachments: validatedData.attachments,
       metadata: validatedData.metadata,
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     await logger.info('Support ticket created', {
       userId: user.id,
-      organizationId: user.organization_id,
+      organizationId: user.organizationId,
       requestPath: '/api/support/tickets',
       requestMethod: 'POST',
       tags: ['support', 'ticket'],
@@ -179,13 +179,13 @@ export async function GET(request: NextRequest) {
 
     // Organization admins can only see their organization's tickets
     if (!userIsSuperAdmin) {
-      if (!user.organization_id) {
+      if (!user.organizationId) {
         return NextResponse.json(
           { error: 'You must be part of an organization to view support tickets' },
           { status: 403 }
         );
       }
-      queryOptions.eq = { ...queryOptions.eq, organization_id: user.organization_id };
+      queryOptions.eq = { ...queryOptions.eq, organization_id: user.organizationId };
     } else if (organizationId) {
       // Super admins can filter by organization
       queryOptions.eq = { ...queryOptions.eq, organization_id: organizationId };

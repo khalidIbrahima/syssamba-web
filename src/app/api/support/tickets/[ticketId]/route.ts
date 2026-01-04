@@ -60,7 +60,7 @@ export async function GET(
     }
 
     // Check access: organization admins can only see their organization's tickets
-    if (!userIsSuperAdmin && ticket.organization_id !== user.organization_id) {
+    if (!userIsSuperAdmin && ticket.organization_id !== user.organizationId) {
       await logger.warn('Unauthorized access attempt to ticket', {
         userId: user.id,
         ticketId,
