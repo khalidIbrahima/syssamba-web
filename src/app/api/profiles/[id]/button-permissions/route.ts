@@ -128,7 +128,15 @@ export async function GET(
       );
 
       const permissionField = getPermissionFieldForAction(buttonDef.action);
-      const shouldEnable = objectPerm?.[permissionField] ?? false;
+      // Map camelCase to snake_case for database fields
+      const dbFieldMap: Record<'canCreate' | 'canRead' | 'canEdit' | 'canDelete', 'can_create' | 'can_read' | 'can_edit' | 'can_delete'> = {
+        canCreate: 'can_create',
+        canRead: 'can_read',
+        canEdit: 'can_edit',
+        canDelete: 'can_delete',
+      };
+      const dbField = dbFieldMap[permissionField];
+      const shouldEnable = objectPerm?.[dbField] ?? false;
 
       const override = buttonOverridesMap.get(buttonDef.key);
 
