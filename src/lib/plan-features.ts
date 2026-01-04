@@ -43,7 +43,7 @@ export interface PlanFeature {
 }
 
 export interface PlanFeatureWithDetails extends PlanFeature {
-  feature: Feature | null;
+  feature: Feature;
 }
 
 /**
@@ -54,13 +54,12 @@ export async function getAllFeatures(): Promise<Feature[]> {
   try {
     const features = await db.select<{
       id: string;
-      name: string; // This is the feature key (e.g., "properties.view")
-      display_name: string;
+      key: string; // Feature key (e.g., "task_management")
+      name: string; // Display name (e.g., "Gestion des tâches")
       description: string | null;
       category: string;
-      is_premium: boolean;
-      is_beta: boolean;
-      required_plan: string | null;
+      icon: string | null;
+      is_active: boolean;
       created_at: Date;
       updated_at: Date;
     }>('features', {
@@ -70,12 +69,12 @@ export async function getAllFeatures(): Promise<Feature[]> {
 
     return features.map(f => ({
       id: f.id,
-      key: f.name, // Use name as key
-      name: f.display_name, // Use display_name as name
+      key: f.key, // Use key as key
+      name: f.name, // Use name as display name
       description: f.description,
       category: f.category,
-      icon: null, // Not in current schema
-      isActive: true,
+      icon: f.icon,
+      isActive: f.is_active,
       createdAt: f.created_at,
       updatedAt: f.updated_at,
     }));
@@ -93,29 +92,28 @@ export async function getFeaturesByCategory(category: string): Promise<Feature[]
   try {
     const features = await db.select<{
       id: string;
-      name: string; // Feature key
-      display_name: string;
+      key: string; // Feature key
+      name: string; // Display name
       description: string | null;
       category: string;
-      is_premium: boolean;
-      is_beta: boolean;
-      required_plan: string | null;
+      icon: string | null;
+      is_active: boolean;
       created_at: Date;
       updated_at: Date;
     }>('features', {
       eq: { category },
       filter: { is_active: true },
-      orderBy: { column: 'display_name', ascending: true },
+      orderBy: { column: 'name', ascending: true },
     });
 
     return features.map(f => ({
       id: f.id,
-      key: f.name, // Use name as key
-      name: f.display_name, // Use display_name as name
+      key: f.key, // Use key as key
+      name: f.name, // Use name as display name
       description: f.description,
       category: f.category,
-      icon: null, // Not in current schema
-      isActive: true,
+      icon: f.icon,
+      isActive: f.is_active,
       createdAt: f.created_at,
       updatedAt: f.updated_at,
     }));
@@ -137,11 +135,11 @@ export async function getPlanFeatures(planName: PlanName): Promise<PlanFeatureWi
       return [];
     }
 
-    // Get plan_features with feature_id (not feature_key)
+    // Get plan_features with feature_key (direct access)
     const planFeatures = await db.select<{
       id: string;
       plan_id: string;
-      feature_id: string;
+      feature_key: string;
       is_enabled: boolean;
       limits: Record<string, any> | null;
       created_at: Date;
@@ -149,37 +147,48 @@ export async function getPlanFeatures(planName: PlanName): Promise<PlanFeatureWi
       eq: { plan_id: planId, is_enabled: true },
     });
 
-    // Fetch feature details for each plan feature using feature_id
-    const featuresWithDetails: PlanFeatureWithDetails[] = [];
-    
-    for (const pf of planFeatures) {
-      const feature = await db.selectOne<{
-        id: string;
-        name: string; // This is the feature key (e.g., "properties.view")
-        display_name: string;
-        description: string | null;
-        category: string;
-        is_premium: boolean;
-        is_beta: boolean;
-        required_plan: string | null;
-        created_at: Date;
-        updated_at: Date;
-      }>('features', {
-        eq: { id: pf.feature_id },
-      });
+    if (planFeatures.length === 0) {
+      return [];
+    }
 
-      if (feature) {
-        featuresWithDetails.push({
+    // Get all feature keys
+    const featureKeys = planFeatures.map(pf => pf.feature_key);
+
+    // Fetch feature details using feature keys (more efficient: one query instead of N queries)
+    const features = await db.select<{
+      id: string;
+      key: string;
+      name: string;
+      description: string | null;
+      category: string;
+      created_at: Date;
+      updated_at: Date;
+    }>('features', {
+      in: { key: featureKeys },
+    });
+
+    // Create a map of features by key
+    const featuresMap = new Map(
+      features.map(f => [f.key, f])
+    );
+
+    // Combine plan features with feature details
+    const featuresWithDetails: PlanFeatureWithDetails[] = planFeatures
+      .map((pf) => {
+        const feature = featuresMap.get(pf.feature_key);
+        if (!feature) return null;
+
+        const result: PlanFeatureWithDetails = {
           id: pf.id,
           planName: planName,
-          featureKey: feature.name, // Use feature.name as the key
+          featureKey: feature.key,
           isEnabled: pf.is_enabled,
           createdAt: pf.created_at,
           updatedAt: feature.updated_at,
           feature: {
             id: feature.id,
-            key: feature.name,
-            name: feature.display_name,
+            key: feature.key,
+            name: feature.name,
             description: feature.description,
             category: feature.category,
             icon: null, // Not in current schema
@@ -187,9 +196,10 @@ export async function getPlanFeatures(planName: PlanName): Promise<PlanFeatureWi
             createdAt: feature.created_at,
             updatedAt: feature.updated_at,
           },
-        });
-      }
-    }
+        };
+        return result;
+      })
+      .filter((f): f is PlanFeatureWithDetails => f !== null);
 
     // Sort by feature name
     featuresWithDetails.sort((a, b) => a.featureKey.localeCompare(b.featureKey));
@@ -216,13 +226,12 @@ export async function getAllPlanFeaturesWithStatus(planName: PlanName): Promise<
     // Get all features from features table
     const allFeatures = await db.select<{
       id: string;
-      name: string; // This is the feature key
-      display_name: string;
+      key: string; // Feature key
+      name: string; // Display name
       description: string | null;
       category: string;
-      is_premium: boolean;
-      is_beta: boolean;
-      required_plan: string | null;
+      icon: string | null;
+      is_active: boolean;
       created_at: Date;
       updated_at: Date;
     }>('features', {
@@ -230,27 +239,27 @@ export async function getAllPlanFeaturesWithStatus(planName: PlanName): Promise<
       orderBy: { column: 'category', ascending: true },
     });
     
-    // Get enabled features for this plan using feature_id
+    // Get enabled features for this plan using feature_key
     const enabledPlanFeatures = await db.select<{
-      feature_id: string;
+      feature_key: string;
     }>('plan_features', {
       eq: { plan_id: planId, is_enabled: true },
     });
 
-    const enabledFeatureIds = new Set(enabledPlanFeatures.map(f => f.feature_id));
+    const enabledFeatureKeys = new Set(enabledPlanFeatures.map(f => f.feature_key));
 
     // Map features with their enabled status
     return allFeatures.map(feature => ({
       id: feature.id,
-      key: feature.name, // Use name as key
-      name: feature.display_name,
+      key: feature.key, // Use key as key
+      name: feature.name, // Use name as display name
       description: feature.description,
       category: feature.category,
-      icon: null, // Not in current schema
-      isActive: true,
+      icon: feature.icon,
+      isActive: feature.is_active,
       createdAt: feature.created_at,
       updatedAt: feature.updated_at,
-      isEnabled: enabledFeatureIds.has(feature.id),
+      isEnabled: enabledFeatureKeys.has(feature.key), // Check by key
     }));
   } catch (error) {
     console.error('Error fetching plan features with status:', error);
@@ -260,7 +269,7 @@ export async function getAllPlanFeaturesWithStatus(planName: PlanName): Promise<
 
 /**
  * Check if a specific feature is enabled for a plan
- * Uses feature_id by first finding the feature by name (key)
+ * Uses feature_key directly (no need to find feature_id first)
  */
 export async function isFeatureEnabled(planName: PlanName, featureKey: string): Promise<boolean> {
   try {
@@ -269,22 +278,22 @@ export async function isFeatureEnabled(planName: PlanName, featureKey: string): 
       return false;
     }
 
-    // First, find the feature by name (which is the key)
+    // Check if feature exists first (optional validation)
     const feature = await db.selectOne<{
       id: string;
     }>('features', {
-      eq: { name: featureKey },
+      eq: { key: featureKey },
     });
 
     if (!feature) {
       return false;
     }
 
-    // Then check if it's enabled in plan_features
+    // Then check if it's enabled in plan_features using feature_key
     const planFeature = await db.selectOne<{
       is_enabled: boolean;
     }>('plan_features', {
-      eq: { plan_id: planId, feature_id: feature.id },
+      eq: { plan_id: planId, feature_key: featureKey },
     });
 
     return planFeature?.is_enabled || false;
@@ -296,7 +305,7 @@ export async function isFeatureEnabled(planName: PlanName, featureKey: string): 
 
 /**
  * Enable or disable a feature for a plan
- * Uses feature_id by first finding the feature by name (key)
+ * Uses feature_key directly (no need to find feature_id first)
  */
 export async function setPlanFeature(
   planName: PlanName,
@@ -310,11 +319,11 @@ export async function setPlanFeature(
       return false;
     }
 
-    // First, find the feature by name (which is the key)
+    // Verify feature exists (optional validation)
     const feature = await db.selectOne<{
       id: string;
     }>('features', {
-      eq: { name: featureKey },
+      eq: { key: featureKey },
     });
 
     if (!feature) {
@@ -325,14 +334,14 @@ export async function setPlanFeature(
     const existing = await db.selectOne<{
       id: string;
     }>('plan_features', {
-      eq: { plan_id: planId, feature_id: feature.id },
+      eq: { plan_id: planId, feature_key: featureKey },
     });
 
     if (!existing) {
-      // Create new entry
+      // Create new entry using feature_key
       await db.insertOne('plan_features', {
         plan_id: planId,
-        feature_id: feature.id,
+        feature_key: featureKey,
         is_enabled: isEnabled,
       });
     } else {
@@ -394,8 +403,8 @@ export async function getPlanFeaturesByCategory(planName: PlanName): Promise<Rec
 
 /**
  * Get enabled feature keys for a plan as a Set
- * Returns a Set of feature keys (feature.name) that are enabled for the given plan
- * Uses feature_id to join with features table
+ * Returns a Set of feature keys that are enabled for the given plan
+ * Uses feature_key directly (no join needed)
  */
 export async function getEnabledPlanFeatures(planName: PlanName): Promise<Set<string>> {
   try {
@@ -405,26 +414,15 @@ export async function getEnabledPlanFeatures(planName: PlanName): Promise<Set<st
       return new Set();
     }
 
-    // Get plan_features with feature_id
+    // Get plan_features with feature_key (direct access, no join needed)
     const planFeatures = await db.select<{
-      feature_id: string;
+      feature_key: string;
     }>('plan_features', {
       eq: { plan_id: planId, is_enabled: true },
     });
 
-    // Get feature names (keys) for each feature_id
-    const featureKeys: string[] = [];
-    for (const pf of planFeatures) {
-      const feature = await db.selectOne<{
-        name: string; // This is the feature key
-      }>('features', {
-        eq: { id: pf.feature_id },
-      });
-      
-      if (feature) {
-        featureKeys.push(feature.name);
-      }
-    }
+    // Extract feature keys directly (no need to join with features table)
+    const featureKeys = planFeatures.map(pf => pf.feature_key);
 
     return new Set(featureKeys);
   } catch (error) {

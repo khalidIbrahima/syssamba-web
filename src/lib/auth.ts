@@ -16,6 +16,7 @@ export interface AuthUser {
   organizationId: string | null;
   avatarUrl: string | null;
   isActive: boolean;
+  profileId: string | null;
 }
 
 /**
@@ -43,6 +44,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       role: string;
       is_active: boolean;
       organization_id: string | null;
+      profile_id: string | null;
     }>('users', {
       eq: { sb_user_id: user.id },
     });
@@ -60,6 +62,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         role: string;
         is_active: boolean;
         organization_id: string | null;
+        profile_id: string | null;
       }>('users', {
         eq: { id: user.id },
       });
@@ -78,6 +81,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         role: string;
         is_active: boolean;
         organization_id: string | null;
+        profile_id: string | null;
       }>('users', {
         id: user.id, // Use Supabase ID as primary key
         sb_user_id: user.id, // Explicit Supabase user ID link
@@ -89,6 +93,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         role: 'viewer',
         is_active: true,
         organization_id: null,
+        profile_id: null,
       });
 
       if (!newUser) return null;
@@ -103,6 +108,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         organizationId: newUser.organization_id,
         avatarUrl: newUser.avatar_url,
         isActive: newUser.is_active,
+        profileId: newUser.profile_id,
       };
     }
 
@@ -123,6 +129,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       organizationId: dbUser.organization_id,
       avatarUrl: dbUser.avatar_url,
       isActive: dbUser.is_active,
+      profileId: dbUser.profile_id,
     };
   } catch (error) {
     console.error('Error getting current user:', error);

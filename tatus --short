@@ -1,0 +1,114 @@
+warning: in the working copy of 'DATABASE_CONFIG.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/(auth)/admin/plan-features/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/(auth)/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/(auth)/payments/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/(auth)/setup/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/api/admin/plan-features/route.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/app/auth/sign-in/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/layout/app-loader.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/layout/header.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/layout/sidebar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/db/schema.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hooks/use-message-notifications.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hooks/use-payment-notifications.ts', LF will be replaced by CRLF the next time Git touches it
+CREATE_ENV_LOCAL.md
+MIGRATION_TROUBLESHOOTING.md
+VERIFY_SUPABASE_USAGE.md
+next.config.ts
+package-lock.json
+package.json
+src/app/(auth)/accounting/auto-entries/page.tsx
+src/app/(auth)/accounting/balance/page.tsx
+src/app/(auth)/accounting/dsf/page.tsx
+src/app/(auth)/accounting/page.tsx
+src/app/(auth)/admin/organizations/page.tsx
+src/app/(auth)/admin/page.tsx
+src/app/(auth)/admin/plan-features/page.tsx
+src/app/(auth)/admin/plans/page.tsx
+src/app/(auth)/admin/profiles/[id]/page.tsx
+src/app/(auth)/admin/profiles/page.tsx
+src/app/(auth)/admin/select-organization/page.tsx
+src/app/(auth)/dashboard/layout.tsx
+src/app/(auth)/dashboard/page.tsx
+src/app/(auth)/layout.tsx
+src/app/(auth)/leases/new/page.tsx
+src/app/(auth)/leases/page.tsx
+src/app/(auth)/notifications/page.tsx
+src/app/(auth)/owners/page.tsx
+src/app/(auth)/payments/[id]/page.tsx
+src/app/(auth)/payments/page.tsx
+src/app/(auth)/properties/[id]/edit/page.tsx
+src/app/(auth)/properties/[id]/page.tsx
+src/app/(auth)/properties/new/page.tsx
+src/app/(auth)/properties/page.tsx
+src/app/(auth)/settings/page.tsx
+src/app/(auth)/settings/subscription/page.tsx
+src/app/(auth)/settings/users/page.tsx
+src/app/(auth)/setup/page.tsx
+src/app/(auth)/tasks/[id]/page.tsx
+src/app/(auth)/tasks/new/page.tsx
+src/app/(auth)/tasks/page.tsx
+src/app/(auth)/tenants/[id]/edit/page.tsx
+src/app/(auth)/tenants/[id]/page.tsx
+src/app/(auth)/tenants/new/page.tsx
+src/app/(auth)/tenants/page.tsx
+src/app/(auth)/units/[id]/edit/page.tsx
+src/app/(auth)/units/[id]/page.tsx
+src/app/(auth)/units/new/page.tsx
+src/app/(auth)/units/page.tsx
+src/app/api/accounting/accounts/route.ts
+src/app/api/admin/plan-features/route.ts
+src/app/api/admin/plans/route.ts
+src/app/api/dashboard/route.ts
+src/app/api/profiles/route.ts
+src/app/api/user/plan-features/route.ts
+src/app/auth/callback/route.ts
+src/app/auth/forgot-password/page.tsx
+src/app/auth/sign-in/page.tsx
+src/app/auth/sign-up/page.tsx
+src/app/extranet/[tenantId]/page.tsx
+src/app/invite/[token]/[[...rest]]/page.tsx
+src/app/invite/[token]/complete/page.tsx
+src/app/layout.tsx
+src/app/page.tsx
+src/app/pricing/page.tsx
+src/components/accounting/create-journal-entry-dialog.tsx
+src/components/features/FeatureGate.tsx
+src/components/layout/app-loader-wrapper.tsx
+src/components/layout/app-loader.tsx
+src/components/layout/auth-content.tsx
+src/components/layout/header.tsx
+src/components/layout/sidebar.tsx
+src/components/messaging/user-message-dialog.tsx
+src/components/permissions/PermissionGate.tsx
+src/components/security/ProfileAccessBadge.tsx
+src/components/security/ProfileAccessDetails.tsx
+src/components/tasks/task-attachments.tsx
+src/components/tenants/tenant-messages.tsx
+src/components/ui/access-denied.tsx
+src/components/ui/alert-dialog.tsx
+src/components/ui/emoji-picker.tsx
+src/components/ui/page-loader.tsx
+src/components/ui/photo-upload.tsx
+src/components/ui/popover.tsx
+src/components/ui/profile-avatar.tsx
+src/components/ui/property-map-editor.tsx
+src/components/ui/property-map.tsx
+src/components/ui/select.tsx
+src/components/ui/unit-map.tsx
+src/components/ui/units-map-viewer.tsx
+src/contexts/FeatureContext.tsx
+src/db/schema.ts
+src/hooks/use-access.ts
+src/hooks/use-feature-check.ts
+src/hooks/use-message-notifications.ts
+src/hooks/use-payment-notifications.ts
+src/hooks/use-plan.ts
+src/hooks/use-query.ts
+src/hooks/use-tab-permission.ts
+src/lib/auth.ts
+src/lib/plan-features.ts
+src/lib/profiles.ts
+src/lib/supabase-db.ts
+src/middleware.ts
+tailwind.config.ts

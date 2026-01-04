@@ -51,6 +51,19 @@ export interface ProfileFieldPermission {
  */
 export async function getProfiles(organizationId: string | null = null, getAll: boolean = false): Promise<Profile[]> {
   try {
+    // Validate and normalize organizationId
+    // If it's the string "null" or "undefined", convert to null
+    if (organizationId === 'null' || organizationId === 'undefined') {
+      organizationId = null;
+    } else if (organizationId) {
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(organizationId)) {
+        console.error('Invalid organizationId format:', organizationId);
+        return [];
+      }
+    }
+
     let allProfiles: Array<{
       id: string;
       organization_id: string | null;

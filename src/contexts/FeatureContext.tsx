@@ -1,38 +1,47 @@
 'use client';
 
 /**
- * Feature Context
- * Provides access to user's plan features throughout the application
+ * Feature Context - Rebuilt from scratch
+ * Provides global access to user's plan features with optimal performance
  */
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useDataQuery } from '@/hooks/use-query';
 
-interface Feature {
+// Types
+type FeatureLimits = Record<string, number | string | boolean | null>;
+
+export interface Feature {
+  id: string;
+  featureKey: string; // Unique identifier (e.g., "task_management")
+  displayName: string; // Human-readable name (e.g., "Gestion des tâches")
+  description: string | null;
+  category: string;
+  isEnabled: boolean;
+  limits?: FeatureLimits;
+}
+
+export interface UserPlan { 
   id: string;
   name: string;
   displayName: string;
   description: string | null;
-  category: string;
-  isEnabled: boolean;
-  limits?: any;
 }
 
-interface UserPlan {
-  id: string;
-  name: string;
-  displayName: string;
-  features: Feature[];
-}
-
-interface FeatureContextValue {
+export interface FeatureContextValue {
   plan: UserPlan | null;
   features: Feature[];
-  hasFeature: (featureName: string) => boolean;
-  isFeatureEnabled: (featureName: string) => boolean;
-  getFeatureLimit: (featureName: string, limitKey: string) => any;
+  // Core methods
+  hasFeature: (featureKey: string) => boolean;
+  isFeatureEnabled: (featureKey: string) => boolean;
+  getFeature: (featureKey: string) => Feature | undefined;
+  getFeatureLimit: (featureKey: string, limitKey: string) => number | string | boolean | null;
+  // State
   isLoading: boolean;
   error: Error | null;
+  // Utilities
+  getFeaturesByCategory: (category: string) => Feature[];
+  getAllEnabledFeatures: () => Feature[];
 }
 
 const FeatureContext = createContext<FeatureContextValue | undefined>(undefined);
@@ -42,12 +51,15 @@ async function fetchUserPlanFeatures() {
   const response = await fetch('/api/user/plan-features', {
     credentials: 'include',
   });
-
+  
   if (!response.ok) {
-    throw new Error('Failed to fetch plan features');
+    const error = await response.json().catch(() => ({ error: 'Failed to fetch plan features' }));
+    throw new Error(error.error || 'Failed to fetch plan features');
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log('[FeatureContext] Fetched plan features:', data);
+  return data;
 }
 
 interface FeatureProviderProps {
@@ -60,29 +72,50 @@ export function FeatureProvider({ children }: FeatureProviderProps) {
     fetchUserPlanFeatures,
     {
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (renamed from cacheTime in React Query v5)
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     }
   );
 
-  const plan = data?.plan || null;
-  const features = data?.features || [];
+  const plan: UserPlan | null = data?.plan || null;
+  const features: Feature[] = Array.isArray(data?.features) ? data.features : [];
+
+  // Memoize feature map for O(1) lookups
+  const featuresMap = useMemo(() => {
+    return new Map(features.map((f) => [f.featureKey, f]));
+  }, [features]);
 
   // Check if user has access to a feature (feature exists in plan)
-  const hasFeature = (featureName: string): boolean => {
-    return features.some((f: Feature) => f.name === featureName);
+  const hasFeature = (featureKey: string): boolean => {
+    return featuresMap.has(featureKey);
   };
 
   // Check if a feature is enabled
-  const isFeatureEnabled = (featureName: string): boolean => {
-    const feature = features.find((f: Feature) => f.name === featureName);
-    return feature ? feature.isEnabled : false;
+  const isFeatureEnabled = (featureKey: string): boolean => {
+    const feature = featuresMap.get(featureKey);
+    return feature?.isEnabled ?? false;
+  };
+
+  // Get feature object
+  const getFeature = (featureKey: string): Feature | undefined => {
+    const feature = featuresMap.get(featureKey);
+    return feature as Feature | undefined;
   };
 
   // Get feature limit value
-  const getFeatureLimit = (featureName: string, limitKey: string): any => {
-    const feature = features.find((f: Feature) => f.name === featureName);
-    if (!feature || !feature.limits) return null;
-    return feature.limits[limitKey];
+  const getFeatureLimit = (featureKey: string, limitKey: string): number | string | boolean | null => {
+    const feature = featuresMap.get(featureKey);
+    if (!feature?.limits) return null;
+    return feature.limits[limitKey] ?? null;
+  };
+
+  // Get features by category
+  const getFeaturesByCategory = (category: string): Feature[] => {
+    return features.filter((f) => f.category === category);
+  };
+
+  // Get all enabled features
+  const getAllEnabledFeatures = (): Feature[] => {
+    return features.filter((f) => f.isEnabled);
   };
 
   const value: FeatureContextValue = {
@@ -90,9 +123,12 @@ export function FeatureProvider({ children }: FeatureProviderProps) {
     features,
     hasFeature,
     isFeatureEnabled,
+    getFeature,
     getFeatureLimit,
     isLoading,
     error,
+    getFeaturesByCategory,
+    getAllEnabledFeatures,
   };
 
   return (
@@ -102,7 +138,10 @@ export function FeatureProvider({ children }: FeatureProviderProps) {
   );
 }
 
-// Hook to use features
+/**
+ * Hook to use features context
+ * @throws Error if used outside FeatureProvider
+ */
 export function useFeatures() {
   const context = useContext(FeatureContext);
   if (context === undefined) {
@@ -111,14 +150,19 @@ export function useFeatures() {
   return context;
 }
 
-// Hook to check a specific feature
-export function useFeature(featureName: string) {
-  const { isFeatureEnabled, getFeatureLimit, isLoading } = useFeatures();
+/**
+ * Hook to check a specific feature
+ * Optimized for single feature checks
+ */
+export function useFeature(featureKey: string) {
+  const { isFeatureEnabled, getFeatureLimit, getFeature, isLoading } = useFeatures();
+  
+  const feature = getFeature(featureKey);
   
   return {
-    isEnabled: isFeatureEnabled(featureName),
-    getLimit: (limitKey: string) => getFeatureLimit(featureName, limitKey),
+    isEnabled: isFeatureEnabled(featureKey),
+    feature,
+    getLimit: (limitKey: string) => getFeatureLimit(featureKey, limitKey),
     isLoading,
   };
 }
-

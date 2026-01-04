@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/i18n/routing';
 import { useState, useEffect } from 'react';
 import { Bell, MessageSquare, Download, Search, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,13 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import Link from 'next/link';
+import { Link } from '@/i18n/routing';
 import { usePlan } from '@/hooks/use-plan';
+import { useAccess } from '@/hooks/use-access';
 import { UserMessageDialog } from '@/components/messaging/user-message-dialog';
 import { useMessageNotifications } from '@/hooks/use-message-notifications';
 import { usePaymentNotifications } from '@/hooks/use-payment-notifications';
+import { useSupportTicketNotifications } from '@/hooks/use-support-ticket-notifications';
 import { useDataQuery } from '@/hooks/use-query';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LanguageSwitcher } from '@/components/ui/language-switcher';
+import { useTranslations } from 'next-intl';
+import { Ticket } from 'lucide-react';
 
 // Fetch current user's organization ID
 async function getCurrentUserOrg() {
@@ -33,11 +39,22 @@ async function getCurrentUserOrg() {
 }
 
 export function Header() {
+  const t = useTranslations();
   const pathname = usePathname();
   const { plan, limits } = usePlan();
+  const { canAccessFeature, canPerformAction } = useAccess();
   const [isMounted, setIsMounted] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  // Check if user has access to messaging feature
+  // Requires: messaging feature enabled in plan AND canSendMessages permission
+  const canAccessMessaging = canAccessFeature('messaging', 'canSendMessages') || 
+                             canPerformAction('canSendMessages') || 
+                             canPerformAction('canViewAllMessages');
+
+  // Check if realtime is disabled via environment variable
+  const isRealtimeDisabled = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_REALTIME_DISABLED === 'true';
 
   // Get current user's organization ID
   const { data: currentUser } = useDataQuery(
@@ -45,9 +62,9 @@ export function Header() {
     getCurrentUserOrg
   );
 
-  // Set up message notifications
+  // Set up message notifications (only if user has access to messaging and realtime is enabled)
   const { unreadCount: messageUnreadCount, setUnreadCount: setMessageUnreadCount } = useMessageNotifications(
-    currentUser?.organizationId,
+    canAccessMessaging && !isRealtimeDisabled ? currentUser?.organizationId : null, // Only fetch if user has access and realtime is enabled
     (message) => {
       // When notification is clicked, open message dialog
       setIsMessageDialogOpen(true);
@@ -59,17 +76,29 @@ export function Header() {
     }
   );
 
-  // Set up payment notifications
+  // Set up payment notifications (only if realtime is enabled)
   const { unreadCount: paymentUnreadCount, setUnreadCount: setPaymentUnreadCount } = usePaymentNotifications(
-    currentUser?.organizationId,
+    !isRealtimeDisabled ? currentUser?.organizationId : null, // Only fetch if realtime is enabled
     (notification) => {
       // When payment notification is clicked, navigate to payments page
       window.location.href = '/payments';
     }
   );
 
-  // Total unread count (messages + payments)
-  const totalUnreadCount = (messageUnreadCount || 0) + (paymentUnreadCount || 0);
+  // Set up support ticket notifications (only for super-admins)
+  const { unreadCount: supportTicketUnreadCount, markAsRead: markSupportTicketsAsRead } = useSupportTicketNotifications(
+    (ticket) => {
+      // When new ticket notification is clicked, navigate to support tickets page
+      window.location.href = '/admin/support-tickets';
+    }
+  );
+
+  // Total unread count (messages + payments + support tickets)
+  // Only include messages if user has access to messaging
+  // Only include payments if realtime is enabled
+  const totalUnreadCount = (canAccessMessaging && !isRealtimeDisabled ? (messageUnreadCount || 0) : 0) + 
+                           (!isRealtimeDisabled ? (paymentUnreadCount || 0) : 0) + 
+                           (supportTicketUnreadCount || 0);
   
   // Mock data for plan usage
   const lotsUsed = 47;
@@ -85,7 +114,7 @@ export function Header() {
   }, []);
 
   return (
-    <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8" suppressHydrationWarning>
+    <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-border bg-background px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8" suppressHydrationWarning>
       <div className="flex flex-1 items-center justify-between gap-4">
         {/* Left: Logo (only on properties page) or Title */}
         {isPropertiesPage ? (
@@ -93,11 +122,11 @@ export function Header() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
               <Building2 className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">SambaOne</span>
+            <span className="text-xl font-bold text-foreground">SambaOne</span>
           </Link>
         ) : (
-          <h1 className="text-xl font-semibold text-gray-900">
-            {isDashboardPage ? 'Tableau de bord' : 'Dashboard'}
+          <h1 className="text-xl font-semibold text-foreground">
+            {isDashboardPage ? t('nav.dashboard') : t('nav.dashboard')}
           </h1>
         )}
 
@@ -105,7 +134,7 @@ export function Header() {
         {isPropertiesPage && (
           <div className="flex-1 max-w-2xl mx-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 placeholder="Rechercher un bien, lot, locataire..."
                 className="pl-10 w-full"
@@ -119,20 +148,39 @@ export function Header() {
           {/* Plan Info (only on properties page) */}
           {isPropertiesPage && (
             <div className="hidden md:flex items-center gap-2 text-sm">
-              <span className="text-gray-600">Plan:</span>
+              <span className="text-muted-foreground">Plan:</span>
               <Badge variant="default" className="bg-blue-600 text-white">
                 {plan.charAt(0).toUpperCase() + plan.slice(1)}
               </Badge>
-              <span className="text-gray-600">{lotsUsed}/{lotsLimit} lots</span>
+              <span className="text-muted-foreground">{lotsUsed}/{lotsLimit} lots</span>
             </div>
           )}
 
           {/* Language Switcher */}
-          <div className="hidden md:flex items-center border border-gray-200 rounded-md px-1 py-1 bg-white overflow-hidden">
-            <button className="px-2 py-1 text-xs font-bold text-white bg-blue-600">FR</button>
-            <button className="px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-900">EN</button>
-            <button className="px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-900">WO</button>
-          </div>
+          <LanguageSwitcher />
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
+          {/* Support Tickets Notification (Super Admin only) */}
+          {supportTicketUnreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="relative"
+              suppressHydrationWarning
+              onClick={() => {
+                markSupportTicketsAsRead();
+                window.location.href = '/admin/support-tickets';
+              }}
+              title={`${supportTicketUnreadCount} nouveau${supportTicketUnreadCount > 1 ? 'x' : ''} ticket${supportTicketUnreadCount > 1 ? 's' : ''} de support`}
+            >
+              <Ticket className="h-5 w-5 text-orange-600" suppressHydrationWarning />
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-orange-500 text-xs text-white flex items-center justify-center font-bold animate-pulse">
+                {supportTicketUnreadCount > 9 ? '9+' : supportTicketUnreadCount}
+              </span>
+            </Button>
+          )}
 
           {/* Notifications */}
           <Button 
@@ -162,52 +210,54 @@ export function Header() {
               }
             }}
           >
-            <Bell className="h-5 w-5 text-gray-600" suppressHydrationWarning />
-            {totalUnreadCount > 0 && (
+            <Bell className="h-5 w-5 text-muted-foreground" suppressHydrationWarning />
+            {!isRealtimeDisabled && (messageUnreadCount || 0) + (paymentUnreadCount || 0) > 0 && (
               <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs text-white flex items-center justify-center font-bold">
-                {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+                {(messageUnreadCount || 0) + (paymentUnreadCount || 0) > 9 ? '9+' : (messageUnreadCount || 0) + (paymentUnreadCount || 0)}
               </span>
             )}
           </Button>
 
-          {/* Messages */}
-          <Button 
-            variant="ghost"
-            suppressHydrationWarning 
-            size="sm"
-            className="relative"
-            onClick={async () => {
-              setIsMessageDialogOpen(true);
-              setSelectedUserId(null);
-              
-              // Mark all messages as read when opening the dialog
-              try {
-                await fetch('/api/messages/mark-read', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({}),
-                });
-                // Refresh unread count
-                const countResponse = await fetch('/api/messages/unread-count', {
-                  credentials: 'include',
-                });
-                if (countResponse.ok) {
-                  const data = await countResponse.json();
-                  setMessageUnreadCount(data.unreadCount || 0);
+          {/* Messages - Only show if user has access to messaging */}
+          {canAccessMessaging && (
+            <Button 
+              variant="ghost"
+              suppressHydrationWarning 
+              size="sm"
+              className="relative"
+              onClick={async () => {
+                setIsMessageDialogOpen(true);
+                setSelectedUserId(null);
+                
+                // Mark all messages as read when opening the dialog
+                try {
+                  await fetch('/api/messages/mark-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({}),
+                  });
+                  // Refresh unread count
+                  const countResponse = await fetch('/api/messages/unread-count', {
+                    credentials: 'include',
+                  });
+                  if (countResponse.ok) {
+                    const data = await countResponse.json();
+                    setMessageUnreadCount(data.unreadCount || 0);
+                  }
+                } catch (error) {
+                  console.error('Error marking messages as read:', error);
                 }
-              } catch (error) {
-                console.error('Error marking messages as read:', error);
-              }
-            }}
-          >
-            <MessageSquare className="h-5 w-5 text-gray-600" suppressHydrationWarning />
-            {messageUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs text-white flex items-center justify-center font-bold">
-                {messageUnreadCount > 9 ? '9+' : messageUnreadCount}
-              </span>
-            )}
-          </Button>
+              }}
+            >
+              <MessageSquare className="h-5 w-5 text-muted-foreground" suppressHydrationWarning />
+              {messageUnreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs text-white flex items-center justify-center font-bold">
+                  {messageUnreadCount > 9 ? '9+' : messageUnreadCount}
+                </span>
+              )}
+            </Button>
+          )}
 
           {/* User Profile Avatar */}
           <ProfileAvatar className="hidden md:flex" />

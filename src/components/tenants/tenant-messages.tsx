@@ -214,15 +214,15 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
       <div className="flex-1 overflow-y-auto bg-gradient-to-b from-gray-50 to-white px-4 py-4">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : tenantMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <MessageSquare className="h-8 w-8 text-gray-400" />
+              <MessageSquare className="h-8 w-8 text-muted-foreground" />
             </div>
-            <p className="text-gray-600 font-medium">Aucun message</p>
-            <p className="text-sm text-gray-500 mt-1">Envoyez le premier message pour commencer la conversation</p>
+            <p className="text-muted-foreground font-medium">Aucun message</p>
+            <p className="text-sm text-muted-foreground mt-1">Envoyez le premier message pour commencer la conversation</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -240,7 +240,7 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
                   {dateHeader && (
                     <div className="flex items-center justify-center my-4">
                       <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full border border-gray-200 shadow-sm">
-                        <span className="text-xs font-medium text-gray-600">{dateHeader}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{dateHeader}</span>
                       </div>
                     </div>
                   )}
@@ -258,7 +258,7 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
                         {showAvatar ? (
                           <Avatar className="h-8 w-8 ring-2 ring-white">
                             <AvatarImage src={msg.senderAvatar || undefined} />
-                            <AvatarFallback className="bg-gray-200 text-gray-700 text-xs font-medium">
+                            <AvatarFallback className="bg-gray-200 text-muted-foreground text-xs font-medium">
                               {msg.tenantName
                                 ?.split(' ')
                                 .map((n) => n[0])
@@ -279,7 +279,7 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
                     )}>
                       {/* Sender Name (only for tenant messages, first in group) */}
                       {!isStaff && showAvatar && msg.tenantName && (
-                        <span className="text-xs font-medium text-gray-600 mb-1 px-1">
+                        <span className="text-xs font-medium text-muted-foreground mb-1 px-1">
                           {msg.tenantName}
                         </span>
                       )}
@@ -289,7 +289,7 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
                         "relative rounded-2xl px-4 py-2.5 shadow-sm",
                         isStaff
                           ? "bg-blue-600 text-white rounded-br-md"
-                          : "bg-white text-gray-900 border border-gray-200 rounded-bl-md",
+                          : "bg-white text-foreground border border-gray-200 rounded-bl-md",
                         "hover:shadow-md transition-shadow"
                       )}>
                         {msg.content && (
@@ -325,7 +325,7 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
                                         "flex items-center gap-2 px-3 py-2 rounded-lg border",
                                         isStaff
                                           ? "bg-blue-500/20 border-blue-400/50 text-white"
-                                          : "bg-gray-100 border-gray-300 text-gray-900"
+                                          : "bg-gray-100 border-gray-300 text-foreground"
                                       )}
                                     >
                                       <File className="h-4 w-4" />
@@ -346,7 +346,7 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
                         "flex items-center gap-1.5 mt-0.5 px-1",
                         isStaff ? "flex-row-reverse" : ""
                       )}>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-muted-foreground">
                           {formatMessageTime(msg.createdAt)}
                         </span>
                         {isStaff && (
@@ -354,7 +354,7 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
                             {msg.readAt ? (
                               <CheckCheck className="h-3.5 w-3.5 text-blue-600" />
                             ) : (
-                              <Check className="h-3.5 w-3.5 text-gray-400" />
+                              <Check className="h-3.5 w-3.5 text-muted-foreground" />
                             )}
                           </div>
                         )}
@@ -415,8 +415,8 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
                     </div>
                   ) : (
                     <div className="relative flex items-center gap-2 px-2 py-1 bg-gray-100 rounded-lg border border-gray-200">
-                      <File className="h-4 w-4 text-gray-600" />
-                      <span className="text-xs text-gray-700 max-w-[100px] truncate">
+                      <File className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground max-w-[100px] truncate">
                         {attachment.split('/').pop()}
                       </span>
                       <button
@@ -468,9 +468,9 @@ export function TenantMessages({ tenantId, organizationId }: TenantMessagesProps
                 title="Joindre un fichier"
               >
                 {uploadingFiles ? (
-                  <Loader2 className="h-4 w-4 text-gray-500 animate-spin" />
+                  <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
                 ) : (
-                  <Paperclip className="h-4 w-4 text-gray-500" />
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
                 )}
               </Button>
               <EmojiPicker onEmojiSelect={handleEmojiSelect} />

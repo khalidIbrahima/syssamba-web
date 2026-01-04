@@ -17,7 +17,7 @@ interface ProfileAccessBadgeProps {
 }
 
 const accessLevelColors: Record<AccessLevel, string> = {
-  None: 'bg-gray-100 text-gray-600',
+  None: 'bg-gray-100 text-muted-foreground',
   Read: 'bg-blue-100 text-blue-700',
   ReadWrite: 'bg-green-100 text-green-700',
   All: 'bg-purple-100 text-purple-700',
@@ -52,7 +52,7 @@ export function ProfileAccessBadge({ showDetails = false, className = '' }: Prof
         {overallAccessLevel}
       </Badge>
       {showDetails && (
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-muted-foreground">
           {profileName && `${profileName} - `}
           {description}
         </span>

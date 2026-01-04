@@ -22,10 +22,10 @@ export default function TenantExtranetPage({ params }: { params: { tenantId: str
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             Bonjour {tenantData.name}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             Lot {tenantData.unit} - {tenantData.property}
           </p>
         </div>
@@ -170,17 +170,17 @@ export default function TenantExtranetPage({ params }: { params: { tenantId: str
               <div className="space-y-3">
                 <div>
                   <p className="font-medium text-sm">Gestionnaire</p>
-                  <p className="text-sm text-gray-600">Marie Dupont</p>
-                  <p className="text-sm text-gray-600">+221 77 123 45 67</p>
+                  <p className="text-sm text-muted-foreground">Marie Dupont</p>
+                  <p className="text-sm text-muted-foreground">+221 77 123 45 67</p>
                 </div>
                 <div>
                   <p className="font-medium text-sm">Horaires d'urgence</p>
-                  <p className="text-sm text-gray-600">24h/24 - 7j/7</p>
-                  <p className="text-sm text-gray-600">+221 76 987 65 43</p>
+                  <p className="text-sm text-muted-foreground">24h/24 - 7j/7</p>
+                  <p className="text-sm text-muted-foreground">+221 76 987 65 43</p>
                 </div>
                 <div>
                   <p className="font-medium text-sm">Prochaine visite technique</p>
-                  <p className="text-sm text-gray-600">15 janvier 2025</p>
+                  <p className="text-sm text-muted-foreground">15 janvier 2025</p>
                 </div>
               </div>
             </CardContent>

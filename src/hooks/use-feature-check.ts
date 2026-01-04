@@ -14,11 +14,11 @@ import { useFeatures } from '@/contexts/FeatureContext';
  *   // Show advanced analytics
  * }
  */
-export function useFeatureCheck(featureName: string) {
+export function useFeatureCheck(featureKey: string) {
   const { isFeatureEnabled, isLoading, plan } = useFeatures();
   
   return {
-    canAccess: isFeatureEnabled(featureName),
+    canAccess: isFeatureEnabled(featureKey),
     isLoading,
     plan,
   };
@@ -33,15 +33,15 @@ export function useFeatureCheck(featureName: string) {
  *   toast.error(`Vous avez atteint la limite de ${limit} propriétés`);
  * }
  */
-export function useFeatureLimit(featureName: string, limitKey: string) {
+export function useFeatureLimit(featureKey: string, limitKey: string) {
   const { getFeatureLimit, isFeatureEnabled } = useFeatures();
   
-  const limit = getFeatureLimit(featureName, limitKey);
+  const limit = getFeatureLimit(featureKey, limitKey);
   
   return {
     limit,
     hasLimit: limit !== null && limit !== undefined,
-    isEnabled: isFeatureEnabled(featureName),
+    isEnabled: isFeatureEnabled(featureKey),
   };
 }
 
@@ -52,11 +52,11 @@ export function useFeatureLimit(featureName: string, limitKey: string) {
  * const { canAdd, remaining } = useFeatureLimitCheck('property_management', 'max_properties', currentCount);
  */
 export function useFeatureLimitCheck(
-  featureName: string,
+  featureKey: string,
   limitKey: string,
   currentCount: number
 ) {
-  const { limit, hasLimit } = useFeatureLimit(featureName, limitKey);
+  const { limit, hasLimit } = useFeatureLimit(featureKey, limitKey);
   
   if (!hasLimit || limit === null) {
     return {

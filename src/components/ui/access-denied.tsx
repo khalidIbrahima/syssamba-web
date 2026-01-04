@@ -43,10 +43,10 @@ export function AccessDenied({
         <CardContent className="space-y-4">
           {featureName && (
             <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-sm font-medium text-gray-900 mb-1">
+              <p className="text-sm font-medium text-foreground mb-1">
                 Fonctionnalité demandée :
               </p>
-              <p className="text-sm text-gray-600">{featureName}</p>
+              <p className="text-sm text-muted-foreground">{featureName}</p>
             </div>
           )}
 

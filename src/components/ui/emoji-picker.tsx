@@ -38,7 +38,7 @@ export function EmojiPicker({ onEmojiSelect, className }: EmojiPickerProps) {
           className={`h-7 w-7 p-0 hover:bg-gray-200 rounded-full ${className || ''}`}
           title="Emoji"
         >
-          <Smile className="h-4 w-4 text-gray-500" />
+          <Smile className="h-4 w-4 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
@@ -52,7 +52,7 @@ export function EmojiPicker({ onEmojiSelect, className }: EmojiPickerProps) {
                 className={`px-3 py-1 text-xs font-medium rounded-t transition-colors ${
                   selectedCategory === category
                     ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-gray-50'
                 }`}
               >
                 {category}

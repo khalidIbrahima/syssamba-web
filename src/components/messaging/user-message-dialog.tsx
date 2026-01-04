@@ -273,7 +273,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
           <div className="w-1/3 border-r flex flex-col">
             <div className="p-4 border-b">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Rechercher un utilisateur..."
                   value={searchQuery}
@@ -286,10 +286,10 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
             <div className="flex-1 overflow-y-auto">
               {isLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : filteredUsers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   <p className="text-sm">Aucun utilisateur trouvé</p>
                 </div>
               ) : (
@@ -310,10 +310,10 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
+                        <p className="font-medium text-foreground truncate">
                           {user.firstName} {user.lastName}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="text-xs text-muted-foreground truncate">
                           {user.email || user.role}
                         </p>
                       </div>
@@ -336,10 +336,10 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-foreground">
                       {selectedUser.firstName} {selectedUser.lastName}
                     </p>
-                    <p className="text-sm text-gray-500">{selectedUser.email}</p>
+                    <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
                   </div>
                   <Button
                     variant="ghost"
@@ -354,12 +354,12 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                 <div className="flex-1 overflow-y-auto bg-gradient-to-b from-gray-50 to-white px-4 py-4">
                   {messagesLoading ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                   ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <p className="text-gray-500">Aucun message</p>
-                      <p className="text-sm text-gray-400 mt-1">Envoyez le premier message</p>
+                      <p className="text-muted-foreground">Aucun message</p>
+                      <p className="text-sm text-muted-foreground mt-1">Envoyez le premier message</p>
                     </div>
                   ) : (
                     <div className="space-y-1">
@@ -391,7 +391,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                             {!isCurrentUser && (
                               <Avatar className="h-8 w-8 flex-shrink-0">
                                 <AvatarImage src={msg.senderAvatar || undefined} />
-                                <AvatarFallback className="bg-gray-200 text-gray-700 text-xs">
+                                <AvatarFallback className="bg-gray-200 text-muted-foreground text-xs">
                                   {msg.senderName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                                 </AvatarFallback>
                               </Avatar>
@@ -404,7 +404,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                                 "relative rounded-2xl px-4 py-2.5 shadow-sm",
                                 isCurrentUser
                                   ? "bg-blue-600 text-white rounded-br-md"
-                                  : "bg-white text-gray-900 border border-gray-200 rounded-bl-md"
+                                  : "bg-white text-foreground border border-gray-200 rounded-bl-md"
                               )}>
                                 {msg.content && (
                                   <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
@@ -439,7 +439,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                                                 "flex items-center gap-2 px-3 py-2 rounded-lg border",
                                                 isCurrentUser
                                                   ? "bg-blue-500/20 border-blue-400/50 text-white"
-                                                  : "bg-gray-100 border-gray-300 text-gray-900"
+                                                  : "bg-gray-100 border-gray-300 text-foreground"
                                               )}
                                             >
                                               <File className="h-4 w-4" />
@@ -454,7 +454,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                                   </div>
                                 )}
                               </div>
-                              <span className="text-xs text-gray-500 mt-0.5 px-1">
+                              <span className="text-xs text-muted-foreground mt-0.5 px-1">
                                 {formatTime(msg.createdAt)}
                               </span>
                             </div>
@@ -500,8 +500,8 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                               </div>
                             ) : (
                               <div className="relative flex items-center gap-2 px-2 py-1 bg-gray-100 rounded-lg border border-gray-200">
-                                <File className="h-4 w-4 text-gray-600" />
-                                <span className="text-xs text-gray-700 max-w-[100px] truncate">
+                                <File className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground max-w-[100px] truncate">
                                   {attachment.split('/').pop()}
                                 </span>
                                 <button
@@ -553,9 +553,9 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                           title="Joindre un fichier"
                         >
                           {uploadingFiles ? (
-                            <Loader2 className="h-4 w-4 text-gray-500 animate-spin" />
+                            <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
                           ) : (
-                            <Paperclip className="h-4 w-4 text-gray-500" />
+                            <Paperclip className="h-4 w-4 text-muted-foreground" />
                           )}
                         </Button>
                         <EmojiPicker onEmojiSelect={handleEmojiSelect} />
@@ -578,8 +578,8 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
             ) : (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
-                  <p className="text-gray-500 mb-2">Sélectionnez un utilisateur pour commencer</p>
-                  <p className="text-sm text-gray-400">Choisissez un utilisateur dans la liste à gauche</p>
+                  <p className="text-muted-foreground mb-2">Sélectionnez un utilisateur pour commencer</p>
+                  <p className="text-sm text-muted-foreground">Choisissez un utilisateur dans la liste à gauche</p>
                 </div>
               </div>
             )}

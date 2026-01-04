@@ -69,15 +69,15 @@ export function PermissionGate({
       return (
         <Card className="border-2 border-dashed">
           <CardContent className="p-8 text-center">
-            <Lock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Accès Refusé
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               {deniedMessage || `Vous n'avez pas la permission de ${actionLabels[action] || action} les ${objectType}.`}
             </p>
             {profileName && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Profil actuel: {profileName}
               </p>
             )}

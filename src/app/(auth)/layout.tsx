@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { AuthContent } from '@/components/layout/auth-content';
 import { getCurrentUser } from '@/lib/auth';
 import { isSuperAdmin } from '@/lib/super-admin';
+import { canUserAccessObject } from '@/lib/user-permissions';
 import { db } from '@/lib/db';
 
 export default async function AuthLayout({
@@ -22,6 +23,17 @@ export default async function AuthLayout({
   const isSetupPage = pathname.includes('/setup');
   const isAdminSelectPage = pathname === '/admin/select-organization' || pathname.startsWith('/admin/select-organization');
   const isAdminPage = pathname.startsWith('/admin'); // Includes /admin and /admin/*
+  const isDashboardPage = pathname === '/dashboard' || pathname.startsWith('/dashboard');
+
+  // Check if super admin is trying to access setup page - NEVER allow this
+  if (isSetupPage) {
+    const userIsSuperAdmin = await isSuperAdmin(user.id);
+    if (userIsSuperAdmin) {
+      // Super admin should NEVER access setup page - redirect to admin
+      redirect('/admin/select-organization');
+      return;
+    }
+  }
 
   // Check organization configuration
   if (!isSetupPage && !isAdminSelectPage) {
@@ -41,20 +53,40 @@ export default async function AuthLayout({
       const userIsSuperAdmin = await isSuperAdmin(user.id);
 
       if (userIsSuperAdmin) {
-        // Super admin: always allow access to admin pages
-        // If not on admin page, redirect to /admin
-        if (!isAdminPage) {
+        // Super admin: redirect dashboard to /admin (their home page)
+        if (isDashboardPage) {
+          if (!user.organizationId) {
+            redirect('/admin/select-organization');
+            return;
+          } else {
             redirect('/admin');
+            return;
+          }
         }
-        // If already on admin pages, allow access
+        // Super admin without organization trying to access non-admin pages
+        if (!isAdminPage && !user.organizationId) {
+          redirect('/admin/select-organization');
+          return;
+        }
+        // If on admin pages or has organization, allow access to all pages
       } else {
         // Regular user: if no organization, redirect to setup
-        // If user has organization, allow access (don't redirect to setup)
         if (!user.organizationId) {
           redirect('/setup');
           return;
         }
-        // User has organization - allow access to dashboard and other pages
+
+        // Check if user is organization admin (can edit Organization)
+        // Organization admins should have access to dashboard and other pages
+        const canEditOrg = await canUserAccessObject(user.id, 'Organization', 'edit');
+        
+        if (canEditOrg) {
+          // Organization admin - allow access to all pages including dashboard
+          // No redirect needed
+        } else {
+          // Regular user with organization - allow access (permissions checked in page components)
+          // User has organization - allow access to dashboard and other pages
+        }
       }
     } catch (error) {
       console.error('Error checking organization:', error);

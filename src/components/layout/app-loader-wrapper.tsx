@@ -33,11 +33,11 @@ class AppLoaderErrorBoundary extends Component<
     if (this.state.hasError) {
       // Show loading screen if there's an error (likely QueryClient not available)
       return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
           <div className="flex flex-col items-center gap-4">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-            <p className="text-lg font-medium text-gray-700">Loading settings...</p>
-            <p className="text-sm text-gray-500">Please wait while we load your data</p>
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 dark:border-blue-400 border-t-transparent" />
+            <p className="text-lg font-medium text-foreground">Loading settings...</p>
+            <p className="text-sm text-muted-foreground">Please wait while we load your data</p>
           </div>
         </div>
       );

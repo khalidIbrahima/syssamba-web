@@ -89,9 +89,9 @@ export function PhotoUpload({
   return (
     <div className="space-y-3">
       <div>
-        <label className="text-sm font-medium text-gray-700">{label}</label>
+        <label className="text-sm font-medium text-muted-foreground">{label}</label>
         {description && (
-          <p className="text-xs text-gray-500 mt-1">{description}</p>
+          <p className="text-xs text-muted-foreground mt-1">{description}</p>
         )}
       </div>
 
@@ -153,7 +153,7 @@ export function PhotoUpload({
               </>
             )}
           </Button>
-          <p className="text-xs text-gray-500 mt-1 text-center">
+          <p className="text-xs text-muted-foreground mt-1 text-center">
             Formats acceptés: JPG, PNG, WebP (max 5MB par photo)
           </p>
         </div>

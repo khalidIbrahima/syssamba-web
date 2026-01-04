@@ -95,8 +95,8 @@ export function PropertyMap({
           <Popup>
             <div className="p-2">
               <p className="font-semibold text-sm">{propertyName}</p>
-              {address && <p className="text-xs text-gray-600">{address}</p>}
-              {city && <p className="text-xs text-gray-500">{city}</p>}
+              {address && <p className="text-xs text-muted-foreground">{address}</p>}
+              {city && <p className="text-xs text-muted-foreground">{city}</p>}
             </div>
           </Popup>
         </Marker>

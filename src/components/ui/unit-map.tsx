@@ -96,8 +96,8 @@ export function UnitMap({
           <Popup>
             <div className="p-2">
               <p className="font-semibold text-sm">Lot {unitNumber}</p>
-              {propertyName && <p className="text-xs text-gray-600">{propertyName}</p>}
-              {address && <p className="text-xs text-gray-500">{address}</p>}
+              {propertyName && <p className="text-xs text-muted-foreground">{propertyName}</p>}
+              {address && <p className="text-xs text-muted-foreground">{address}</p>}
             </div>
           </Popup>
         </Marker>

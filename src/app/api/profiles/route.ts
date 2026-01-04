@@ -39,12 +39,39 @@ export async function GET(request: Request) {
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
-    const filterOrganizationId = searchParams.get('organizationId');
+    let filterOrganizationId = searchParams.get('organizationId');
     const getAll = searchParams.get('getAll') === 'true';
+
+    // Validate and normalize organizationId
+    // If it's the string "null" or "undefined", convert to null
+    if (filterOrganizationId === 'null' || filterOrganizationId === 'undefined') {
+      filterOrganizationId = null;
+    } else if (filterOrganizationId) {
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(filterOrganizationId)) {
+        return NextResponse.json(
+          { error: 'Invalid organization ID format' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Regular users need an organization
     if (!userIsSuperAdmin && !user.organizationId) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    }
+
+    // Normalize user.organizationId (in case it's the string "null")
+    let userOrgId: string | null = user.organizationId;
+    if (userOrgId === 'null' || userOrgId === 'undefined') {
+      userOrgId = null;
+    } else if (userOrgId) {
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userOrgId)) {
+        userOrgId = null; // Invalid UUID, treat as null
+      }
     }
 
     let profiles;
@@ -56,16 +83,57 @@ export async function GET(request: Request) {
       } else if (filterOrganizationId) {
         // Filter by specific organization
         profiles = await getProfiles(filterOrganizationId, false);
-      } else if (user.organizationId) {
+      } else if (userOrgId) {
         // Use user's selected organization
-        profiles = await getProfiles(user.organizationId, false);
+        profiles = await getProfiles(userOrgId, false);
       } else {
         // Super admin without organization: return global system profiles only
         profiles = await getProfiles(null, false);
       }
     } else {
       // Regular user: get profiles for their organization (includes global system profiles)
-      profiles = await getProfiles(user.organizationId!, false);
+      profiles = await getProfiles(userOrgId, false);
+      
+      // Filter out profiles that are only used by super admin users
+      // Get all super admin users and their profile IDs
+      const superAdminUsers = await db.select<{
+        profile_id: string | null;
+      }>('users', {
+        filter: { is_super_admin: true },
+      });
+      
+      const superAdminProfileIds = new Set(
+        superAdminUsers
+          .map(u => u.profile_id)
+          .filter((id): id is string => id !== null)
+      );
+      
+      // Get all non-super-admin users and their profile IDs
+      const regularUsers = await db.select<{
+        profile_id: string | null;
+      }>('users', {
+        filter: { is_super_admin: false },
+      });
+      
+      const regularUserProfileIds = new Set(
+        regularUsers
+          .map(u => u.profile_id)
+          .filter((id): id is string => id !== null)
+      );
+      
+      // Filter out profiles that are only used by super admins (not used by regular users)
+      profiles = profiles.filter(profile => {
+        // If profile is used by regular users, keep it
+        if (regularUserProfileIds.has(profile.id)) {
+          return true;
+        }
+        // If profile is only used by super admins, exclude it for non-super-admin users
+        if (superAdminProfileIds.has(profile.id)) {
+          return false;
+        }
+        // If profile is not used by anyone, keep it (available for assignment)
+        return true;
+      });
     }
 
     // Enrich profiles with organization names for super admin

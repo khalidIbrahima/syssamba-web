@@ -134,7 +134,11 @@ export function useAccess() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const enabledFeatures = new Set(accessData?.enabledFeatures || []);
+  // Ensure enabledFeatures is always an array (defensive check)
+  const enabledFeaturesArray = Array.isArray(accessData?.enabledFeatures) 
+    ? accessData.enabledFeatures 
+    : [];
+  const enabledFeatures = new Set(enabledFeaturesArray);
   const objectPermissions = profileData?.objectPermissions || [];
   const permissions = mapObjectPermissionsToFeatures(objectPermissions);
 

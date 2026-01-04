@@ -6,7 +6,13 @@ const config: Config = {
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}",
+    "./src/app/**/*.{ts,tsx}",
+    "./src/components/**/*.{ts,tsx}",
+    "./src/contexts/**/*.{ts,tsx}",
+    "./src/hooks/**/*.{ts,tsx}",
+    "./src/lib/**/*.{ts,tsx}",
+    "./src/db/**/*.{ts,tsx}",
+    // Exclude src/scripts - scripts don't contain Tailwind classes
   ],
   prefix: "",
   theme: {

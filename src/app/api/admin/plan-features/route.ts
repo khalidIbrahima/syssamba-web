@@ -18,7 +18,8 @@ const createPlanFeatureSchema = z.object({
 });
 
 const updatePlanFeatureRecordSchema = z.object({
-  planFeatureId: z.string().uuid('Invalid plan feature ID'),
+  planId: z.string().uuid('Invalid plan ID'),
+  featureId: z.string().uuid('Invalid feature ID'),
   isEnabled: z.boolean().optional(),
   limits: z.record(z.string(), z.any()).optional(), // JSONB field for limits
 });
@@ -172,7 +173,7 @@ export async function GET() {
       }
       
       return {
-      id: pf.id,
+      // plan_features is a junction table with composite PK (plan_id, feature_id) - no id column
       plan_id: pf.plan_id,
       feature_id: pf.feature_id,
       is_enabled: pf.is_enabled,
@@ -201,7 +202,7 @@ export async function GET() {
       displayName: string;
       description: string | null;
       features: Array<{
-        id: string;
+        planId: string;
         featureId: string;
         featureKey: string;
         featureName: string;
@@ -273,7 +274,8 @@ export async function GET() {
       const category = pf.feature_category || 'Unknown';
 
       const feature = {
-        id: pf.id,
+        // plan_features is a junction table with composite PK (plan_id, feature_id) - no id column
+        planId: pf.plan_id,
         featureId: pf.feature_id,
         featureKey: featureKey,
         featureName: featureName,
@@ -410,8 +412,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if plan_feature relationship already exists
+    // plan_features is a junction table with composite PK (plan_id, feature_id) - no id column
     const existingRelation = await db.selectOne<{
-      id: string;
+      plan_id: string;
+      feature_id: string;
       is_enabled: boolean;
     }>('plan_features', {
       eq: {
@@ -421,19 +425,23 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingRelation) {
-      // Update existing relationship
+      // Update existing relationship using composite PK
       await db.updateOne(
         'plan_features',
         {
           is_enabled: validatedData.isEnabled,
         },
-        { id: existingRelation.id }
+        { 
+          plan_id: validatedData.planId,
+          feature_id: featureId,
+        }
       );
 
       return NextResponse.json({
         success: true,
         message: 'Plan feature updated successfully',
-        planFeatureId: existingRelation.id,
+        planId: validatedData.planId,
+        featureId: featureId,
         isEnabled: validatedData.isEnabled,
       });
     } else {
@@ -454,7 +462,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: 'Plan feature created successfully',
-        planFeatureId: newRelation.id,
+        planId: validatedData.planId,
+        featureId: featureId,
         isEnabled: validatedData.isEnabled,
       });
     }
@@ -562,8 +571,10 @@ export async function PUT(request: NextRequest) {
       }
 
       // Check if plan_feature relationship already exists
+      // plan_features is a junction table with composite PK (plan_id, feature_id) - no id column
       const existingRelation = await db.selectOne<{
-        id: string;
+        plan_id: string;
+        feature_id: string;
         is_enabled: boolean;
       }>('plan_features', {
         eq: {
@@ -580,14 +591,18 @@ export async function PUT(request: NextRequest) {
             {
               is_enabled: isEnabled,
             },
-            { id: existingRelation.id }
+            { 
+              plan_id: planId,
+              feature_id: featureId,
+            }
           );
 
           results.push({
             featureKey,
             action: 'updated',
             isEnabled,
-            planFeatureId: existingRelation.id,
+            planId,
+            featureId,
           });
         }
       } else {
@@ -603,7 +618,8 @@ export async function PUT(request: NextRequest) {
             featureKey,
             action: 'created',
             isEnabled,
-            planFeatureId: newRelation.id,
+            planId,
+            featureId,
           });
         }
       }
@@ -661,14 +677,17 @@ export async function PATCH(request: NextRequest) {
     const validatedData = updatePlanFeatureRecordSchema.parse(body);
 
     // Check if plan_feature record exists
+    // plan_features is a junction table with composite PK (plan_id, feature_id) - no id column
     const existingRecord = await db.selectOne<{
-      id: string;
       plan_id: string;
       feature_id: string;
       is_enabled: boolean;
       limits: any;
     }>('plan_features', {
-      eq: { id: validatedData.planFeatureId },
+      eq: { 
+        plan_id: validatedData.planId,
+        feature_id: validatedData.featureId,
+      },
     });
 
     if (!existingRecord) {
@@ -687,22 +706,27 @@ export async function PATCH(request: NextRequest) {
       updateData.limits = validatedData.limits;
     }
 
-    // Update the record
+    // Update the record using composite PK
     await db.updateOne(
       'plan_features',
       updateData,
-      { id: validatedData.planFeatureId }
+      { 
+        plan_id: validatedData.planId,
+        feature_id: validatedData.featureId,
+      }
     );
 
     // Fetch updated record
     const updatedRecord = await db.selectOne<{
-      id: string;
       plan_id: string;
       feature_id: string;
       is_enabled: boolean;
       limits: any;
     }>('plan_features', {
-      eq: { id: validatedData.planFeatureId },
+      eq: { 
+        plan_id: validatedData.planId,
+        feature_id: validatedData.featureId,
+      },
     });
 
     return NextResponse.json({

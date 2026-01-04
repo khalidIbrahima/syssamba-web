@@ -62,7 +62,7 @@ export function TaskAttachments({ attachments, className }: TaskAttachmentsProps
     if (preview.type === 'pdf') {
       return <FileText className="h-5 w-5 text-red-600" />;
     }
-    return <File className="h-5 w-5 text-gray-600" />;
+    return <File className="h-5 w-5 text-muted-foreground" />;
   };
 
   const getFileTypeLabel = (url: string) => {
@@ -92,10 +92,10 @@ export function TaskAttachments({ attachments, className }: TaskAttachmentsProps
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {getFileIcon(attachment)}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {fileName}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {getFileTypeLabel(attachment)} • {canPreviewFile ? 'Visualisable' : 'Téléchargeable'}
                   </p>
                 </div>
@@ -188,8 +188,8 @@ export function TaskAttachments({ attachments, className }: TaskAttachmentsProps
             )}
             {previewType === 'file' && previewUrl && (
               <div className="flex flex-col items-center justify-center h-[70vh] text-center">
-                <FileText className="h-16 w-16 text-gray-400 mb-4" />
-                <p className="text-gray-600 mb-4">
+                <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">
                   Ce type de fichier ne peut pas être prévisualisé
                 </p>
                 <Button onClick={() => handleDownload(previewUrl)}>

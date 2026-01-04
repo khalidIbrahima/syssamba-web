@@ -147,7 +147,7 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
         <Avatar className="h-10 w-10">
-          <AvatarFallback className="bg-gray-300 text-gray-600 animate-pulse">
+          <AvatarFallback className="bg-gray-300 text-muted-foreground animate-pulse">
             ...
           </AvatarFallback>
         </Avatar>
@@ -184,7 +184,7 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
             </AvatarFallback>
           </Avatar>
           <div className="hidden lg:flex flex-col items-start">
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-medium text-foreground">
               {getUserFullName()}
             </span>
             <div className="flex items-center gap-1">
@@ -202,13 +202,13 @@ export function ProfileAvatar({ className }: ProfileAvatarProps) {
               )}
             </div>
           </div>
-          <ChevronDown className="h-4 w-4 text-gray-400 ml-1 hidden lg:block" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground ml-1 hidden lg:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-64" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-2">
-            <p className="text-sm font-medium leading-none text-gray-900">
+            <p className="text-sm font-medium leading-none text-foreground">
               {getUserFullName()}
             </p>
             

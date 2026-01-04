@@ -80,14 +80,14 @@ export default function InviteCompletePage() {
           {isProcessing && !isComplete ? (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-              <p className="text-center text-gray-600">
+              <p className="text-center text-muted-foreground">
                 Acceptation de l'invitation en cours...
               </p>
             </div>
           ) : isComplete ? (
             <div className="flex flex-col items-center gap-4">
               <CheckCircle2 className="h-12 w-12 text-green-600" />
-              <p className="text-center text-gray-600">
+              <p className="text-center text-muted-foreground">
                 Votre invitation a été acceptée avec succès. Redirection vers le tableau de bord...
               </p>
             </div>

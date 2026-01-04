@@ -27,6 +27,15 @@ export async function GET() {
 
     const organizationId = user.organizationId;
 
+    // Get user's profile
+    const userWithProfile = await supabaseAdmin
+      .from('users')
+      .select('profile_id, profiles(name)')
+      .eq('id', user.id)
+      .single();
+
+    const profileName = (userWithProfile.data?.profiles as any)?.name || 'Viewer';
+
     // Get all units for the organization
     const allUnits = await db.select<{
       id: string;
@@ -215,7 +224,9 @@ export async function GET() {
         };
       });
 
-    return NextResponse.json({
+    // Base data structure
+    const baseData = {
+      profile: profileName,
       treasury: {
         amount: Math.round(treasury),
         change: Math.round(change * 10) / 10,
@@ -239,7 +250,92 @@ export async function GET() {
       lotDistribution,
       upcomingInspections,
       overdueTasks: overdueTasksList,
-    });
+    };
+
+    // Profile-specific data
+    let profileData: any = {};
+
+    if (profileName === 'Accountant' || profileName === 'System Administrator') {
+      // Accountant: Focus on financial data
+      // Get journal entries count
+      const journalEntries = await supabaseAdmin
+        .from('journal_entries')
+        .select('id', { count: 'exact' })
+        .eq('organization_id', organizationId);
+
+      // Get pending payments
+      const pendingPayments = await supabaseAdmin
+        .from('payments')
+        .select('amount')
+        .eq('organization_id', organizationId)
+        .eq('status', 'pending');
+
+      const pendingAmount = (pendingPayments.data || []).reduce(
+        (sum, p) => sum + parseFloat(p.amount?.toString() || '0'),
+        0
+      );
+
+      profileData = {
+        ...baseData,
+        accounting: {
+          journalEntriesCount: journalEntries.count || 0,
+          pendingPayments: {
+            count: pendingPayments.data?.length || 0,
+            amount: Math.round(pendingAmount),
+          },
+        },
+      };
+    } else if (profileName === 'Agent') {
+      // Agent: Focus on operational tasks and properties
+      const properties = await db.select<{ id: string }>('properties', {
+        eq: { organization_id: organizationId },
+      });
+
+      // Get assigned tasks
+      const assignedTasks = allTasks.filter(t => {
+        // In production, check if task is assigned to current user
+        return t.status !== 'done';
+      });
+
+      profileData = {
+        ...baseData,
+        operations: {
+          propertiesCount: properties.length,
+          assignedTasks: assignedTasks.length,
+          myTasks: assignedTasks.slice(0, 5).map((task) => ({
+            id: task.id,
+            title: task.title || 'Tâche sans titre',
+            status: task.status,
+            priority: task.priority,
+            dueDate: task.due_date,
+          })),
+        },
+      };
+    } else if (profileName === 'Owner') {
+      // Owner: Focus on owned properties and revenue
+      const properties = await db.select<{ id: string }>('properties', {
+        eq: { organization_id: organizationId },
+      });
+
+      profileData = {
+        ...baseData,
+        ownership: {
+          propertiesCount: properties.length,
+          totalRevenue: Math.round(monthlyRevenue),
+          averageRent: totalUnits > 0 
+            ? Math.round(monthlyRevenue / totalUnits)
+            : 0,
+        },
+      };
+    } else {
+      // Viewer: Limited read-only data
+      profileData = {
+        ...baseData,
+        viewOnly: true,
+      };
+    }
+
+    return NextResponse.json(profileData);
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     return NextResponse.json(

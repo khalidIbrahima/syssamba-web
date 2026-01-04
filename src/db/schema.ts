@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, boolean, integer, decimal, date, timestamp, jsonb, check, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, boolean, integer, decimal, date, timestamp, jsonb, check, uniqueIndex, index, primaryKey } from 'drizzle-orm/pg-core';
 
 // Plans table - définitions des plans disponibles
 export const plans = pgTable('plans', {
@@ -128,6 +128,7 @@ export const userInvitations = pgTable('user_invitations', {
   firstName: text('first_name'),
   lastName: text('last_name'),
   role: text('role', { enum: ['owner', 'admin', 'accountant', 'agent', 'viewer'] }).default('viewer'),
+  profileId: uuid('profile_id'), // References profiles(id) - defined in SQL
   token: text('token').unique().notNull(), // Unique token for invitation link
   invitationMethod: text('invitation_method', { enum: ['email', 'sms', 'both'] }).default('email'), // Method used to send invitation
   invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'set null' }),
@@ -142,13 +143,14 @@ export const userInvitations = pgTable('user_invitations', {
   idxInvitationsEmail: index('idx_invitations_email').on(table.email),
   idxInvitationsPhone: index('idx_invitations_phone').on(table.phone),
   idxInvitationsStatus: index('idx_invitations_status').on(table.status),
+  idxInvitationsProfile: index('idx_invitations_profile').on(table.profileId),
 }));
 
 // Users table
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }),
-  clerkId: text('clerk_id').unique().notNull(),
+  sbUserId: text('sb_user_id').unique(), // Supabase Auth user ID (nullable for invited users not yet signed up)
   email: text('email'),
   phone: text('phone'),
   firstName: text('first_name'),
@@ -157,7 +159,9 @@ export const users = pgTable('users', {
   avatarUrl: text('avatar_url'),
   isActive: boolean('is_active').default(true),
   isSuperAdmin: boolean('is_super_admin').default(false),
+  profileId: uuid('profile_id'), // References profiles(id) - defined in SQL
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
 // Super admins table - additional table for super-admin management
@@ -484,4 +488,168 @@ export const ownerTransfers = pgTable('owner_transfers', {
   idxOwnerTransfersOwner: index('idx_owner_transfers_owner').on(table.ownerId),
   idxOwnerTransfersStatus: index('idx_owner_transfers_status').on(table.status),
   idxOwnerTransfersDueDate: index('idx_owner_transfers_due_date').on(table.dueDate),
+}));
+
+// Navigation Items System
+// Table pour gérer dynamiquement les éléments de navigation de la sidebar
+
+// Navigation items table - définit tous les éléments de navigation disponibles
+export const navigationItems = pgTable('navigation_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  // Identification unique
+  key: text('key').notNull().unique(), // e.g., 'dashboard', 'properties', 'tasks'
+  name: text('name').notNull(), // Nom d'affichage (e.g., 'Dashboard', 'Biens')
+  href: text('href').notNull(), // Route (e.g., '/dashboard', '/properties')
+  
+  // Métadonnées UI
+  icon: text('icon'), // Nom de l'icône Lucide (e.g., 'LayoutDashboard', 'Building2')
+  badgeCount: integer('badge_count'), // Nombre pour badge (null = pas de badge)
+  sortOrder: integer('sort_order').default(0), // Ordre d'affichage
+  
+  // Sécurité Plan (Feature Level)
+  featureId: uuid('feature_id').references(() => features.id, { onDelete: 'set null' }), // Feature requise du plan - FK vers features(id)
+  
+  // Sécurité Profile (Permission Level)
+  requiredPermission: text('required_permission'), // Permission requise (e.g., 'canViewAllProperties')
+  requiredObjectType: text('required_object_type'), // Object type pour permission (e.g., 'Property')
+  requiredObjectAction: text('required_object_action', { enum: ['read', 'create', 'edit', 'delete'] }).default('read'),
+  
+  // Hiérarchie (pour sub-items)
+  parentKey: text('parent_key').references((): any => navigationItems.key, { onDelete: 'cascade' }), // Self-reference pour sub-items
+  
+  // Configuration
+  isActive: boolean('is_active').default(true),
+  isSystemItem: boolean('is_system_item').default(false), // Items système (non supprimables)
+  
+  // Métadonnées
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  idxNavigationItemsKey: index('idx_navigation_items_key').on(table.key),
+  idxNavigationItemsParent: index('idx_navigation_items_parent').on(table.parentKey),
+  idxNavigationItemsActive: index('idx_navigation_items_active').on(table.isActive),
+  idxNavigationItemsFeature: index('idx_navigation_items_feature_id').on(table.featureId),
+  idxNavigationItemsSort: index('idx_navigation_items_sort').on(table.sortOrder),
+}));
+
+// Profile navigation items - liaison entre profils et éléments de navigation (JUNCTION TABLE)
+// PRIMARY KEY composite: (profile_id, navigation_item_id)
+// Note: profiles table is defined in SQL migrations, using uuid reference without explicit FK
+export const profileNavigationItems = pgTable('profile_navigation_items', {
+  // Relations (composite primary key - no id column)
+  profileId: uuid('profile_id').notNull(), // References profiles(id) - defined in SQL
+  navigationItemId: uuid('navigation_item_id').notNull().references(() => navigationItems.id, { onDelete: 'cascade' }),
+  
+  // Configuration
+  isEnabled: boolean('is_enabled').default(true), // Activer/désactiver pour ce profil
+  isVisible: boolean('is_visible').default(true), // Visible dans la sidebar
+  customSortOrder: integer('custom_sort_order'), // Ordre personnalisé pour ce profil
+  
+  // Métadonnées
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  // Composite primary key: (profile_id, navigation_item_id)
+  pkProfileNavItem: primaryKey({ columns: [table.profileId, table.navigationItemId], name: 'profile_navigation_items_pkey' }),
+  idxProfileNavProfile: index('idx_profile_nav_profile').on(table.profileId),
+  idxProfileNavItem: index('idx_profile_nav_item').on(table.navigationItemId),
+  idxProfileNavEnabled: index('idx_profile_nav_enabled').on(table.profileId, table.isEnabled),
+}));
+
+// Organization navigation items - personnalisation par organisation (multi-tenant)
+export const organizationNavigationItems = pgTable('organization_navigation_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  // Relations
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  navigationItemKey: text('navigation_item_key').notNull().references(() => navigationItems.key, { onDelete: 'cascade' }),
+  
+  // Configuration
+  isEnabled: boolean('is_enabled').default(true),
+  isVisible: boolean('is_visible').default(true),
+  customName: text('custom_name'), // Nom personnalisé pour cette organisation
+  customIcon: text('custom_icon'), // Icône personnalisée
+  
+  // Métadonnées
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  idxOrgNavOrg: index('idx_org_nav_org').on(table.organizationId),
+  idxOrgNavItem: index('idx_org_nav_item').on(table.navigationItemKey),
+  idxOrgNavEnabled: index('idx_org_nav_enabled').on(table.organizationId, table.isEnabled),
+  uniqueOrgNavItem: uniqueIndex('unique_org_nav_item').on(table.organizationId, table.navigationItemKey),
+}));
+
+// Buttons table - defines all buttons available in the system
+export const buttons = pgTable('buttons', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  
+  // Identification unique
+  key: text('key').notNull().unique(), // e.g., 'property.create', 'tenant.edit'
+  name: text('name').notNull(), // Nom d'affichage (e.g., 'Créer un bien')
+  label: text('label').notNull(), // Label du bouton (e.g., 'Créer', 'Modifier')
+  
+  // Type de bouton
+  buttonType: text('button_type', { enum: ['button', 'icon', 'link', 'menu_item'] }).notNull().default('button'),
+  variant: text('variant', { enum: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'] }).default('default'),
+  size: text('size', { enum: ['default', 'sm', 'lg', 'icon'] }).default('default'),
+  
+  // Relation avec objet
+  objectType: text('object_type').notNull(), // Type d'objet (e.g., 'Property', 'Tenant')
+  action: text('action', { enum: ['create', 'read', 'update', 'edit', 'delete', 'view', 'export', 'import', 'print', 'custom'] }).notNull().default('create'),
+  
+  // Métadonnées UI
+  icon: text('icon'), // Nom de l'icône Lucide
+  tooltip: text('tooltip'), // Tooltip au survol
+  sortOrder: integer('sort_order').default(0),
+  
+  // Sécurité Plan (Feature Level)
+  featureId: uuid('feature_id').references(() => features.id, { onDelete: 'set null' }),
+  
+  // Sécurité Profile (Permission Level)
+  requiredPermission: text('required_permission'),
+  requiredObjectType: text('required_object_type'),
+  requiredObjectAction: text('required_object_action', { enum: ['read', 'create', 'edit', 'delete'] }).default('create'),
+  
+  // Configuration
+  isActive: boolean('is_active').default(true),
+  isSystemButton: boolean('is_system_button').default(false),
+  
+  // Métadonnées
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  idxButtonsKey: index('idx_buttons_key').on(table.key),
+  idxButtonsObjectType: index('idx_buttons_object_type').on(table.objectType),
+  idxButtonsAction: index('idx_buttons_action').on(table.action),
+  idxButtonsActive: index('idx_buttons_active').on(table.isActive),
+  idxButtonsFeature: index('idx_buttons_feature_id').on(table.featureId),
+  idxButtonsObjectAction: index('idx_buttons_object_action').on(table.objectType, table.action),
+}));
+
+// Profile buttons - liaison entre profils et boutons (JUNCTION TABLE)
+// PRIMARY KEY composite: (profile_id, button_id)
+export const profileButtons = pgTable('profile_buttons', {
+  // Relations (composite primary key)
+  profileId: uuid('profile_id').notNull(), // References profiles(id) - defined in SQL
+  buttonId: uuid('button_id').notNull().references(() => buttons.id, { onDelete: 'cascade' }),
+  
+  // Configuration
+  isEnabled: boolean('is_enabled').default(true), // Activer/désactiver pour ce profil
+  isVisible: boolean('is_visible').default(true), // Visible dans l'interface
+  customLabel: text('custom_label'), // Label personnalisé pour ce profil
+  customIcon: text('custom_icon'), // Icône personnalisée pour ce profil
+  
+  // Métadonnées
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  // Composite primary key: (profile_id, button_id)
+  pkProfileButton: primaryKey({ columns: [table.profileId, table.buttonId], name: 'profile_buttons_pkey' }),
+  idxProfileButtonProfile: index('idx_profile_buttons_profile').on(table.profileId),
+  idxProfileButtonButton: index('idx_profile_buttons_button').on(table.buttonId),
+  idxProfileButtonEnabled: index('idx_profile_buttons_enabled').on(table.profileId, table.isEnabled),
 }));

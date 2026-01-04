@@ -4,6 +4,7 @@
  */
 
 import { useAccess } from './use-access';
+import { getObjectTypeFromPermission } from '@/lib/permission-mappings';
 import type { ObjectType } from '@/lib/salesforce-inspired-security';
 
 interface TabPermissionConfig {
@@ -36,19 +37,7 @@ export function useTabPermission(tabConfig: TabPermissionConfig): boolean {
   // If a specific permission is specified, check it
   if (permission) {
     // Map permission to object type for access checking
-    const permissionToObjectMap: Record<string, ObjectType> = {
-      'canViewAllProperties': 'Property',
-      'canViewAllUnits': 'Unit',
-      'canViewAllTenants': 'Tenant',
-      'canViewAllLeases': 'Lease',
-      'canViewAllPayments': 'Payment',
-      'canViewAllTasks': 'Task',
-      'canViewAccounting': 'JournalEntry',
-      'canSendMessages': 'Message',
-      'canViewSettings': 'Organization',
-    };
-
-    const mappedObjectType = permissionToObjectMap[permission];
+    const mappedObjectType = getObjectTypeFromPermission(permission);
     if (mappedObjectType) {
       return canAccessObject(mappedObjectType, 'read');
     }

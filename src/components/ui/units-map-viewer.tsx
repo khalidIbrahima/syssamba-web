@@ -117,8 +117,8 @@ export function UnitsMapViewer({ units, height = '500px' }: UnitsMapViewerProps)
     return (
       <div style={{ height }} className="rounded-lg border bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 mb-2">Aucun lot sélectionné avec coordonnées</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-muted-foreground mb-2">Aucun lot sélectionné avec coordonnées</p>
+          <p className="text-sm text-muted-foreground">
             Sélectionnez des lots qui ont des coordonnées géographiques
           </p>
         </div>
@@ -149,9 +149,9 @@ export function UnitsMapViewer({ units, height = '500px' }: UnitsMapViewerProps)
             <Popup>
               <div className="p-2">
                 <p className="font-semibold text-sm">Lot {unit.unitNumber}</p>
-                <p className="text-xs text-gray-600 mt-1">{unit.propertyName}</p>
-                <p className="text-xs text-gray-500 mt-1">{unit.address}</p>
-                {unit.city && <p className="text-xs text-gray-500">{unit.city}</p>}
+                <p className="text-xs text-muted-foreground mt-1">{unit.propertyName}</p>
+                <p className="text-xs text-muted-foreground mt-1">{unit.address}</p>
+                {unit.city && <p className="text-xs text-muted-foreground">{unit.city}</p>}
               </div>
             </Popup>
           </Marker>

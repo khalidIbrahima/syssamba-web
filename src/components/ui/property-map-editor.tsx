@@ -127,7 +127,7 @@ export function PropertyMapEditor({
           </Marker>
         )}
       </MapContainer>
-      <div className="mt-2 text-sm text-gray-600 text-center">
+      <div className="mt-2 text-sm text-muted-foreground text-center">
         {markerPosition ? (
           <p>
             Position: {markerPosition[0].toFixed(6)}, {markerPosition[1].toFixed(6)}

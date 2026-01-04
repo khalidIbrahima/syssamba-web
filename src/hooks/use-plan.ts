@@ -1,4 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+'use client';
+
+import { useDataQuery } from '@/hooks/use-query';
 import { 
   getPlanLimits, 
   getPlanDefinition,
@@ -135,14 +137,16 @@ async function getOrganizationPlan(): Promise<{
 }
 
 export function usePlan() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['organization-plan'],
-    queryFn: getOrganizationPlan,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    // Ensure we always get fresh data from DB
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-  });
+  // Use useDataQuery instead of useQuery directly to ensure proper QueryClient setup
+  const { data, isLoading, error } = useDataQuery(
+    ['organization-plan'],
+    getOrganizationPlan,
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
+  );
 
   // Use data from API (which comes from DB) if available
   // Only use fallback if data is completely missing (not just undefined properties)

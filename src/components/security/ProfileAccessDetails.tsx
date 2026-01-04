@@ -13,7 +13,7 @@ import type { AccessLevel } from '@/lib/security/profile-access-level';
 import { Shield, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 const accessLevelColors: Record<AccessLevel, string> = {
-  None: 'bg-gray-100 text-gray-600 border-gray-300',
+  None: 'bg-gray-100 text-muted-foreground border-gray-300',
   Read: 'bg-blue-100 text-blue-700 border-blue-300',
   ReadWrite: 'bg-green-100 text-green-700 border-green-300',
   All: 'bg-purple-100 text-purple-700 border-purple-300',
@@ -38,7 +38,7 @@ export function ProfileAccessDetails() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -65,7 +65,7 @@ export function ProfileAccessDetails() {
       <CardContent className="space-y-6">
         {/* Overall Summary */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">
             Résumé global
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -73,7 +73,7 @@ export function ProfileAccessDetails() {
               {canCreateAny ? (
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
               ) : (
-                <XCircle className="h-4 w-4 text-gray-400" />
+                <XCircle className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="text-sm">Créer</span>
             </div>
@@ -81,7 +81,7 @@ export function ProfileAccessDetails() {
               {canEditAny ? (
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
               ) : (
-                <XCircle className="h-4 w-4 text-gray-400" />
+                <XCircle className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="text-sm">Modifier</span>
             </div>
@@ -89,7 +89,7 @@ export function ProfileAccessDetails() {
               {canDeleteAny ? (
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
               ) : (
-                <XCircle className="h-4 w-4 text-gray-400" />
+                <XCircle className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="text-sm">Supprimer</span>
             </div>
@@ -97,7 +97,7 @@ export function ProfileAccessDetails() {
               {canViewAllAny ? (
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
               ) : (
-                <XCircle className="h-4 w-4 text-gray-400" />
+                <XCircle className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="text-sm">Voir tout</span>
             </div>
@@ -106,23 +106,23 @@ export function ProfileAccessDetails() {
 
         {/* Statistics */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">
             Statistiques
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-foreground">
                 {accessibleObjects}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 Objets accessibles sur {totalObjects}
               </div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-foreground">
                 {overallAccessLevel}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 {getAccessLevelDescription(overallAccessLevel)}
               </div>
             </div>
@@ -132,7 +132,7 @@ export function ProfileAccessDetails() {
         {/* Object Access Levels */}
         {Object.keys(objectAccessLevels).length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">
               Accès par type d'objet
             </h3>
             <div className="space-y-2">
@@ -141,7 +141,7 @@ export function ProfileAccessDetails() {
                   key={objectType}
                   className="flex items-center justify-between p-2 rounded border"
                 >
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-muted-foreground">
                     {objectType}
                   </span>
                   <Badge className={accessLevelColors[level]}>
@@ -156,7 +156,7 @@ export function ProfileAccessDetails() {
         {/* Detailed Permissions */}
         {permissions.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground mb-3">
               Permissions détaillées
             </h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -166,7 +166,7 @@ export function ProfileAccessDetails() {
                   className="p-3 rounded border bg-gray-50"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-foreground">
                       {permission.objectType}
                     </span>
                     <Badge className={accessLevelColors[permission.accessLevel]}>
@@ -178,7 +178,7 @@ export function ProfileAccessDetails() {
                       {permission.canRead ? (
                         <CheckCircle2 className="h-3 w-3 text-green-600" />
                       ) : (
-                        <XCircle className="h-3 w-3 text-gray-400" />
+                        <XCircle className="h-3 w-3 text-muted-foreground" />
                       )}
                       <span>Lire</span>
                     </div>
@@ -186,7 +186,7 @@ export function ProfileAccessDetails() {
                       {permission.canCreate ? (
                         <CheckCircle2 className="h-3 w-3 text-green-600" />
                       ) : (
-                        <XCircle className="h-3 w-3 text-gray-400" />
+                        <XCircle className="h-3 w-3 text-muted-foreground" />
                       )}
                       <span>Créer</span>
                     </div>
@@ -194,7 +194,7 @@ export function ProfileAccessDetails() {
                       {permission.canEdit ? (
                         <CheckCircle2 className="h-3 w-3 text-green-600" />
                       ) : (
-                        <XCircle className="h-3 w-3 text-gray-400" />
+                        <XCircle className="h-3 w-3 text-muted-foreground" />
                       )}
                       <span>Modifier</span>
                     </div>
@@ -202,7 +202,7 @@ export function ProfileAccessDetails() {
                       {permission.canDelete ? (
                         <CheckCircle2 className="h-3 w-3 text-green-600" />
                       ) : (
-                        <XCircle className="h-3 w-3 text-gray-400" />
+                        <XCircle className="h-3 w-3 text-muted-foreground" />
                       )}
                       <span>Supprimer</span>
                     </div>

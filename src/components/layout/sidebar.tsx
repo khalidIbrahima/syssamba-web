@@ -26,10 +26,15 @@ import { usePlan } from '@/hooks/use-plan';
 import { useAccess } from '@/hooks/use-access';
 import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { useFeatures } from '@/contexts/FeatureContext';
+import { getObjectTypeFromPermission } from '@/lib/permission-mappings';
 import type { ObjectType } from '@/lib/salesforce-inspired-security';
+import { useMemo } from 'react';
+import { useDataQuery } from '@/hooks/use-query';
+import { getIconByName } from '@/lib/icon-mapper';
 
 // Type definitions for navigation items with tab-based permissions
 interface SubItem {
+  key?: string; // Unique identifier (from API)
   name: string;
   href: string;
   tab?: string; // Tab identifier (e.g., 'tenant-payments', 'owner-transfers')
@@ -40,6 +45,7 @@ interface SubItem {
 }
 
 interface NavigationItem {
+  key?: string; // Unique identifier (from API)
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -49,8 +55,23 @@ interface NavigationItem {
   subItems?: SubItem[];
 }
 
+// Fetch navigation items from API
+async function fetchNavigationItems() {
+  const response = await fetch('/api/navigation/items', {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch navigation items');
+  }
+
+  const data = await response.json();
+  return data.items || [];
+}
+
 // Navigation items with feature requirements and tab-based permissions
-const navigationItems: NavigationItem[] = [
+// DEPRECATED: Now using dynamic navigation items from API
+const navigationItemsStatic: NavigationItem[] = [
   { 
     name: 'Dashboard', 
     href: '/dashboard', 
@@ -140,7 +161,7 @@ const navigationItems: NavigationItem[] = [
     href: '/tasks', 
     icon: CheckSquare, 
     badge: 12,
-    featureKey: 'maintenance_requests',
+    featureKey: 'task_management',
     permission: 'canViewAllTasks' as const,
   },
   { 
@@ -168,9 +189,50 @@ function SidebarContent() {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const { limits, currentUsage, plan, definition } = usePlan();
-  const { canAccessFeature, canPerformAction, canAccessObject } = useAccess();
+  const { canAccessObject, canPerformAction } = useAccess();
   const { isFeatureEnabled } = useFeatures();
   const { isSuperAdmin } = useSuperAdmin();
+  
+  // Fetch navigation items from API
+  const { data: apiNavigationItems, isLoading: isLoadingNavItems } = useDataQuery(
+    ['navigation-items'],
+    fetchNavigationItems
+  );
+  
+  // Transform API items to NavigationItem format
+  const navigationItems: NavigationItem[] = useMemo(() => {
+    if (!apiNavigationItems || !Array.isArray(apiNavigationItems) || apiNavigationItems.length === 0) {
+      return [];
+    }
+
+    return apiNavigationItems
+      .filter((item: any) => item && item.href && typeof item.href === 'string') // Filter out items without valid href
+      .map((item: any) => {
+        const IconComponent = getIconByName(item.icon);
+        
+        return {
+          key: item.key, // Add key for unique identification
+          name: item.name || 'Unnamed',
+          href: item.href, // Guaranteed to be a string after filter
+          icon: IconComponent,
+          badge: item.badge,
+          featureKey: null, // Already filtered by API
+          permission: '', // Already filtered by API
+          subItems: item.subItems
+            ?.filter((subItem: any) => subItem && subItem.href && typeof subItem.href === 'string') // Filter out sub-items without valid href
+            .map((subItem: any) => ({
+              key: subItem.key || subItem.href, // Use key or href as unique identifier
+              name: subItem.name || 'Unnamed',
+              href: subItem.href, // Guaranteed to be a string after filter
+              tab: subItem.href.includes('tab=') ? new URLSearchParams(subItem.href.split('?')[1] || '').get('tab') || undefined : undefined,
+              permission: '', // Already filtered by API
+              objectType: undefined,
+              objectAction: undefined,
+              featureKey: undefined,
+            })) || [],
+        };
+      });
+  }, [apiNavigationItems]);
   
   // Check if user is organization admin (can edit Organization)
   // Org admins manage their own organization and should see all sidebar items
@@ -179,127 +241,14 @@ function SidebarContent() {
   // Alias for backward compatibility
   const isAdmin = isOrgAdmin;
 
-  /**
-   * Check if a sub-item should be visible based on its permissions
-   */
-  const canAccessSubItem = (subItem: SubItem): boolean => {
-    // Organization admins bypass all checks (they manage their own org)
-    if (isOrgAdmin) {
-      return true;
-    }
-
-    // If sub-item has a feature requirement, check it first
-    if (subItem.featureKey && !isFeatureEnabled(subItem.featureKey)) {
-      return false;
-    }
-
-    // If sub-item has objectType and objectAction, use object-level permission check
-    if (subItem.objectType && subItem.objectAction) {
-      return canAccessObject(subItem.objectType, subItem.objectAction);
-    }
-
-    // If sub-item has a specific permission, check it
-    if (subItem.permission) {
-      // Map permission to object type for access checking
-      const permissionToObjectMap: Record<string, ObjectType> = {
-        'canViewAllProperties': 'Property',
-        'canViewAllUnits': 'Unit',
-        'canViewAllTenants': 'Tenant',
-        'canViewAllLeases': 'Lease',
-        'canViewAllPayments': 'Payment',
-        'canViewAllTasks': 'Task',
-        'canViewAccounting': 'JournalEntry',
-        'canSendMessages': 'Message',
-        'canViewSettings': 'Organization',
-      };
-
-      const objectType = permissionToObjectMap[subItem.permission];
-      if (objectType) {
-        return canAccessObject(objectType, 'read');
-      }
-      return canPerformAction(subItem.permission);
-    }
-
-    // If no specific permission, inherit from parent item (default behavior)
-    return true;
-  };
-
-  // Filter navigation items based on access
-  // Organization admins can see all items (they manage their own org)
-  const filteredNavigation = navigationItems
-    .filter((item) => {
-      // Organization admins bypass all checks (they manage their own org)
-      if (isOrgAdmin) {
-        return true;
-      }
-
-      // Map permission to object type for access checking
-      const permissionToObjectMap: Record<string, ObjectType> = {
-        'canViewAllProperties': 'Property',
-        'canViewAllUnits': 'Unit',
-        'canViewAllTenants': 'Tenant',
-        'canViewAllLeases': 'Lease',
-        'canViewAllPayments': 'Payment',
-        'canViewAllTasks': 'Task',
-        'canViewAccounting': 'JournalEntry',
-        'canSendMessages': 'Message',
-        'canViewSettings': 'Organization',
-      };
-
-      // If feature is required, check both feature and permission
-      if (item.featureKey) {
-        // First check if feature is enabled in plan - if not, don't show item
-        if (!isFeatureEnabled(item.featureKey)) {
-          return false;
-        }
-        
-        // Then check if user has access to the object
-        if (item.permission) {
-          const objectType = permissionToObjectMap[item.permission];
-          if (objectType) {
-            // User must have at least read access to the object
-            // This allows users with CRUD access to see items even if they don't have "ViewAll"
-            return canAccessObject(objectType, 'read');
-          }
-          // If no object type mapping, check the specific permission
-          return canPerformAction(item.permission);
-        }
-        
-        // If no permission required but feature is enabled, show item
-        return true;
-      }
-      
-      // If no feature key, check permission only
-      if (item.permission) {
-        const objectType = permissionToObjectMap[item.permission];
-        if (objectType) {
-          // User must have at least read access to the object
-          return canAccessObject(objectType, 'read');
-        }
-        // If no object type mapping, check the specific permission
-        return canPerformAction(item.permission);
-      }
-      
-      // If no feature key and no permission, don't show item
-      return false;
-    })
-    .map((item) => {
-      // Filter sub-items based on their individual permissions
-      if (item.subItems && item.subItems.length > 0) {
-        return {
-          ...item,
-          subItems: item.subItems.filter(canAccessSubItem),
-        };
-      }
-      return item;
-    })
-    // Hide parent items if they have sub-items but none are accessible
-    .filter((item) => {
-      if (item.subItems && item.subItems.length > 0) {
-        return item.subItems.length > 0; // Only show if at least one sub-item is accessible
-      }
-      return true;
-    });
+  // Navigation items are already filtered by the API based on:
+  // 1. Plan Feature Security
+  // 2. Profile Permission Security
+  // 3. Profile Navigation Overrides
+  // So we can use them directly
+  const filteredNavigation = useMemo(() => {
+    return navigationItems;
+  }, [navigationItems]);
 
   // Initialize expanded items after mount to avoid hydration mismatch
   useEffect(() => {
@@ -314,11 +263,11 @@ function SidebarContent() {
   if (!isMounted) {
     return (
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-blue-500 px-4 pb-4">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-blue-500 dark:bg-blue-900/90 px-4 pb-4">
           {/* Placeholder to maintain layout */}
           <div className="flex h-16 shrink-0 items-center">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-blue-800">
                 <div className="h-5 w-5" />
               </div>
               <span className="text-xl font-bold text-white">Sys Samba</span>
@@ -351,85 +300,90 @@ function SidebarContent() {
 
   return (
     <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col" suppressHydrationWarning>
-      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-blue-500 px-4 pb-4" suppressHydrationWarning>
+      <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-blue-500 dark:bg-blue-900/90 px-4 pb-4 border-r border-border" suppressHydrationWarning>
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
-              <Building2 className="h-5 w-5 text-blue-600" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-blue-800">
+              <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-200" />
             </div>
-            <span className="text-xl font-bold text-white">Sys Samba</span>
+            <span className="text-xl font-bold text-white dark:text-white">Sys Samba</span>
           </Link>
         </div>
 
         {/* Navigation */}
         <nav className="flex flex-1 flex-col">
           <ul role="list" className="flex flex-1 flex-col gap-y-1">
-            {filteredNavigation.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href);
-              const hasSubItems = item.subItems && item.subItems.length > 0;
-              const isExpanded = hasSubItems && isItemExpanded(item.name);
-              
-              return (
-                <li key={item.name}>
-                  <div>
-                    {hasSubItems ? (
-                      <button
-                        onClick={() => toggleExpanded(item.name)}
-                        className={cn(
-                          'group flex items-center justify-between gap-x-3 rounded-lg p-3 text-sm font-medium leading-6 transition-colors w-full',
-                          isActive
-                            ? 'bg-white text-blue-600'
-                            : 'text-white hover:bg-blue-600/80'
-                        )}
-                      >
-                        <div className="flex items-center gap-x-3">
-                          <item.icon
-                            className={cn(
-                              'h-5 w-5 shrink-0',
-                              isActive ? 'text-blue-600' : 'text-white'
-                            )}
-                            aria-hidden="true"
-                          />
-                          {item.name}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {item.badge && (
-                            <Badge 
-                              className={cn(
-                                'h-5 min-w-5 px-1.5 text-xs font-bold',
-                                item.name === 'Paiements' 
-                                  ? 'bg-red-500 text-white' 
-                                  : 'bg-orange-500 text-white'
-                              )}
-                            >
-                              {item.badge}
-                            </Badge>
+            {filteredNavigation
+              .filter((item) => item && item.href && typeof item.href === 'string') // Additional safety check
+              .map((item, index) => {
+                const isActive = pathname === item.href || pathname.startsWith(item.href);
+                const hasSubItems = item.subItems && item.subItems.length > 0;
+                const isExpanded = hasSubItems && isItemExpanded(item.name);
+                
+                // Ensure unique key: use key if available, otherwise use href, fallback to index
+                const itemKey = item.key || item.href || `nav-item-${index}`;
+                
+                return (
+                  <li key={itemKey}>
+                    <div>
+                      {hasSubItems ? (
+                        <button
+                          onClick={() => toggleExpanded(item.name)}
+                          className={cn(
+                            'group flex items-center justify-between gap-x-3 rounded-lg p-3 text-sm font-medium leading-6 transition-colors w-full',
+                            isActive
+                              ? 'bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-100'
+                              : 'text-white/90 dark:text-white/80 hover:bg-blue-600/80 dark:hover:bg-blue-800/50'
                           )}
-                          <ChevronRight
-                            className={cn(
-                              'h-4 w-4 shrink-0 transition-transform',
-                              isExpanded ? 'rotate-90' : '',
-                              isActive ? 'text-blue-600' : 'text-white'
+                        >
+                          <div className="flex items-center gap-x-3">
+                            <item.icon
+                              className={cn(
+                                'h-5 w-5 shrink-0',
+                                isActive ? 'text-blue-600' : 'text-white'
+                              )}
+                              aria-hidden="true"
+                            />
+                            {item.name}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {item.badge && (
+                              <Badge 
+                                className={cn(
+                                  'h-5 min-w-5 px-1.5 text-xs font-bold',
+                                  item.name === 'Paiements' 
+                                    ? 'bg-red-500 text-white' 
+                                    : 'bg-orange-500 text-white'
+                                )}
+                              >
+                                {item.badge}
+                              </Badge>
                             )}
-                          />
-                        </div>
-                      </button>
-                    ) : (
-                      <Link
-                        href={item.href}
+                            <ChevronRight
+                              className={cn(
+                                'h-4 w-4 shrink-0 transition-transform',
+                                isExpanded ? 'rotate-90' : '',
+                                isActive ? 'text-blue-600' : 'text-white'
+                              )}
+                            />
+                          </div>
+                        </button>
+                      ) : (
+                        <Link
+                          href={item.href || '#'}
                         className={cn(
                           'group flex items-center justify-between gap-x-3 rounded-lg p-3 text-sm font-medium leading-6 transition-colors',
                           isActive
-                            ? 'bg-white text-blue-600'
-                            : 'text-white hover:bg-blue-600/80'
+                            ? 'bg-white dark:bg-blue-800 text-blue-600 dark:text-blue-100'
+                            : 'text-white/90 dark:text-white/80 hover:bg-blue-600/80 dark:hover:bg-blue-800/50'
                         )}
                       >
                         <div className="flex items-center gap-x-3">
                           <item.icon
                             className={cn(
                               'h-5 w-5 shrink-0',
-                              isActive ? 'text-blue-600' : 'text-white'
+                              isActive ? 'text-blue-600 dark:text-blue-100' : 'text-white/90 dark:text-white/80'
                             )}
                             aria-hidden="true"
                           />
@@ -453,28 +407,26 @@ function SidebarContent() {
                     {/* Sub-items */}
                     {hasSubItems && isExpanded && (
                       <ul className="ml-4 mt-1 space-y-1">
-                        {item.subItems?.map((subItem: SubItem) => {
-                          const subItemParams = new URLSearchParams(subItem.href.split('?')[1] || '');
-                          const subItemTab = subItemParams.get('tab');
-                          const currentTab = searchParams.get('tab');
-                          
-                          // Check if this sub-item is active based on tab parameter
-                          const isSubActive = pathname === item.href.split('?')[0] && 
-                            ((subItemTab && currentTab === subItemTab) ||
-                             (!subItemTab && !currentTab && subItem === item.subItems?.[0]));
-                          
-                          // Check if user has access to this specific sub-item
-                          const hasAccess = canAccessSubItem(subItem);
-                          
-                          // Don't render if user doesn't have access
-                          if (!hasAccess) {
-                            return null;
-                          }
-                          
-                          return (
-                            <li key={subItem.name}>
-                              <Link
-                                href={subItem.href}
+                        {item.subItems
+                          ?.filter((subItem: SubItem) => subItem && subItem.href && typeof subItem.href === 'string') // Additional safety check
+                          .map((subItem: SubItem, subIndex: number) => {
+                            const subItemParams = new URLSearchParams(subItem.href.split('?')[1] || '');
+                            const subItemTab = subItemParams.get('tab');
+                            const currentTab = searchParams.get('tab');
+                            
+                            // Check if this sub-item is active based on tab parameter
+                            const isSubActive = pathname === item.href.split('?')[0] && 
+                              ((subItemTab && currentTab === subItemTab) ||
+                               (!subItemTab && !currentTab && subItem === item.subItems?.[0]));
+                            
+                            // Ensure unique key for sub-items
+                            const subItemKey = subItem.key || subItem.href || `${itemKey}-sub-${subIndex}`;
+                            
+                            // Sub-items are already filtered by API, so render all
+                            return (
+                              <li key={subItemKey}>
+                                <Link
+                                  href={subItem.href || '#'}
                                 className={cn(
                                   'flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
                                   isSubActive
@@ -495,8 +447,8 @@ function SidebarContent() {
               );
             })}
             
-            {/* Admin Section - Show for both super admins and organization admins */}
-            {(isSuperAdmin || isAdmin) && (
+            {/* Admin Section - Show only for super admins */}
+            {isSuperAdmin && (
               <li>
                 <div className="pt-4 border-t border-blue-400">
                   <Link
@@ -525,13 +477,13 @@ function SidebarContent() {
 
         {/* Plan Agence Section - Only for admins */}
         {isAdmin && (
-          <div className="mt-auto border-t border-blue-400 pt-4">
-            <div className="rounded-lg bg-blue-600/50 p-4">
-              <h3 className="text-sm font-semibold text-white mb-2">
+          <div className="mt-auto border-t border-blue-400 dark:border-blue-700 pt-4">
+            <div className="rounded-lg bg-blue-600/50 dark:bg-blue-800/50 p-4">
+              <h3 className="text-sm font-semibold text-white dark:text-white mb-2">
                 Plan {definition?.display_name || (plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'Agence')}
               </h3>
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-white/90">
+                <div className="flex items-center justify-between text-xs text-white/90 dark:text-white/80">
                   <span>
                     {lotsUsed}/{lotsLimit === Infinity ? '∞' : lotsLimit} lots utilisés
                   </span>
@@ -542,13 +494,13 @@ function SidebarContent() {
                 {lotsLimit !== Infinity && lotsLimit > 0 && !isNaN(lotsPercentage) && (
                   <Progress 
                     value={lotsPercentage} 
-                    className="h-2 bg-blue-400" 
-                    indicatorClassName="bg-green-500"
+                    className="h-2 bg-blue-400 dark:bg-blue-700" 
+                    indicatorClassName="bg-green-500 dark:bg-green-400"
                   />
                 )}
                 <Button
                   size="sm"
-                  className="w-full bg-white text-blue-600 hover:bg-white/90 text-xs font-medium mt-2"
+                  className="w-full bg-white dark:bg-blue-700 text-blue-600 dark:text-white hover:bg-white/90 dark:hover:bg-blue-600 text-xs font-medium mt-2"
                   asChild
                 >
                   <Link href="/settings/subscription">Gérer l'abonnement</Link>
@@ -574,9 +526,9 @@ export function Sidebar() {
   if (!isClient) {
     return (
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-blue-500 px-4 pb-4">
+        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-blue-500 dark:bg-blue-900/90 px-4 pb-4">
           <div className="flex h-16 shrink-0 items-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white animate-pulse" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-blue-800 animate-pulse" />
             <span className="text-xl font-bold text-white ml-2">Samba Sys</span>
           </div>
         </div>

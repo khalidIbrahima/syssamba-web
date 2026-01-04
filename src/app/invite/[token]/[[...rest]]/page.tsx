@@ -201,7 +201,7 @@ export default function InvitePage() {
               <Button type="submit" className="w-full">
                 Créer mon compte
               </Button>
-              <div className="text-center text-sm text-gray-600">
+              <div className="text-center text-sm text-muted-foreground">
                 <p>Vous avez déjà un compte ?</p>
                 <Link
                   href={`/auth/sign-in?redirect=/invite/${token}/complete`}

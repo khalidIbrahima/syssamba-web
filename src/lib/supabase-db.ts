@@ -59,19 +59,40 @@ export class SupabaseDB {
     // Apply filters
     if (options.eq) {
       Object.entries(options.eq).forEach(([key, value]) => {
-        query = query.eq(key, value);
+        // Handle null values (including string "null" and "undefined")
+        if (value === null || value === 'null' || value === 'undefined') {
+          query = query.is(key, null);
+        } else if (value !== undefined) {
+          // Validate UUID format only for known UUID columns
+          // This prevents passing invalid UUID strings to Supabase for UUID columns
+          const uuidColumns = ['id', 'organization_id', 'profile_id', 'user_id', 'button_id', 'feature_id', 'plan_id', 'tenant_id', 'property_id', 'unit_id', 'lease_id', 'payment_id', 'task_id', 'message_id', 'journal_entry_id'];
+          if (uuidColumns.includes(key)) {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (typeof value === 'string' && value.length === 36 && !uuidRegex.test(value)) {
+              console.warn(`Skipping invalid UUID value for ${key}: ${value}`);
+              return; // Skip this filter
+            }
+          }
+          query = query.eq(key, value);
+        }
       });
     }
 
     if (options.in) {
       Object.entries(options.in).forEach(([key, values]) => {
-        query = query.in(key, values);
+        // Filter out null, "null", and "undefined" strings from arrays
+        const validValues = (values || []).filter(v => 
+          v !== null && v !== undefined && v !== 'null' && v !== 'undefined'
+        );
+        if (validValues.length > 0) {
+          query = query.in(key, validValues);
+        }
       });
     }
 
     if (options.filter) {
       Object.entries(options.filter).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (value !== undefined && value !== null && value !== 'null' && value !== 'undefined') {
           query = query.eq(key, value);
         }
       });

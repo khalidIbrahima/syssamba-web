@@ -32,6 +32,13 @@ export function useMessageNotifications(
 
   // Fetch initial unread count and set up polling to refresh it
   useEffect(() => {
+    // Check if real-time is disabled via environment variable FIRST
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_REALTIME_DISABLED === 'true') {
+      console.log('[useMessageNotifications] Real-time disabled - skipping unread count polling');
+      setUnreadCount(0); // Reset to 0 when disabled
+      return;
+    }
+
     if (!organizationId) return;
 
     const fetchUnreadCount = async () => {
@@ -84,6 +91,12 @@ export function useMessageNotifications(
 
   useEffect(() => {
     if (!organizationId || !supabase) return;
+
+    // Check if real-time is disabled via environment variable
+    if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_REALTIME_DISABLED === 'true') {
+      console.log('[useMessageNotifications] Real-time disabled via NEXT_PUBLIC_REALTIME_DISABLED');
+      return;
+    }
 
     let mounted = true;
     let channel: RealtimeChannel | null = null;

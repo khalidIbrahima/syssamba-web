@@ -30,11 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Loader2, Trash2, AlertCircle } from 'lucide-react';
+import { Plus, Loader2, Trash2, AlertCircle, Search, Filter, X, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDataQuery } from '@/hooks/use-query';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 const journalEntryFormSchema = z.object({
   entryDate: z.string().min(1, 'La date est requise'),
@@ -78,9 +81,14 @@ interface CreateJournalEntryDialogProps {
 export function CreateJournalEntryDialog({ children }: CreateJournalEntryDialogProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [accountPopoverOpen, setAccountPopoverOpen] = useState<Record<number, boolean>>({});
+  const [createAccountOpen, setCreateAccountOpen] = useState(false);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [newAccount, setNewAccount] = useState({ accountNumber: '', label: '', category: '1' });
   const queryClient = useQueryClient();
 
-  const { data: accounts, isLoading: accountsLoading } = useDataQuery(
+  const { data: accounts, isLoading: accountsLoading, refetch: refetchAccounts } = useDataQuery(
     ['accounts'],
     getAccounts
   );
@@ -153,17 +161,76 @@ export function CreateJournalEntryDialog({ children }: CreateJournalEntryDialogP
     return amount.toLocaleString('fr-FR');
   };
 
+  // Filter accounts by category (global filter)
+  const categoryFilteredAccounts = accounts?.filter((account: any) => {
+    const matchesCategory = selectedCategories.length === 0 || 
+      selectedCategories.includes(account.category);
+    return matchesCategory;
+  }) || [];
+
+  // Get unique categories
+  const categories = Array.from(new Set(accounts?.map((a: any) => String(a.category)) || [])).sort() as string[];
+
+  // Handle create account
+  const handleCreateAccount = async () => {
+    if (!newAccount.accountNumber || !newAccount.label || !newAccount.category) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    setIsCreatingAccount(true);
+    try {
+      const response = await fetch('/api/accounting/accounts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newAccount),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors de la création du compte');
+      }
+
+      const createdAccount = await response.json();
+      toast.success('Compte créé avec succès!');
+      
+      // Refresh accounts list
+      await refetchAccounts();
+      
+      // Reset form
+      setNewAccount({ accountNumber: '', label: '', category: '1' });
+      setCreateAccountOpen(false);
+      
+      // Set the newly created account in the current field
+      // This will be handled by the parent component
+    } catch (error: any) {
+      console.error('Error creating account:', error);
+      toast.error(error.message || 'Erreur lors de la création du compte');
+    } finally {
+      setIsCreatingAccount(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
-          <Button className="bg-green-600 hover:bg-green-700 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle Écriture
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          {children || (
+            <Button className="bg-green-600 hover:bg-green-700 text-white">
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvelle Écriture
+            </Button>
+          )}
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto z-50" onInteractOutside={(e) => {
+          // Allow interactions with PopoverContent
+          const target = e.target as HTMLElement;
+          if (target.closest('[data-radix-popover-content]')) {
+            e.preventDefault();
+          }
+        }}>
         <DialogHeader>
           <DialogTitle>Créer une nouvelle écriture comptable</DialogTitle>
           <DialogDescription>
@@ -241,7 +308,7 @@ export function CreateJournalEntryDialog({ children }: CreateJournalEntryDialogP
                 {fields.map((field, index) => (
                   <div key={field.id} className="p-4 border rounded-lg space-y-3">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">Ligne {index + 1}</span>
+                      <span className="text-sm font-medium text-muted-foreground">Ligne {index + 1}</span>
                       {fields.length > 2 && (
                         <Button
                           type="button"
@@ -261,24 +328,156 @@ export function CreateJournalEntryDialog({ children }: CreateJournalEntryDialogP
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Compte *</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={accountsLoading}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionner un compte" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {accounts?.map((account: any) => (
-                                  <SelectItem key={account.id} value={account.id}>
-                                    {account.accountNumber} - {account.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="space-y-2">
+                              <div className="flex gap-2">
+                                <Popover 
+                                  open={accountPopoverOpen[index] || false} 
+                                  onOpenChange={(open) => {
+                                    setAccountPopoverOpen((prev) => ({ ...prev, [index]: open }));
+                                  }}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <FormControl>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        role="combobox"
+                                        className={cn(
+                                          "w-full justify-between",
+                                          !field.value && "text-muted-foreground"
+                                        )}
+                                        disabled={accountsLoading}
+                                      >
+                                        {field.value
+                                          ? (() => {
+                                              const selectedAccount = accounts?.find((acc: any) => acc.id === field.value);
+                                              return selectedAccount 
+                                                ? `${selectedAccount.accountNumber} - ${selectedAccount.label}`
+                                                : "Sélectionner un compte";
+                                            })()
+                                          : "Sélectionner un compte"}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                      </Button>
+                                    </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent 
+                                    className="w-[var(--radix-popover-trigger-width)] max-w-[400px] min-w-[300px] p-0 z-[9999]" 
+                                    align="start"
+                                    side="bottom"
+                                    sideOffset={4}
+                                    onOpenAutoFocus={(e) => e.preventDefault()}
+                                    style={{ pointerEvents: 'auto' }}
+                                  >
+                                    <Command shouldFilter={true} className="rounded-lg border-none shadow-none">
+                                      <CommandInput 
+                                        placeholder="Rechercher un compte (numéro ou libellé)..." 
+                                        className="h-9"
+                                      />
+                                      <CommandList className="max-h-[300px] overflow-y-auto overflow-x-hidden p-1">
+                                        <CommandEmpty>
+                                          {accountsLoading ? "Chargement..." : "Aucun compte trouvé."}
+                                        </CommandEmpty>
+                                        <CommandGroup>
+                                          {categoryFilteredAccounts.length > 0 ? (
+                                            categoryFilteredAccounts.map((account: any) => {
+                                              const accountValue = `${account.accountNumber} ${account.label} ${account.category}`;
+                                              return (
+                                              <CommandItem
+                                                key={account.id}
+                                                value={accountValue}
+                                                onSelect={(value) => {
+                                                  console.log('Selecting account:', account.id, value);
+                                                  // Update the form field using both methods for reliability
+                                                  form.setValue(`lines.${index}.accountId`, account.id, { shouldValidate: true });
+                                                  field.onChange(account.id);
+                                                  // Close the popover after a small delay to ensure state is updated
+                                                  setTimeout(() => {
+                                                    setAccountPopoverOpen((prev) => ({ ...prev, [index]: false }));
+                                                  }, 150);
+                                                }}
+                                                className="cursor-pointer hover:bg-accent hover:text-accent-foreground aria-selected:bg-accent aria-selected:text-accent-foreground"
+                                              >
+                                                <Check
+                                                  className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    field.value === account.id ? "opacity-100" : "opacity-0"
+                                                  )}
+                                                />
+                                                <div className="flex flex-col flex-1 min-w-0">
+                                                  <span className="font-medium truncate">{account.accountNumber} - {account.label}</span>
+                                                  <span className="text-xs text-muted-foreground">Classe {account.category}</span>
+                                                </div>
+                                              </CommandItem>
+                                              );
+                                            })
+                                          ) : (
+                                            <div className="py-6 text-center text-sm text-muted-foreground">
+                                              Aucun compte disponible
+                                            </div>
+                                          )}
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </PopoverContent>
+                                </Popover>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button type="button" variant="outline" size="icon">
+                                      <Filter className="h-4 w-4" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-56">
+                                    <div className="space-y-2">
+                                      <div className="font-medium text-sm">Filtrer par classe</div>
+                                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        {categories.map((cat: string) => (
+                                          <div key={cat} className="flex items-center space-x-2">
+                                            <Checkbox
+                                              id={`category-${cat}`}
+                                              checked={selectedCategories.includes(cat)}
+                                              onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                  setSelectedCategories([...selectedCategories, cat]);
+                                                } else {
+                                                  setSelectedCategories(selectedCategories.filter((c: string) => c !== cat));
+                                                }
+                                              }}
+                                            />
+                                            <label
+                                              htmlFor={`category-${cat}`}
+                                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                            >
+                                              Classe {cat}
+                                            </label>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      {selectedCategories.length > 0 && (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="w-full"
+                                          onClick={() => setSelectedCategories([])}
+                                        >
+                                          <X className="h-3 w-3 mr-1" />
+                                          Réinitialiser
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => setCreateAccountOpen(true)}
+                                  title="Créer un nouveau compte"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -383,15 +582,15 @@ export function CreateJournalEntryDialog({ children }: CreateJournalEntryDialogP
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-600">Total Débit:</span>
+                  <span className="text-muted-foreground">Total Débit:</span>
                   <span className="ml-2 font-semibold">{formatCurrency(totalDebit)} FCFA</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Total Crédit:</span>
+                  <span className="text-muted-foreground">Total Crédit:</span>
                   <span className="ml-2 font-semibold">{formatCurrency(totalCredit)} FCFA</span>
                 </div>
                 <div className="col-span-2 pt-2 border-t">
-                  <span className="text-gray-600">Différence:</span>
+                  <span className="text-muted-foreground">Différence:</span>
                   <span className={cn(
                     "ml-2 font-semibold",
                     isBalanced ? "text-green-600" : "text-red-600"
@@ -431,8 +630,90 @@ export function CreateJournalEntryDialog({ children }: CreateJournalEntryDialogP
             </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Account Dialog */}
+      <Dialog open={createAccountOpen} onOpenChange={setCreateAccountOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Créer un nouveau compte</DialogTitle>
+            <DialogDescription>
+              Ajoutez un nouveau compte au plan comptable SYSCOHADA
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Numéro de compte *</label>
+              <Input
+                placeholder="Ex: 7012"
+                value={newAccount.accountNumber}
+                onChange={(e) => setNewAccount({ ...newAccount, accountNumber: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Libellé *</label>
+              <Input
+                placeholder="Ex: Loyers perçus"
+                value={newAccount.label}
+                onChange={(e) => setNewAccount({ ...newAccount, label: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Classe *</label>
+              <Select
+                value={newAccount.category}
+                onValueChange={(value) => setNewAccount({ ...newAccount, category: value })}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      Classe {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCreateAccountOpen(false);
+                  setNewAccount({ accountNumber: '', label: '', category: '1' });
+                }}
+                disabled={isCreatingAccount}
+              >
+                Annuler
+              </Button>
+              <Button
+                type="button"
+                onClick={handleCreateAccount}
+                disabled={isCreatingAccount || !newAccount.accountNumber || !newAccount.label}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isCreatingAccount ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Créer
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

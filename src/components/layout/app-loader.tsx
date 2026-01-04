@@ -59,15 +59,15 @@ export function AppLoader({ children }: { children: React.ReactNode }) {
   
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white" suppressHydrationWarning>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background" suppressHydrationWarning>
         <div className="flex flex-col items-center gap-4" suppressHydrationWarning>
           {isMounted ? (
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" suppressHydrationWarning />
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" suppressHydrationWarning />
           ) : (
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" suppressHydrationWarning />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 dark:border-blue-400 border-t-transparent" suppressHydrationWarning />
           )}
-          <p className="text-lg font-medium text-gray-700" suppressHydrationWarning>Loading settings...</p>
-          <p className="text-sm text-gray-500" suppressHydrationWarning>Please wait while we load your data</p>
+          <p className="text-lg font-medium text-foreground" suppressHydrationWarning>Loading settings...</p>
+          <p className="text-sm text-muted-foreground" suppressHydrationWarning>Please wait while we load your data</p>
         </div>
       </div>
     );
