@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,10 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 /**
- * Accept Invitation Page
+ * Accept Invitation Page Content
  * Allows users to accept invitations and set up their account
  */
-export default function AcceptInvitationPage() {
+function AcceptInvitationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -243,6 +243,29 @@ export default function AcceptInvitationPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/**
+ * Accept Invitation Page
+ * Wrapped in Suspense for useSearchParams
+ */
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <p className="text-sm text-muted-foreground">Chargement...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <AcceptInvitationContent />
+    </Suspense>
   );
 }
 
