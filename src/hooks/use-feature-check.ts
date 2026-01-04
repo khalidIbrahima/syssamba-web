@@ -66,10 +66,22 @@ export function useFeatureLimitCheck(
     };
   }
   
+  // Ensure limit is a number for comparison
+  const numericLimit = typeof limit === 'number' ? limit : Number(limit);
+  
+  if (isNaN(numericLimit)) {
+    // If limit is not a valid number, treat as unlimited
+    return {
+      canAdd: true,
+      remaining: Infinity,
+      limit: null,
+    };
+  }
+  
   return {
-    canAdd: currentCount < limit,
-    remaining: Math.max(0, limit - currentCount),
-    limit,
+    canAdd: currentCount < numericLimit,
+    remaining: Math.max(0, numericLimit - currentCount),
+    limit: numericLimit,
   };
 }
 
