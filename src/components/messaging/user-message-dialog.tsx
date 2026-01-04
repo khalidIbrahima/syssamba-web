@@ -264,14 +264,14 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0">
-        <DialogHeader className="px-6 py-4 border-b">
+        <DialogHeader className="px-6 py-4 border-b border-border">
           <DialogTitle>Envoyer un message</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 flex overflow-hidden">
           {/* User List Sidebar */}
-          <div className="w-1/3 border-r flex flex-col">
-            <div className="p-4 border-b">
+          <div className="w-1/3 border-r border-border flex flex-col">
+            <div className="p-4 border-b border-border">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -299,13 +299,13 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                       key={user.id}
                       onClick={() => handleSelectUser(user)}
                       className={cn(
-                        "w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-left",
-                        selectedUser?.id === user.id && "bg-blue-50 border border-blue-200"
+                        "w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left",
+                        selectedUser?.id === user.id && "bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary/30"
                       )}
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={user.avatarUrl || undefined} />
-                        <AvatarFallback className="bg-blue-100 text-blue-700">
+                        <AvatarFallback className="bg-primary/20 dark:bg-primary/30 text-primary dark:text-primary-foreground">
                           {user.firstName?.[0] || ''}{user.lastName?.[0] || ''}
                         </AvatarFallback>
                       </Avatar>
@@ -328,10 +328,10 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
           <div className="flex-1 flex flex-col">
             {selectedUser ? (
               <>
-                <div className="p-4 border-b flex items-center gap-3">
+                <div className="p-4 border-b border-border flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={selectedUser.avatarUrl || undefined} />
-                    <AvatarFallback className="bg-blue-100 text-blue-700">
+                    <AvatarFallback className="bg-primary/20 dark:bg-primary/30 text-primary dark:text-primary-foreground">
                       {selectedUser.firstName?.[0] || ''}{selectedUser.lastName?.[0] || ''}
                     </AvatarFallback>
                   </Avatar>
@@ -351,7 +351,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                 </div>
 
                 {/* Messages List */}
-                <div className="flex-1 overflow-y-auto bg-gradient-to-b from-gray-50 to-white px-4 py-4">
+                <div className="flex-1 overflow-y-auto bg-gradient-to-b from-muted/30 to-background dark:from-muted/20 dark:to-background px-4 py-4">
                   {messagesLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -391,7 +391,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                             {!isCurrentUser && (
                               <Avatar className="h-8 w-8 flex-shrink-0">
                                 <AvatarImage src={msg.senderAvatar || undefined} />
-                                <AvatarFallback className="bg-gray-200 text-muted-foreground text-xs">
+                                <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                                   {msg.senderName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                                 </AvatarFallback>
                               </Avatar>
@@ -403,8 +403,8 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                               <div className={cn(
                                 "relative rounded-2xl px-4 py-2.5 shadow-sm",
                                 isCurrentUser
-                                  ? "bg-blue-600 text-white rounded-br-md"
-                                  : "bg-white text-foreground border border-gray-200 rounded-bl-md"
+                                  ? "bg-primary text-primary-foreground rounded-br-md"
+                                  : "bg-card text-card-foreground border border-border rounded-bl-md"
                               )}>
                                 {msg.content && (
                                   <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
@@ -438,8 +438,8 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                                               className={cn(
                                                 "flex items-center gap-2 px-3 py-2 rounded-lg border",
                                                 isCurrentUser
-                                                  ? "bg-blue-500/20 border-blue-400/50 text-white"
-                                                  : "bg-gray-100 border-gray-300 text-foreground"
+                                                  ? "bg-primary/20 dark:bg-primary/30 border-primary/30 dark:border-primary/40 text-primary-foreground"
+                                                  : "bg-muted border-border text-foreground"
                                               )}
                                             >
                                               <File className="h-4 w-4" />
@@ -461,7 +461,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                             {isCurrentUser && (
                               <Avatar className="h-8 w-8 flex-shrink-0">
                                 <AvatarImage src={currentUser?.imageUrl || undefined} />
-                                <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
+                                <AvatarFallback className="bg-primary/20 dark:bg-primary/30 text-primary dark:text-primary-foreground text-xs">
                                   {currentUser?.firstName?.[0] || ''}{currentUser?.lastName?.[0] || ''}
                                 </AvatarFallback>
                               </Avatar>
@@ -475,7 +475,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                 </div>
 
                 {/* Message Input */}
-                <div className="border-t bg-white px-4 py-3">
+                <div className="border-t border-border bg-background px-4 py-3">
                   {/* Attachments Preview */}
                   {attachments.length > 0 && (
                     <div className="mb-2 flex flex-wrap gap-2">
@@ -488,7 +488,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                                 <img
                                   src={attachment}
                                   alt={`Attachment ${idx + 1}`}
-                                  className="h-16 w-16 object-cover rounded-lg border border-gray-200"
+                                  className="h-16 w-16 object-cover rounded-lg border border-border"
                                 />
                                 <button
                                   type="button"
@@ -499,7 +499,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                                 </button>
                               </div>
                             ) : (
-                              <div className="relative flex items-center gap-2 px-2 py-1 bg-gray-100 rounded-lg border border-gray-200">
+                              <div className="relative flex items-center gap-2 px-2 py-1 bg-muted rounded-lg border border-border">
                                 <File className="h-4 w-4 text-muted-foreground" />
                                 <span className="text-xs text-muted-foreground max-w-[100px] truncate">
                                   {attachment.split('/').pop()}
@@ -525,7 +525,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         placeholder="Tapez un message..."
-                        className="min-h-[44px] max-h-32 resize-none pr-20 rounded-2xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50"
+                        className="min-h-[44px] max-h-32 resize-none pr-20 rounded-2xl border-input focus:border-primary focus:ring-primary bg-muted"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -549,7 +549,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                           size="sm"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploadingFiles}
-                          className="h-7 w-7 p-0 hover:bg-gray-200 rounded-full"
+                          className="h-7 w-7 p-0 hover:bg-accent rounded-full"
                           title="Joindre un fichier"
                         >
                           {uploadingFiles ? (
@@ -564,7 +564,7 @@ export function UserMessageDialog({ open, onOpenChange, initialSelectedUserId }:
                     <Button
                       type="submit"
                       disabled={(!message.trim() && attachments.length === 0) || isSending}
-                      className="h-11 w-11 rounded-full bg-blue-600 hover:bg-blue-700 text-white p-0 flex-shrink-0 shadow-lg"
+                      className="h-11 w-11 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground p-0 flex-shrink-0 shadow-lg"
                     >
                       {isSending ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
