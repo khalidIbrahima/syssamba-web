@@ -63,10 +63,12 @@ export async function GET(
     if (!userIsSuperAdmin && ticket.organization_id !== user.organizationId) {
       await logger.warn('Unauthorized access attempt to ticket', {
         userId: user.id,
-        ticketId,
         requestPath: `/api/support/tickets/${ticketId}`,
         requestMethod: 'GET',
         tags: ['support', 'security'],
+        context: {
+          ticketId,
+        },
       });
 
       return NextResponse.json(
@@ -188,11 +190,11 @@ export async function PATCH(
 
     await logger.info('Support ticket updated', {
       userId: user.id,
-      ticketId,
       requestPath: `/api/support/tickets/${ticketId}`,
       requestMethod: 'PATCH',
       tags: ['support', 'ticket'],
       context: {
+        ticketId,
         updates: validatedData,
       },
     });
