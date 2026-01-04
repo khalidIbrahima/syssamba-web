@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 
 interface GoogleSignInButtonProps {
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void | Promise<void>;
   disabled?: boolean;
 }
 
