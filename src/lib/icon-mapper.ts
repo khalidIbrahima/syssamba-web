@@ -47,7 +47,6 @@ const iconMap: Record<string, IconComponent> = {
   Tasks: CheckSquare,
   Messages: MessageSquare,
   Notifications: MessageSquare,
-  Settings: Settings,
   Admin: Shield,
 };
 
