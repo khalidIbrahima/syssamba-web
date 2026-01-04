@@ -28,7 +28,7 @@ const setFieldPermissionSchema = z.object({
  */
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -37,7 +37,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
+    const resolvedParams = await context.params;
     const profileId = resolvedParams.id;
 
     // Check if user is super admin or global admin
@@ -92,7 +92,7 @@ export async function GET(
  */
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -101,7 +101,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
+    const resolvedParams = await context.params;
     const profileId = resolvedParams.id;
 
     if (!profileId) {

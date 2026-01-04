@@ -18,7 +18,7 @@ const updateOrganizationSchema = z.object({
 // GET - Get a specific organization with full details
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -47,7 +47,7 @@ export async function GET(
       );
     }
 
-    const { id } = await params;
+    const { id } = await context.params;
 
     // Get organization
     const organization = await db.selectOne<{
@@ -171,7 +171,7 @@ export async function GET(
 // PATCH - Update organization
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -184,7 +184,7 @@ export async function PATCH(
     }
 
     const user = await getCurrentUser();
-    const { id } = await params;
+    const { id } = await context.params;
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },

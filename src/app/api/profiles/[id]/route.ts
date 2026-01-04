@@ -47,7 +47,7 @@ const setFieldPermissionSchema = z.object({
  */
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -56,7 +56,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
+    const resolvedParams = await context.params;
     const profileId = resolvedParams.id;
 
     if (!profileId) {
@@ -108,7 +108,7 @@ export async function GET(
  */
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -117,7 +117,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
+    const resolvedParams = await context.params;
     const profileId = resolvedParams.id;
 
     if (!profileId) {
@@ -197,7 +197,7 @@ export async function PATCH(
  */
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -206,7 +206,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
+    const resolvedParams = await context.params;
     const profileId = resolvedParams.id;
 
     const user = await getCurrentUser();
@@ -271,7 +271,7 @@ export async function DELETE(
  */
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -280,7 +280,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
+    const resolvedParams = await context.params;
     const profileId = resolvedParams.id;
 
     if (!profileId) {
@@ -367,7 +367,7 @@ export async function POST(
  */
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -376,7 +376,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const resolvedParams = await params;
+    const resolvedParams = await context.params;
     const profileId = resolvedParams.id;
 
     if (!profileId) {

@@ -14,7 +14,7 @@ const updateSubscriptionSchema = z.object({
 // PATCH - Update organization subscription (change plan)
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -43,7 +43,7 @@ export async function PATCH(
       );
     }
 
-    const { id } = await params;
+    const { id } = await context.params;
 
     // Check if organization exists
     const organization = await db.selectOne<{ id: string }>('organizations', {

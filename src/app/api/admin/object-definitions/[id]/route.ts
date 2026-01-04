@@ -20,7 +20,7 @@ const updateObjectDefinitionSchema = z.object({
 // GET - Get a specific object definition
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
@@ -32,7 +32,7 @@ export async function GET(
       );
     }
 
-    const { id } = await params;
+    const { id } = await context.params;
 
     const objectDefinition = await db.selectOne<{
       id: string;
@@ -90,12 +90,12 @@ export async function GET(
 // PATCH - Update an object definition
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
 
-    const { id } = await params;
+    const { id } = await context.params;
     
     if (!userId) {
       return NextResponse.json(
@@ -224,12 +224,12 @@ export async function PATCH(
 // DELETE - Delete an object definition
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await checkAuth();
 
-    const { id } = await params;
+    const { id } = await context.params;
     
     if (!userId) {
       return NextResponse.json(
