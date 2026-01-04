@@ -1,10 +1,10 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query';
 
 // Generic hook for fetching data
 export function useDataQuery<T>(
-  key: string[],
+  key: QueryKey,
   queryFn: () => Promise<T>,
   options?: {
     enabled?: boolean;
