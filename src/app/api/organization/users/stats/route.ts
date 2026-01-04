@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkAuth, getCurrentUser, getCurrentOrganization } from '@/lib/auth-helpers';
 import { db } from '@/lib/db';
-import { getPlanLimits } from '@/lib/permissions';
+import { getPlanLimits, type PlanName } from '@/lib/permissions';
 
 /**
  * GET /api/organization/users/stats
@@ -69,7 +69,7 @@ export async function GET() {
 
     // If no plan found, use freemium limits
     if (!usersLimit && !extranetTenantsLimit) {
-      const limits = await getPlanLimits(planName);
+      const limits = await getPlanLimits(planName as PlanName);
       usersLimit = limits.users;
       extranetTenantsLimit = limits.extranetTenants;
     }
