@@ -19,7 +19,7 @@ const createTicketSchema = z.object({
   type: z.enum(['question', 'issue', 'request', 'complaint', 'other']).optional(),
   tags: z.array(z.string()).optional().default([]),
   attachments: z.array(z.string()).optional().default([]),
-  metadata: z.record(z.any()).optional().default({}),
+  metadata: z.record(z.string(), z.any()).optional().default({}),
 });
 
 const updateTicketSchema = z.object({
