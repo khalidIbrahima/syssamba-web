@@ -302,25 +302,31 @@ export async function PUT(
       if (existing) {
         // Update existing override
         updates.push(
-          supabaseAdmin
-            .from('profile_buttons')
-            .update(updateData)
-            .eq('profile_id', profileId)
-            .eq('button_id', buttonId)
+          (async () => {
+            const { error } = await supabaseAdmin
+              .from('profile_buttons')
+              .update(updateData)
+              .eq('profile_id', profileId)
+              .eq('button_id', buttonId);
+            if (error) throw error;
+          })()
         );
       } else {
         // Create new override
         updates.push(
-          supabaseAdmin
-            .from('profile_buttons')
-            .insert({
-              profile_id: profileId,
-              button_id: buttonId,
-              is_enabled: validated.isEnabled ?? true,
-              is_visible: validated.isVisible ?? true,
-              custom_label: validated.customLabel || null,
-              custom_icon: validated.customIcon || null,
-            })
+          (async () => {
+            const { error } = await supabaseAdmin
+              .from('profile_buttons')
+              .insert({
+                profile_id: profileId,
+                button_id: buttonId,
+                is_enabled: validated.isEnabled ?? true,
+                is_visible: validated.isVisible ?? true,
+                custom_label: validated.customLabel || null,
+                custom_icon: validated.customIcon || null,
+              });
+            if (error) throw error;
+          })()
         );
       }
     }
