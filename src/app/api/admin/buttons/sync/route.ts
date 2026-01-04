@@ -114,16 +114,19 @@ export async function POST(request: NextRequest) {
 
             // Upsert profile_button
             syncOperations.push(
-              supabaseAdmin
-                .from('profile_buttons')
-                .upsert({
-                  profile_id: profileId,
-                  button_id: button.id,
-                  is_enabled: shouldEnable,
-                  is_visible: shouldEnable,
-                }, {
-                  onConflict: 'profile_id,button_id',
-                })
+              (async () => {
+                const { error } = await supabaseAdmin
+                  .from('profile_buttons')
+                  .upsert({
+                    profile_id: profileId,
+                    button_id: button.id,
+                    is_enabled: shouldEnable,
+                    is_visible: shouldEnable,
+                  }, {
+                    onConflict: 'profile_id,button_id',
+                  });
+                if (error) throw error;
+              })()
             );
           }
         }
@@ -197,16 +200,19 @@ export async function POST(request: NextRequest) {
               }
 
               syncOperations.push(
-                supabaseAdmin
-                  .from('profile_buttons')
-                  .upsert({
-                    profile_id: profile.id,
-                    button_id: button.id,
-                    is_enabled: shouldEnable,
-                    is_visible: shouldEnable,
-                  }, {
-                    onConflict: 'profile_id,button_id',
-                  })
+                (async () => {
+                  const { error } = await supabaseAdmin
+                    .from('profile_buttons')
+                    .upsert({
+                      profile_id: profile.id,
+                      button_id: button.id,
+                      is_enabled: shouldEnable,
+                      is_visible: shouldEnable,
+                    }, {
+                      onConflict: 'profile_id,button_id',
+                    });
+                  if (error) throw error;
+                })()
               );
             }
           }
