@@ -1,23 +1,23 @@
 import createNextIntlPlugin from 'next-intl/plugin';
+import type { NextConfig } from 'next';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   // Désactiver complètement les source maps pour éviter les erreurs
   productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
+        protocol: 'https' as const,
         hostname: 'images.clerk.dev',
       },
       {
-        protocol: 'https',
+        protocol: 'https' as const,
         hostname: 'img.clerk.com',
       },
       {
-        protocol: 'https',
+        protocol: 'https' as const,
         hostname: 'images.unsplash.com',
       },
     ],
