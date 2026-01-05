@@ -224,7 +224,9 @@ export default function PricingPage() {
     if (plan.priceType === 'custom' || plan.name.toLowerCase() === 'enterprise' || plan.name.toLowerCase() === 'enterprise') {
       return 'Nous contacter';
     }
-    return 'Essai gratuit';
+    // Check if plan is free (price is 0)
+    const isFree = plan.priceMonthly === '0' || plan.priceYearly === '0';
+    return isFree ? 'Essai gratuit' : 'Commencer';
   };
 
   const getCtaColor = (plan: PricingPlan) => {
