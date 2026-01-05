@@ -1,10 +1,22 @@
 // Database types
+export type Country = {
+  code: string; // ISO 3166-1 alpha-2
+  name: string;
+  nameEn?: string;
+  currency: string; // ISO 4217
+  currencySymbol: string;
+  isActive: boolean;
+  isOhada: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type Organization = {
   id: string;
   name: string;
   slug: string;
   type: 'agency' | 'sci' | 'syndic' | 'individual';
-  country: string; // Code pays ISO 3166-1 alpha-2 (ex: 'SN' pour Sénégal)
+  country: string; // Code pays ISO 3166-1 alpha-2, référence à Country.code
   // Note: planId and limits are in subscriptions and plans tables
   extranetTenantsCount: number;
   customExtranetDomain?: string;

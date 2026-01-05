@@ -1,5 +1,21 @@
 import { pgTable, text, uuid, boolean, integer, decimal, date, timestamp, jsonb, check, uniqueIndex, index, primaryKey } from 'drizzle-orm/pg-core';
 
+// Countries table - pays avec leurs devises
+export const countries = pgTable('countries', {
+  code: text('code').primaryKey(), // ISO 3166-1 alpha-2
+  name: text('name').notNull(), // Nom en français
+  nameEn: text('name_en'), // Nom en anglais (optionnel)
+  currency: text('currency').notNull(), // Code devise ISO 4217
+  currencySymbol: text('currency_symbol').notNull(), // Symbole de la devise
+  isActive: boolean('is_active').default(true),
+  isOhada: boolean('is_ohada').default(false), // Membre de l'OHADA
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  idxCountriesCurrency: index('idx_countries_currency').on(table.currency),
+  idxCountriesIsActive: index('idx_countries_is_active').on(table.isActive),
+}));
+
 // Plans table - définitions des plans disponibles
 export const plans = pgTable('plans', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -72,7 +88,7 @@ export const organizations = pgTable('organizations', {
   name: text('name'), // Nullable until configured
   slug: text('slug').unique(), // Nullable until configured
   type: text('type', { enum: ['agency', 'sci', 'syndic', 'individual'] }).default('individual'),
-  country: text('country').notNull().default('SN'), // Code pays ISO 3166-1 alpha-2 (SN = Sénégal)
+  country: text('country').notNull().default('SN').references(() => countries.code, { onDelete: 'restrict' }), // Code pays ISO 3166-1 alpha-2, référence à countries
   
   // Compteur réel (mis à jour par trigger ou application)
   extranetTenantsCount: integer('extranet_tenants_count').default(0),
@@ -82,7 +98,9 @@ export const organizations = pgTable('organizations', {
   isConfigured: boolean('is_configured').default(false), // True when organization is fully configured
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-});
+}, (table) => ({
+  idxOrganizationsCountry: index('idx_organizations_country').on(table.country),
+}));
 
 // Subscriptions table - liens entre organisations et abonnements
 export const subscriptions = pgTable('subscriptions', {

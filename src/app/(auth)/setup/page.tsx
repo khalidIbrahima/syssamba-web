@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { useDataQuery } from '@/hooks/use-query';
 import { toast } from 'sonner';
-import { OHADA_COUNTRIES, getDefaultCountry } from '@/lib/countries';
+import { getDefaultCountry } from '@/lib/countries';
 import { cn } from '@/lib/utils';
 
 // Fetch available plans
@@ -42,6 +42,16 @@ async function getPlans() {
   }
   const data = await response.json();
   return data.plans || [];
+}
+
+// Fetch available countries
+async function getCountries() {
+  const response = await fetch('/api/countries');
+  if (!response.ok) {
+    throw new Error('Failed to fetch countries');
+  }
+  const data = await response.json();
+  return data.countries || [];
 }
 
 // Lots range options with recommended plans
@@ -186,6 +196,8 @@ export default function SetupPage() {
   });
 
   const { data: plans, isLoading: plansLoading } = useDataQuery(['plans'], getPlans);
+  const { data: countriesData, isLoading: countriesLoading } = useDataQuery(['countries'], getCountries);
+  const countries = countriesData?.countries || [];
 
   // Get recommended plan based on lots range
   const recommendedPlan = selectedLotsRange
@@ -670,14 +682,20 @@ export default function SetupPage() {
                     required
                   >
                     <SelectTrigger id="country">
-                      <SelectValue />
+                      <SelectValue placeholder="Sélectionner un pays" />
                     </SelectTrigger>
                     <SelectContent>
-                      {OHADA_COUNTRIES.map((country) => (
-                        <SelectItem key={country.code} value={country.code}>
-                          {country.name} ({country.code})
-                        </SelectItem>
-                      ))}
+                      {countriesLoading ? (
+                        <SelectItem value="" disabled>Chargement...</SelectItem>
+                      ) : countries.length > 0 ? (
+                        countries.map((country: any) => (
+                          <SelectItem key={country.code} value={country.code}>
+                            {country.name} ({country.code}) - {country.currencySymbol}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>Aucun pays disponible</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
