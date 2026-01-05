@@ -216,8 +216,8 @@ export default function PricingPage() {
     if (price === '0') return isAnnual ? '0 FCFA /an' : '0 FCFA /mois';
     const numPrice = parseInt(price.replace(/,/g, ''));
     if (isNaN(numPrice)) return 'Sur devis';
-    const displayPrice = isAnnual && numPrice > 0 ? Math.round(numPrice * 0.8) : numPrice;
-    return `${displayPrice.toLocaleString('fr-FR')} FCFA ${isAnnual ? '/an' : '/mois'}`;
+    // Use the price directly (already priceYearly or priceMonthly from the plan)
+    return `${numPrice.toLocaleString('fr-FR')} FCFA ${isAnnual ? '/an' : '/mois'}`;
   };
 
   const getCtaText = (plan: PricingPlan) => {
