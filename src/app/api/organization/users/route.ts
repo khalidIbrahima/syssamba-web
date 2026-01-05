@@ -65,6 +65,8 @@ export async function GET() {
       id: u.id,
       email: u.email,
       fullName: u.full_name,
+      firstName: u.full_name ? u.full_name.split(' ')[0] : null,
+      lastName: u.full_name ? u.full_name.split(' ').slice(1).join(' ') : null,
       role: u.role,
       profileId: u.profile_id,
       organizationId: u.organization_id,
@@ -74,7 +76,39 @@ export async function GET() {
       updatedAt: u.updated_at instanceof Date ? u.updated_at.toISOString() : (u.updated_at || null),
     }));
 
-    return NextResponse.json(mappedUsers);
+    // Get pending invitations for the organization
+    const invitations = await db.select<{
+      id: string;
+      email: string | null;
+      phone: string | null;
+      first_name: string | null;
+      last_name: string | null;
+      role: string;
+      status: string;
+      created_at: Date;
+      expires_at: Date;
+    }>('user_invitations', {
+      eq: { organization_id: organization.id, status: 'pending' },
+      orderBy: { column: 'created_at', ascending: false },
+    });
+
+    const mappedInvitations = invitations.map(inv => ({
+      id: inv.id,
+      email: inv.email,
+      phone: inv.phone,
+      firstName: inv.first_name,
+      lastName: inv.last_name,
+      role: inv.role,
+      status: inv.status,
+      createdAt: inv.created_at instanceof Date ? inv.created_at.toISOString() : inv.created_at,
+      expiresAt: inv.expires_at instanceof Date ? inv.expires_at.toISOString() : inv.expires_at,
+    }));
+
+    return NextResponse.json({
+      users: mappedUsers,
+      invitations: mappedInvitations,
+      totalCount: mappedUsers.length,
+    });
   } catch (error: any) {
     console.error('Error fetching users:', error);
     return NextResponse.json(

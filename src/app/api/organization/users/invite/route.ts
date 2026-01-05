@@ -52,7 +52,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check permission to create users
-    const canCreate = await canUserPerformAction(userId, user.organizationId, 'User', 'create');
+    // Allow admin and owner roles to manage users, in addition to profile-based permissions
+    const canCreateByProfile = await canUserPerformAction(userId, user.organizationId, 'User', 'create');
+    const canCreateByRole = user.role === 'admin' || user.role === 'owner';
+    const canCreate = canCreateByProfile || canCreateByRole;
+    
     if (!canCreate) {
       return NextResponse.json(
         { error: 'You do not have permission to invite users' },

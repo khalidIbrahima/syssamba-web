@@ -54,7 +54,11 @@ export async function PATCH(
     const userIsSuperAdmin = await isSuperAdmin(user.id);
 
     // Check permission to edit users
-    const canEdit = await canUserPerformAction(userId, user.organizationId, 'User', 'edit');
+    // Allow admin and owner roles to manage users, in addition to profile-based permissions
+    const canEditByProfile = await canUserPerformAction(userId, user.organizationId, 'User', 'edit');
+    const canEditByRole = user.role === 'admin' || user.role === 'owner';
+    const canEdit = canEditByProfile || canEditByRole;
+    
     if (!canEdit) {
       return NextResponse.json(
         { error: 'You do not have permission to edit users' },
