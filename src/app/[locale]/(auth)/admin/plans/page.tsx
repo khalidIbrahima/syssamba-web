@@ -101,6 +101,7 @@ export default function PlansAdminPage() {
     description: '',
     priceMonthly: '',
     priceYearly: '',
+    yearlyDiscountRate: '',
     lotsLimit: '',
     usersLimit: '',
     extranetTenantsLimit: '',
@@ -116,6 +117,7 @@ export default function PlansAdminPage() {
     description: '',
     priceMonthly: '',
     priceYearly: '',
+    yearlyDiscountRate: '',
     lotsLimit: '',
     usersLimit: '',
     extranetTenantsLimit: '',
@@ -134,6 +136,7 @@ export default function PlansAdminPage() {
       description: plan.description || '',
       priceMonthly: plan.priceMonthly !== null && plan.priceMonthly !== undefined ? plan.priceMonthly.toString() : '',
       priceYearly: plan.priceYearly !== null && plan.priceYearly !== undefined ? plan.priceYearly.toString() : '',
+      yearlyDiscountRate: plan.yearlyDiscountRate !== null && plan.yearlyDiscountRate !== undefined ? plan.yearlyDiscountRate.toString() : '',
       lotsLimit: plan.lotsLimit !== null && plan.lotsLimit !== undefined ? plan.lotsLimit.toString() : '',
       usersLimit: plan.usersLimit !== null && plan.usersLimit !== undefined ? plan.usersLimit.toString() : '',
       extranetTenantsLimit: plan.extranetTenantsLimit !== null && plan.extranetTenantsLimit !== undefined ? plan.extranetTenantsLimit.toString() : '',
@@ -160,6 +163,7 @@ export default function PlansAdminPage() {
         description: createFormData.description || null,
         priceMonthly: createFormData.priceMonthly === '' ? null : parseFloat(createFormData.priceMonthly),
         priceYearly: createFormData.priceYearly === '' ? null : parseFloat(createFormData.priceYearly),
+        yearlyDiscountRate: createFormData.yearlyDiscountRate === '' ? null : parseFloat(createFormData.yearlyDiscountRate),
         lotsLimit: createFormData.lotsLimit === '' ? null : parseInt(createFormData.lotsLimit),
         usersLimit: createFormData.usersLimit === '' ? null : parseInt(createFormData.usersLimit),
         extranetTenantsLimit: createFormData.extranetTenantsLimit === '' ? null : parseInt(createFormData.extranetTenantsLimit),
@@ -187,6 +191,7 @@ export default function PlansAdminPage() {
         description: '',
         priceMonthly: '',
         priceYearly: '',
+        yearlyDiscountRate: '',
         lotsLimit: '',
         usersLimit: '',
         extranetTenantsLimit: '',
@@ -219,6 +224,8 @@ export default function PlansAdminPage() {
       if (formData.priceYearly !== '') {
         updates.priceYearly = formData.priceYearly === '' ? null : parseFloat(formData.priceYearly);
       }
+      // Always include yearlyDiscountRate to allow setting it to null
+      updates.yearlyDiscountRate = formData.yearlyDiscountRate === '' ? null : (formData.yearlyDiscountRate ? parseFloat(formData.yearlyDiscountRate) : null);
       if (formData.lotsLimit !== '') {
         updates.lotsLimit = formData.lotsLimit === '' ? null : parseInt(formData.lotsLimit);
       }
@@ -495,6 +502,23 @@ export default function PlansAdminPage() {
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="yearly-discount-rate">Taux de remise annuel (%)</Label>
+                    <Input
+                      id="yearly-discount-rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      placeholder="Ex: 20 pour 20% de remise"
+                      value={formData.yearlyDiscountRate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, yearlyDiscountRate: e.target.value }))}
+                      disabled={savingPlan}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Si défini, le prix annuel sera calculé automatiquement : prix mensuel × 12 × (1 - taux/100)
+                    </p>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Laissez vide pour un prix sur devis
                   </p>
@@ -693,6 +717,23 @@ export default function PlansAdminPage() {
                     />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-yearly-discount-rate">Taux de remise annuel (%)</Label>
+                  <Input
+                    id="create-yearly-discount-rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    placeholder="Ex: 20 pour 20% de remise"
+                    value={createFormData.yearlyDiscountRate}
+                    onChange={(e) => setCreateFormData(prev => ({ ...prev, yearlyDiscountRate: e.target.value }))}
+                    disabled={creatingPlan}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Si défini, le prix annuel sera calculé automatiquement : prix mensuel × 12 × (1 - taux/100)
+                  </p>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Laissez vide pour un prix sur devis
                 </p>
@@ -804,6 +845,7 @@ export default function PlansAdminPage() {
                         description: '',
                         priceMonthly: '',
                         priceYearly: '',
+                        yearlyDiscountRate: '',
                         lotsLimit: '',
                         usersLimit: '',
                         extranetTenantsLimit: '',
