@@ -213,11 +213,11 @@ export default function PricingPage() {
 
   const formatPrice = (price: string, isAnnual: boolean) => {
     if (price === 'Sur devis' || price === 'custom') return 'Sur devis';
-    if (price === '0') return '0 FCFA /mois';
+    if (price === '0') return isAnnual ? '0 FCFA /an' : '0 FCFA /mois';
     const numPrice = parseInt(price.replace(/,/g, ''));
     if (isNaN(numPrice)) return 'Sur devis';
     const displayPrice = isAnnual && numPrice > 0 ? Math.round(numPrice * 0.8) : numPrice;
-    return `${displayPrice.toLocaleString('fr-FR')} FCFA /mois`;
+    return `${displayPrice.toLocaleString('fr-FR')} FCFA ${isAnnual ? '/an' : '/mois'}`;
   };
 
   const getCtaText = (plan: PricingPlan) => {
@@ -235,9 +235,9 @@ export default function PricingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Chargement des plans...</p>
         </div>
       </div>
@@ -245,9 +245,9 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header - Same as home page */}
-      <header className="fixed top-0 left-0 right-0 bg-white z-50 h-20 flex items-center shadow-sm">
+      <header className="fixed top-0 left-0 right-0 bg-background border-b border-border z-50 h-20 flex items-center shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <div className="bg-blue-600 rounded-lg p-1.5">
@@ -264,8 +264,8 @@ export default function PricingPage() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center border border-gray-200 rounded-md px-1 py-1 bg-white overflow-hidden">
-              <button className="px-2 py-1 text-xs font-bold text-white bg-blue-600">FR</button>
+            <div className="hidden md:flex items-center border border-border rounded-md px-1 py-1 bg-card overflow-hidden">
+              <button className="px-2 py-1 text-xs font-bold text-white bg-primary">FR</button>
               <button className="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">EN</button>
               <button className="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">WO</button>
             </div>
@@ -314,7 +314,7 @@ export default function PricingPage() {
             <button
               onClick={() => setIsAnnual(!isAnnual)}
               className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors ${
-                isAnnual ? 'bg-green-500' : 'bg-gray-300'
+                isAnnual ? 'bg-green-500' : 'bg-muted'
               }`}
             >
               <span
@@ -379,10 +379,10 @@ export default function PricingPage() {
                   <Button
                     className={`w-full ${
                       getCtaColor(plan) === 'orange'
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                        ? 'bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white'
                         : getCtaColor(plan) === 'green'
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white'
+                        : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                     }`}
                     size="lg"
                     asChild
@@ -398,11 +398,11 @@ export default function PricingPage() {
         </div>
 
         {/* Extranet Limit Section */}
-        <div className="bg-blue-50 border-y border-blue-100 py-8">
+        <div className="bg-muted/50 dark:bg-muted/30 border-y border-border py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100">
-                <Users className="h-6 w-6 text-blue-600" />
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10 dark:bg-primary/20">
+                <Users className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1">
                 <h3 className="font-bold text-foreground mb-1">Limite extranet locataires</h3>
