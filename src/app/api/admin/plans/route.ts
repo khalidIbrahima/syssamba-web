@@ -12,6 +12,7 @@ const createPlanSchema = z.object({
   description: z.string().nullable().optional(),
   priceMonthly: z.number().nullable().optional(),
   priceYearly: z.number().nullable().optional(),
+  yearlyDiscountRate: z.number().min(0).max(100).nullable().optional(), // Taux de remise en % (0-100)
   lotsLimit: z.number().nullable().optional(),
   usersLimit: z.number().nullable().optional(),
   extranetTenantsLimit: z.number().nullable().optional(),
@@ -27,6 +28,7 @@ const updatePlanSchema = z.object({
   description: z.string().nullable().optional(),
   priceMonthly: z.number().nullable().optional(),
   priceYearly: z.number().nullable().optional(),
+  yearlyDiscountRate: z.number().min(0).max(100).nullable().optional(), // Taux de remise en % (0-100)
   lotsLimit: z.number().nullable().optional(),
   usersLimit: z.number().nullable().optional(),
   extranetTenantsLimit: z.number().nullable().optional(),
@@ -76,6 +78,7 @@ export async function GET() {
       description: string | null;
       price_monthly: number | null;
       price_yearly: number | null;
+      yearly_discount_rate: number | null;
       max_properties: number | null;
       max_users: number | null;
       extranet_tenants_limit: number | null;
@@ -88,22 +91,36 @@ export async function GET() {
       orderBy: { column: 'sort_order', ascending: true },
     });
 
-    const plans = plansFromSupabase.map(plan => ({
-      id: plan.id,
-      name: plan.name,
-      display_name: plan.display_name,
-      description: plan.description,
-      price_monthly: plan.price_monthly,
-      price_yearly: plan.price_yearly,
-      lots_limit: plan.max_properties,
-      users_limit: plan.max_users,
-      extranet_tenants_limit: plan.extranet_tenants_limit,
-      features: plan.features || {},
-      is_active: plan.is_active,
-      sort_order: plan.sort_order,
-      created_at: plan.created_at,
-      updated_at: plan.updated_at,
-    }));
+    const plans = plansFromSupabase.map(plan => {
+      // Calculate yearly price if yearly_discount_rate is set and yearly price is not already set
+      let yearlyPrice = plan.price_yearly;
+      
+      if (plan.yearly_discount_rate !== null && plan.yearly_discount_rate !== undefined) {
+        if (plan.price_monthly !== null && plan.price_monthly !== undefined && plan.price_monthly > 0) {
+          // Formula: yearly_price = monthly_price * 12 * (1 - discount_rate/100)
+          const discountMultiplier = 1 - (plan.yearly_discount_rate / 100);
+          yearlyPrice = plan.price_monthly * 12 * discountMultiplier;
+        }
+      }
+      
+      return {
+        id: plan.id,
+        name: plan.name,
+        display_name: plan.display_name,
+        description: plan.description,
+        price_monthly: plan.price_monthly,
+        price_yearly: yearlyPrice,
+        yearly_discount_rate: plan.yearly_discount_rate,
+        lots_limit: plan.max_properties,
+        users_limit: plan.max_users,
+        extranet_tenants_limit: plan.extranet_tenants_limit,
+        features: plan.features || {},
+        is_active: plan.is_active,
+        sort_order: plan.sort_order,
+        created_at: plan.created_at,
+        updated_at: plan.updated_at,
+      };
+    });
 
     return NextResponse.json({
       plans: plans.map((plan: any) => ({
@@ -113,6 +130,7 @@ export async function GET() {
         description: plan.description,
         priceMonthly: plan.price_monthly ? parseFloat(plan.price_monthly) : null,
         priceYearly: plan.price_yearly ? parseFloat(plan.price_yearly) : null,
+        yearlyDiscountRate: plan.yearly_discount_rate ? parseFloat(plan.yearly_discount_rate) : null,
         lotsLimit: plan.lots_limit,
         usersLimit: plan.users_limit,
         extranetTenantsLimit: plan.extranet_tenants_limit,
@@ -191,6 +209,7 @@ export async function PATCH(request: NextRequest) {
       description?: string | null;
       price_monthly?: number | null;
       price_yearly?: number | null;
+      yearly_discount_rate?: number | null;
       max_properties?: number | null;
       max_users?: number | null;
       extranet_tenants_limit?: number | null;
@@ -208,6 +227,27 @@ export async function PATCH(request: NextRequest) {
     if (updates.priceMonthly !== undefined) {
       updateData.price_monthly = updates.priceMonthly;
     }
+    
+    // Handle yearly_discount_rate
+    if (updates.yearlyDiscountRate !== undefined) {
+      updateData.yearly_discount_rate = updates.yearlyDiscountRate;
+      
+      // If yearly_discount_rate is set and priceMonthly exists, calculate price_yearly automatically
+      // unless priceYearly is explicitly provided
+      if (updates.yearlyDiscountRate !== null && updates.yearlyDiscountRate !== undefined) {
+        const currentPlan = await db.selectOne<{ price_monthly: number | null }>('plans', {
+          eq: { id },
+        });
+        const monthlyPrice = updates.priceMonthly !== undefined ? updates.priceMonthly : currentPlan?.price_monthly;
+        
+        if (monthlyPrice !== null && monthlyPrice !== undefined && monthlyPrice > 0 && updates.priceYearly === undefined) {
+          // Formula: yearly_price = monthly_price * 12 * (1 - discount_rate/100)
+          const discountMultiplier = 1 - (updates.yearlyDiscountRate / 100);
+          updateData.price_yearly = monthlyPrice * 12 * discountMultiplier;
+        }
+      }
+    }
+    
     if (updates.priceYearly !== undefined) {
       updateData.price_yearly = updates.priceYearly;
     }
@@ -250,6 +290,7 @@ export async function PATCH(request: NextRequest) {
       description: string | null;
       price_monthly: number | null;
       price_yearly: number | null;
+      yearly_discount_rate: number | null;
       max_properties: number | null;
       max_users: number | null;
       extranet_tenants_limit: number | null;
@@ -260,6 +301,15 @@ export async function PATCH(request: NextRequest) {
       eq: { id },
     });
 
+    // Calculate yearly price if yearly_discount_rate is set
+    let calculatedYearlyPrice = updatedPlan?.price_yearly ?? null;
+    if (updatedPlan && updatedPlan.yearly_discount_rate !== null && updatedPlan.yearly_discount_rate !== undefined) {
+      if (updatedPlan.price_monthly !== null && updatedPlan.price_monthly !== undefined && updatedPlan.price_monthly > 0) {
+        const discountMultiplier = 1 - (updatedPlan.yearly_discount_rate / 100);
+        calculatedYearlyPrice = updatedPlan.price_monthly * 12 * discountMultiplier;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Plan updated successfully',
@@ -269,7 +319,8 @@ export async function PATCH(request: NextRequest) {
         displayName: updatedPlan.display_name,
         description: updatedPlan.description,
         priceMonthly: updatedPlan.price_monthly ? parseFloat(String(updatedPlan.price_monthly)) : null,
-        priceYearly: updatedPlan.price_yearly ? parseFloat(String(updatedPlan.price_yearly)) : null,
+        priceYearly: calculatedYearlyPrice ? parseFloat(String(calculatedYearlyPrice)) : null,
+        yearlyDiscountRate: updatedPlan.yearly_discount_rate ? parseFloat(String(updatedPlan.yearly_discount_rate)) : null,
         lotsLimit: updatedPlan.max_properties,
         usersLimit: updatedPlan.max_users,
         extranetTenantsLimit: updatedPlan.extranet_tenants_limit,
@@ -344,13 +395,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Calculate yearly price if yearly_discount_rate is set and priceYearly is not provided
+    let calculatedYearlyPrice = validatedData.priceYearly ?? null;
+    if (validatedData.yearlyDiscountRate !== null && validatedData.yearlyDiscountRate !== undefined) {
+      if (validatedData.priceMonthly !== null && validatedData.priceMonthly !== undefined && validatedData.priceMonthly > 0) {
+        // Formula: yearly_price = monthly_price * 12 * (1 - discount_rate/100)
+        const discountMultiplier = 1 - (validatedData.yearlyDiscountRate / 100);
+        calculatedYearlyPrice = validatedData.priceMonthly * 12 * discountMultiplier;
+      }
+    }
+
     // Build insert data with actual database column names
     const insertData = {
       name: validatedData.name,
       display_name: validatedData.displayName,
       description: validatedData.description || null,
       price_monthly: validatedData.priceMonthly ?? null,
-      price_yearly: validatedData.priceYearly ?? null,
+      price_yearly: calculatedYearlyPrice,
+      yearly_discount_rate: validatedData.yearlyDiscountRate ?? null,
       max_properties: validatedData.lotsLimit ?? null,
       max_users: validatedData.usersLimit ?? null,
       extranet_tenants_limit: validatedData.extranetTenantsLimit ?? null,
@@ -367,6 +429,7 @@ export async function POST(request: NextRequest) {
       description: string | null;
       price_monthly: number | null;
       price_yearly: number | null;
+      yearly_discount_rate: number | null;
       max_properties: number | null;
       max_users: number | null;
       extranet_tenants_limit: number | null;
@@ -394,6 +457,7 @@ export async function POST(request: NextRequest) {
         description: newPlan.description,
         priceMonthly: newPlan.price_monthly ? parseFloat(String(newPlan.price_monthly)) : null,
         priceYearly: newPlan.price_yearly ? parseFloat(String(newPlan.price_yearly)) : null,
+        yearlyDiscountRate: newPlan.yearly_discount_rate ? parseFloat(String(newPlan.yearly_discount_rate)) : null,
         lotsLimit: newPlan.max_properties,
         usersLimit: newPlan.max_users,
         extranetTenantsLimit: newPlan.extranet_tenants_limit,

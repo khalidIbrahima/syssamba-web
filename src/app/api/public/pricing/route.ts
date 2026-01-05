@@ -26,6 +26,7 @@ export async function GET() {
       description: string | null;
       price_monthly: number | null;
       price_yearly: number | null;
+      yearly_discount_rate: number | null;
       sort_order: number | null;
     }>('plans', {
       filter: { is_active: true },
@@ -87,9 +88,21 @@ export async function GET() {
           });
         });
 
+        // Calculate yearly price if yearly_discount_rate is set and yearly price is not already set
+        let yearlyPrice = planData?.price_yearly ?? null;
+        
+        if (planData && planData.yearly_discount_rate !== null && planData.yearly_discount_rate !== undefined) {
+          // If yearly_discount_rate is set, calculate yearly price from monthly price
+          if (planData.price_monthly !== null && planData.price_monthly !== undefined && planData.price_monthly > 0) {
+            // Formula: yearly_price = monthly_price * 12 * (1 - discount_rate/100)
+            const discountMultiplier = 1 - (planData.yearly_discount_rate / 100);
+            yearlyPrice = planData.price_monthly * 12 * discountMultiplier;
+          }
+        }
+        
         const prices = planData ? {
           monthly: planData.price_monthly,
-          yearly: planData.price_yearly,
+          yearly: yearlyPrice,
         } : { monthly: null, yearly: null };
 
         return {

@@ -8,6 +8,9 @@ export const plans = pgTable('plans', {
   price: decimal('price', { precision: 10, scale: 2 }), // null pour 'custom'
   priceType: text('price_type', { enum: ['fixed', 'custom'] }).default('fixed'),
   
+  // Pricing
+  yearlyDiscountRate: decimal('yearly_discount_rate', { precision: 5, scale: 2 }), // Taux de remise en % pour calculer yearly_price
+  
   // Limites
   lotsLimit: integer('lots_limit'), // null pour illimité
   usersLimit: integer('users_limit'), // null pour illimité
