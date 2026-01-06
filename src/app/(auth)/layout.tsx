@@ -24,6 +24,8 @@ export default async function AuthLayout({
   const isAdminSelectPage = pathname === '/admin/select-organization' || pathname.startsWith('/admin/select-organization');
   const isAdminPage = pathname.startsWith('/admin'); // Includes /admin and /admin/*
   const isDashboardPage = pathname === '/dashboard' || pathname.startsWith('/dashboard');
+  const isSubscriptionInactivePage = pathname === '/subscription-inactive' || pathname.startsWith('/subscription-inactive');
+  const isSubscriptionPage = pathname.includes('/subscription') || pathname.includes('/settings/subscription');
 
   // Check if super admin is trying to access setup page - NEVER allow this
   if (isSetupPage) {
@@ -36,7 +38,7 @@ export default async function AuthLayout({
   }
 
   // Check organization configuration
-  if (!isSetupPage && !isAdminSelectPage) {
+  if (!isSetupPage && !isAdminSelectPage && !isSubscriptionInactivePage) {
     try {
       const dbUser = await db.selectOne<{
         id: string;
@@ -76,10 +78,35 @@ export default async function AuthLayout({
           return;
         }
 
+        // Check subscription status for users with organization
+        const subscriptions = await db.select<{
+          id: string;
+          status: string;
+        }>('subscriptions', {
+          eq: { organization_id: user.organizationId },
+          limit: 1,
+        });
+
+        const subscription = subscriptions[0];
+        const hasActiveSubscription = subscription && 
+          (subscription.status === 'active' || subscription.status === 'trialing');
+
         // Check if user is organization admin (can edit Organization)
-        // Organization admins should have access to dashboard and other pages
         const canEditOrg = await canUserAccessObject(user.id, 'Organization', 'edit');
         
+        // If subscription is inactive, handle redirects
+        if (!hasActiveSubscription && !isSubscriptionPage) {
+          if (canEditOrg) {
+            // Admin user: redirect to subscription setup page
+            redirect('/settings/subscription');
+            return;
+          } else {
+            // Non-admin user: redirect to inactive subscription page
+            redirect('/subscription-inactive');
+            return;
+          }
+        }
+
         if (canEditOrg) {
           // Organization admin - allow access to all pages including dashboard
           // No redirect needed
