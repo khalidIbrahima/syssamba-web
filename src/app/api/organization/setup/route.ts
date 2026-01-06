@@ -60,14 +60,17 @@ export async function POST(request: NextRequest) {
 
     // Ensure both slug and subdomain uniqueness
     while (true) {
-      const existing = await db.selectOne<{ id: string }>('organizations', {
-        or: [
-          { eq: { slug } },
-          { eq: { subdomain } },
-        ],
+      // Check if slug exists
+      const existingBySlug = await db.selectOne<{ id: string }>('organizations', {
+        eq: { slug },
+      });
+      
+      // Check if subdomain exists
+      const existingBySubdomain = await db.selectOne<{ id: string }>('organizations', {
+        eq: { subdomain },
       });
 
-      if (!existing) break;
+      if (!existingBySlug && !existingBySubdomain) break;
 
       slug = `${baseSlug}-${counter}`;
       subdomain = `${baseSlug}-${counter}`;

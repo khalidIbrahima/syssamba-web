@@ -1154,7 +1154,7 @@ export default function UsersPage() {
                     return (
                       <div
                         key={customRole.id}
-                        className="group p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:shadow-sm bg-white transition-all duration-200"
+                        className="group p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-sm bg-white dark:bg-gray-800 transition-all duration-200"
                       >
                         <div className="flex items-center justify-between mb-3">
                           <Badge className={`${customRole.color || 'bg-gray-100 text-foreground'} text-xs font-semibold px-2.5 py-1`}>
@@ -1171,11 +1171,11 @@ export default function UsersPage() {
                           <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{customRole.description}</p>
                         )}
                         <div className="flex flex-wrap gap-1.5">
-                          <span className="text-xs px-2.5 py-1 bg-purple-100 text-purple-700 rounded-md font-medium">
+                          <span className="text-xs px-2.5 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-md font-medium">
                             Personnalisé
                           </span>
                           {customRole.slug && (
-                            <span className="text-xs px-2.5 py-1 bg-gray-100 text-muted-foreground rounded-md font-medium">
+                            <span className="text-xs px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-muted-foreground rounded-md font-medium">
                               {customRole.slug}
                             </span>
                           )}
@@ -1187,7 +1187,7 @@ export default function UsersPage() {
               )}
               </div>
               {/* Create Role Button - Fixed at bottom */}
-              <div className="px-6 pb-6 pt-4 border-t border-gray-200 bg-gray-50/50">
+              <div className="px-6 pb-6 pt-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                 <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full">
