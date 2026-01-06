@@ -49,8 +49,8 @@ const createOwnerSchema = z.object({
   phone: z.string().optional(),
   bankAccount: z.string().optional(),
   bankName: z.string().optional(),
-  commissionRate: z.number().min(0).max(100).default(20),
-  isActive: z.boolean().default(true),
+  commissionRate: z.number().min(0).max(100).optional().default(20),
+  isActive: z.boolean().optional().default(true),
   notes: z.string().optional(),
 });
 
