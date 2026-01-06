@@ -3,6 +3,18 @@ import { checkAuth, getCurrentUser } from '@/lib/auth-helpers';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 
+// Payment result interface
+interface PaymentResult {
+  success: boolean;
+  transactionId?: string;
+  status: 'completed' | 'pending' | 'failed';
+  message: string;
+  providerCustomerId?: string;
+  providerSubscriptionId?: string;
+  gatewayResponse?: Record<string, any>;
+  failureReason?: string;
+}
+
 // Validation schema for payment data
 const paymentSchema = z.object({
   planName: z.string().min(1, 'Le nom du plan est requis'),
@@ -152,12 +164,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process actual payment based on payment method
-    let paymentResult: {
-      success: boolean;
-      transactionId?: string;
-      status: 'completed' | 'pending' | 'failed';
-      message: string;
-    };
+    let paymentResult: PaymentResult;
 
     switch (validatedData.paymentMethod) {
       case 'stripe':
@@ -355,17 +362,6 @@ export async function POST(request: NextRequest) {
 }
 
 // Payment processor functions
-interface PaymentResult {
-  success: boolean;
-  transactionId?: string;
-  status: 'completed' | 'pending' | 'failed';
-  message: string;
-  providerCustomerId?: string;
-  providerSubscriptionId?: string;
-  gatewayResponse?: Record<string, any>;
-  failureReason?: string;
-}
-
 async function processStripePayment(params: {
   planName: string;
   billingPeriod: 'monthly' | 'yearly';
