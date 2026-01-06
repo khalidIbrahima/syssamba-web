@@ -32,5 +32,5 @@ CHECK (
 );
 
 -- Add comment to column
-COMMENT ON COLUMN organizations.subdomain IS 'Unique subdomain for organization (e.g., org-name.kspace-group.com)';
+COMMENT ON COLUMN organizations.subdomain IS 'Unique subdomain for organization (e.g., org-name.syssamba.com)';
 

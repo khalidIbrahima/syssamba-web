@@ -6,6 +6,22 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig: NextConfig = {
   // Désactiver complètement les source maps pour éviter les erreurs
   productionBrowserSourceMaps: false,
+  
+  // Headers configuration
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+        ],
+      },
+    ];
+  },
+  
   images: {
     remotePatterns: [
       {
@@ -19,6 +35,11 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https' as const,
         hostname: 'images.unsplash.com',
+      },
+      // Allow images from subdomains
+      {
+        protocol: 'https' as const,
+        hostname: `*.${process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com'}`,
       },
     ],
   },

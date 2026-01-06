@@ -20,6 +20,8 @@ export type Organization = {
   // Note: planId and limits are in subscriptions and plans tables
   extranetTenantsCount: number;
   customExtranetDomain?: string;
+  // Subdomain support (e.g., org-name.syssamba.com)
+  subdomain?: string;
   stripeCustomerId?: string;
   isConfigured?: boolean;
   createdAt: Date;

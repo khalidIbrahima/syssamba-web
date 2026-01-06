@@ -1,14 +1,37 @@
 /**
  * Next.js Middleware
- * Handles internationalization, route protection and authentication
+ * Handles subdomain routing, internationalization, route protection and authentication
  */
 
 import createMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { createMiddlewareClient } from '@/lib/supabase/middleware';
 import { routing } from '@/i18n/routing';
+import { db } from '@/lib/db';
 
 const intlMiddleware = createMiddleware(routing);
+
+// Main domain - organizations use subdomains on this domain
+const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
+
+// Extract subdomain from hostname
+function getSubdomain(hostname: string): string | null {
+  // Remove protocol if present
+  const cleanHostname = hostname.replace(/^https?:\/\//, '');
+  
+  // Remove port if present
+  const hostWithoutPort = cleanHostname.split(':')[0];
+  
+  // Check if it's a subdomain of main domain
+  if (hostWithoutPort.endsWith(`.${MAIN_DOMAIN}`)) {
+    const subdomain = hostWithoutPort.replace(`.${MAIN_DOMAIN}`, '');
+    if (subdomain && subdomain !== 'www') {
+      return subdomain;
+    }
+  }
+  
+  return null;
+}
 
 const publicRoutes = ['/auth', '/invite', '/', '/pricing'];
 const protectedRoutes = [
@@ -27,22 +50,68 @@ const protectedRoutes = [
 ];
 
 export async function middleware(req: NextRequest) {
-  const pathname = new URL(req.url).pathname;
+  const url = new URL(req.url);
+  const hostname = req.headers.get('host') || url.hostname;
+  const pathname = url.pathname;
+  
+  // Extract subdomain from hostname
+  const subdomain = getSubdomain(hostname);
+  
+  // Handle subdomain routing
+  if (subdomain) {
+    try {
+      // Look up organization by subdomain
+      const organization = await db.selectOne<{ 
+        id: string; 
+        slug: string;
+      }>('organizations', {
+        eq: { subdomain },
+      });
 
-  // Run intl middleware first to handle locale routing
+      if (organization) {
+        // Add organization context to request headers
+        const response = intlMiddleware(req);
+        const finalResponse = response || NextResponse.next();
+        finalResponse.headers.set('x-organization-id', organization.id);
+        finalResponse.headers.set('x-organization-slug', organization.slug);
+        finalResponse.headers.set('x-subdomain', subdomain);
+        
+        // Continue with normal routing
+        return handleNormalRouting(req, finalResponse, pathname);
+      } else {
+        // Subdomain not found, redirect to main domain
+        const mainDomainUrl = new URL(pathname, `https://${MAIN_DOMAIN}`);
+        mainDomainUrl.search = url.search;
+        return NextResponse.redirect(mainDomainUrl);
+      }
+    } catch (error) {
+      console.error('[Middleware] Error looking up subdomain:', error);
+      // On error, continue with normal routing (don't break the app)
+    }
+  }
+
+  // Main domain or no subdomain - continue with normal routing
   const response = intlMiddleware(req);
   
+  // If intl middleware redirected (e.g., to add locale), return it
+  if (response.status === 307 || response.status === 308) {
+    return response;
+  }
+  
+  return handleNormalRouting(req, response, pathname);
+}
+
+async function handleNormalRouting(
+  req: NextRequest,
+  response: NextResponse,
+  pathname: string
+): Promise<NextResponse> {
   // Extract locale from pathname
   const localeMatch = pathname.match(/^\/(fr|en)(\/|$)/);
   const locale = localeMatch ? localeMatch[1] : 'fr';
   const pathnameWithoutLocale = localeMatch 
     ? pathname.replace(`/${locale}`, '') || '/' 
     : pathname;
-
-  // If intl middleware redirected (e.g., to add locale), return it
-  if (response.status === 307 || response.status === 308) {
-    return response;
-  }
 
   // Handle authentication for protected routes
   // Allow public routes

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate a unique slug for the organization
+    // Generate a unique slug and subdomain for the organization
     const baseSlug = validatedData.organizationName
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '-')
@@ -55,17 +55,22 @@ export async function POST(request: NextRequest) {
       .replace(/^-|-$/g, '');
 
     let slug = baseSlug;
+    let subdomain = baseSlug; // Use same value for subdomain
     let counter = 1;
 
-    // Ensure slug uniqueness
+    // Ensure both slug and subdomain uniqueness
     while (true) {
       const existing = await db.selectOne<{ id: string }>('organizations', {
-        eq: { slug },
+        or: [
+          { eq: { slug } },
+          { eq: { subdomain } },
+        ],
       });
 
       if (!existing) break;
 
       slug = `${baseSlug}-${counter}`;
+      subdomain = `${baseSlug}-${counter}`;
       counter++;
     }
 
@@ -74,6 +79,7 @@ export async function POST(request: NextRequest) {
       id: string;
       name: string;
       slug: string;
+      subdomain: string;
       type: string;
       country: string;
       is_configured: boolean;
@@ -83,6 +89,7 @@ export async function POST(request: NextRequest) {
       id: crypto.randomUUID(), // Generate new UUID for organization
       name: validatedData.organizationName,
       slug,
+      subdomain, // Add subdomain
       type: validatedData.organizationType,
       country: validatedData.country,
       is_configured: true,
@@ -115,15 +122,19 @@ export async function POST(request: NextRequest) {
     // TODO: Create subscription if plan is not freemium
     // For now, we'll skip subscription creation and let users manage it later
 
+    const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
+    
     return NextResponse.json({
       success: true,
       organization: {
         id: organization.id,
         name: organization.name,
         slug: organization.slug,
+        subdomain: organization.subdomain,
         type: organization.type,
         country: organization.country,
       },
+      subdomainUrl: `https://${organization.subdomain}.${MAIN_DOMAIN}`,
       message: 'Organisation configurée avec succès',
     });
 

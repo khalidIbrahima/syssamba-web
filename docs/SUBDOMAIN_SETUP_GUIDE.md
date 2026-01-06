@@ -1,6 +1,6 @@
 # Subdomain Setup Guide for Organizations
 
-This guide will help you set up subdomains for each organization when users sign up and complete organization setup. Each organization will get a unique subdomain like `org-name.kspace-group.com`.
+This guide will help you set up subdomains for each organization when users sign up and complete organization setup. Each organization will get a unique subdomain like `org-name.syssamba.com`.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ This guide will help you set up subdomains for each organization when users sign
 
 ## Prerequisites
 
-- Domain `kspace-group.com` registered and accessible
+- Domain `syssamba.com` registered and accessible
 - Access to DNS management (Hostinger or Vercel)
 - Access to your database
 - Next.js application deployed (Vercel recommended for easier subdomain handling)
@@ -35,8 +35,8 @@ Vercel automatically handles subdomain routing and SSL certificates for wildcard
 
 1. Go to your Vercel project settings
 2. Navigate to **Domains**
-3. Add `kspace-group.com` as your primary domain
-4. Add `*.kspace-group.com` as a wildcard domain
+3. Add `syssamba.com` as your primary domain
+4. Add `*.syssamba.com` as a wildcard domain
 
 #### Step 2: Configure DNS Records
 
@@ -161,8 +161,7 @@ Add to your `.env.local` and Vercel environment variables:
 
 ```env
 # Subdomain configuration
-NEXT_PUBLIC_ROOT_DOMAIN=kspace-group.com
-NEXT_PUBLIC_WILDCARD_DOMAIN=*.kspace-group.com
+NEXT_PUBLIC_MAIN_DOMAIN=syssamba.com
 ```
 
 ---
@@ -205,7 +204,7 @@ const protectedRoutes = [
 
 // Extract subdomain from hostname
 function getSubdomain(hostname: string): string | null {
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'kspace-group.com';
+  const rootDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
   
   // Remove protocol if present
   const cleanHostname = hostname.replace(/^https?:\/\//, '');
@@ -241,7 +240,7 @@ export async function middleware(req: NextRequest) {
 
       if (!organization) {
         // Organization not found, redirect to main domain
-        const mainDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'kspace-group.com';
+        const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
         const redirectUrl = new URL(`https://${mainDomain}${pathname}`, req.url);
         redirectUrl.search = url.search;
         return NextResponse.redirect(redirectUrl);
@@ -421,7 +420,7 @@ export async function POST(request: NextRequest) {
         country: organization.country,
       },
       message: 'Organisation configurée avec succès',
-      subdomainUrl: `https://${organization.subdomain}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'kspace-group.com'}`,
+      subdomainUrl: `https://${organization.subdomain}.${process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com'}`,
     });
 
   } catch (error) {
@@ -466,7 +465,7 @@ export function getSubdomainFromRequest(): string | null {
   if (typeof window !== 'undefined') {
     // Client-side
     const hostname = window.location.hostname;
-    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'kspace-group.com';
+    const rootDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
     
     if (hostname.endsWith(`.${rootDomain}`)) {
       const subdomain = hostname.replace(`.${rootDomain}`, '');
@@ -540,7 +539,7 @@ export type Organization = {
 ### Option 1: Vercel (Automatic)
 
 Vercel automatically provisions SSL certificates for all subdomains when you:
-1. Add the wildcard domain `*.kspace-group.com`
+1. Add the wildcard domain `*.syssamba.com`
 2. Verify the domain
 3. Vercel handles everything automatically
 
@@ -550,7 +549,7 @@ If using your own server, you'll need a wildcard SSL certificate:
 
 1. **Purchase Wildcard SSL Certificate**
    - From providers like Let's Encrypt (free), Cloudflare, or others
-   - Must support `*.kspace-group.com`
+   - Must support `*.syssamba.com`
 
 2. **Install Certificate**
    - Follow your server provider's instructions
@@ -567,10 +566,10 @@ If using your own server, you'll need a wildcard SSL certificate:
 
 ```bash
 # Test if wildcard DNS is working
-dig *.kspace-group.com
+dig *.syssamba.com
 
 # Test specific subdomain
-dig test.kspace-group.com
+dig test.syssamba.com
 ```
 
 ### Step 2: Test Subdomain Creation
@@ -584,7 +583,7 @@ dig test.kspace-group.com
 
 ### Step 3: Test Subdomain Access
 
-1. Visit `https://[subdomain].kspace-group.com`
+1. Visit `https://[subdomain].syssamba.com`
 2. Verify it loads your application
 3. Check browser console for any errors
 4. Verify organization context is correct

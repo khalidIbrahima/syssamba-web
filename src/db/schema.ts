@@ -94,6 +94,10 @@ export const organizations = pgTable('organizations', {
   extranetTenantsCount: integer('extranet_tenants_count').default(0),
 
   customExtranetDomain: text('custom_extranet_domain'),
+  
+  // Subdomain support (e.g., org-name.syssamba.com)
+  subdomain: text('subdomain').unique(),
+  
   stripeCustomerId: text('stripe_customer_id'),
   isConfigured: boolean('is_configured').default(false), // True when organization is fully configured
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
