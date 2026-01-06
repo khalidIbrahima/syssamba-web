@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/logo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -251,11 +252,8 @@ export default function PricingPage() {
       {/* Header - Same as home page */}
       <header className="fixed top-0 left-0 right-0 bg-background border-b border-border z-50 h-20 flex items-center shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="bg-blue-600 rounded-lg p-1.5">
-              <Building2 className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-foreground tracking-tight">Sys Samba</span>
+          <Link href="/" className="flex items-center">
+            <Logo width={180} height={50} />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -504,12 +502,9 @@ export default function PricingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
               {/* Brand */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="bg-blue-600 rounded-lg p-1.5">
-                    <Building2 className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-2xl font-bold">Sys Samba</span>
-                </div>
+                <Link href="/" className="flex items-center">
+                  <Logo width={180} height={50} className="[&_text]:fill-white" />
+                </Link>
                 <p className="text-sm text-white/80">
                   sys.samba
                 </p>

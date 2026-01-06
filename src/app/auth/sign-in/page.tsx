@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import dynamic from 'next/dynamic';
+import { Logo } from '@/components/logo';
 
 // Dynamically import Google sign-in button to prevent hydration issues
 const GoogleSignInButton = dynamic(() => import('./components/GoogleSignInButton').then(mod => ({ default: mod.default })), {
@@ -172,10 +173,10 @@ export default function SignInPage() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-xl mb-4">
-            <Key className="h-8 w-8 text-white" suppressHydrationWarning />
+          <div className="flex justify-center mb-4">
+            <Logo width={200} height={60} className="[&_text]:fill-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Bienvenue sur Syssamba</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Bienvenue sur SYSSAMBA</h1>
           <p className="text-white/90">
             Connectez-vous ou créez votre compte pour gérer vos biens immobiliers
           </p>

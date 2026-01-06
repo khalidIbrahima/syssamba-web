@@ -18,6 +18,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SYS SAMBA - Gestion Immobilière",
   description: "Plateforme de gestion immobilière adaptée au Sénégal et à l'espace OHADA",
+  icons: {
+    icon: '/logo-icon.svg',
+    shortcut: '/logo-icon.svg',
+    apple: '/logo-icon.svg',
+  },
 };
 
 export default function RootLayout({

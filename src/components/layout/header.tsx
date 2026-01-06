@@ -26,6 +26,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { useTranslations } from 'next-intl';
 import { Ticket } from 'lucide-react';
+import { Logo } from '@/components/logo';
 
 // Fetch current user's organization ID
 async function getCurrentUserOrg() {
@@ -119,10 +120,7 @@ export function Header() {
         {/* Left: Logo (only on properties page) or Title */}
         {isPropertiesPage ? (
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-foreground">SambaOne</span>
+            <Logo width={120} height={40} />
           </Link>
         ) : (
           <h1 className="text-xl font-semibold text-foreground">

@@ -31,6 +31,7 @@ import type { ObjectType } from '@/lib/salesforce-inspired-security';
 import { useMemo } from 'react';
 import { useDataQuery } from '@/hooks/use-query';
 import { getIconByName } from '@/lib/icon-mapper';
+import { Logo } from '@/components/logo';
 
 // Type definitions for navigation items with tab-based permissions
 interface SubItem {
@@ -266,12 +267,7 @@ function SidebarContent() {
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-blue-500 dark:bg-blue-900/90 px-4 pb-4">
           {/* Placeholder to maintain layout */}
           <div className="flex h-16 shrink-0 items-center">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-blue-800">
-                <div className="h-5 w-5" />
-              </div>
-              <span className="text-xl font-bold text-white">Sys Samba</span>
-            </div>
+            <Logo width={140} height={40} className="[&_text]:fill-white" />
           </div>
         </div>
       </div>
@@ -303,11 +299,8 @@ function SidebarContent() {
       <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-blue-500 dark:bg-blue-900/90 px-4 pb-4 border-r border-border" suppressHydrationWarning>
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-blue-800">
-              <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-200" />
-            </div>
-            <span className="text-xl font-bold text-white dark:text-white">Sys Samba</span>
+          <Link href="/dashboard" className="flex items-center">
+            <Logo width={140} height={40} className="[&_text]:fill-white" />
           </Link>
         </div>
 
@@ -528,8 +521,7 @@ export function Sidebar() {
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-blue-500 dark:bg-blue-900/90 px-4 pb-4">
           <div className="flex h-16 shrink-0 items-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-blue-800 animate-pulse" />
-            <span className="text-xl font-bold text-white ml-2">Samba Sys</span>
+            <Logo width={140} height={40} className="[&_text]:fill-white animate-pulse" />
           </div>
         </div>
       </div>

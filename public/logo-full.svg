@@ -1,0 +1,26 @@
+<svg width="250" height="80" viewBox="0 0 250 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Graphic Element: Network/Molecular Structure -->
+  <g id="graphic">
+    <!-- Central circle -->
+    <circle cx="35" cy="40" r="10" fill="#2563eb" />
+    
+    <!-- Outer circles (6 circles arranged in star pattern) -->
+    <circle cx="35" cy="15" r="6" fill="#2563eb" />
+    <circle cx="55" cy="25" r="6" fill="#2563eb" />
+    <circle cx="55" cy="55" r="6" fill="#2563eb" />
+    <circle cx="35" cy="65" r="6" fill="#2563eb" />
+    <circle cx="15" cy="55" r="6" fill="#2563eb" />
+    <circle cx="15" cy="25" r="6" fill="#2563eb" />
+    
+    <!-- Connection lines -->
+    <line x1="35" y1="40" x2="35" y2="15" stroke="#2563eb" stroke-width="2.5" />
+    <line x1="35" y1="40" x2="55" y2="25" stroke="#2563eb" stroke-width="2.5" />
+    <line x1="35" y1="40" x2="55" y2="55" stroke="#2563eb" stroke-width="2.5" />
+    <line x1="35" y1="40" x2="35" y2="65" stroke="#2563eb" stroke-width="2.5" />
+    <line x1="35" y1="40" x2="15" y2="55" stroke="#2563eb" stroke-width="2.5" />
+    <line x1="35" y1="40" x2="15" y2="25" stroke="#2563eb" stroke-width="2.5" />
+  </g>
+  
+  <!-- Text: SYSSAMBA -->
+  <text x="75" y="50" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#1f2937" letter-spacing="2">SYSSAMBA</text>
+</svg>

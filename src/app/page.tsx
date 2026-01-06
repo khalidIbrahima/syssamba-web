@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/lib/auth';
+import { Logo } from '@/components/logo';
 import {
   Building2,
   Check,
@@ -34,12 +35,9 @@ export default async function Home() {
       <header className="fixed top-0 left-0 right-0 bg-white z-50 h-20 flex items-center shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-600 rounded-lg p-1.5">
-              <Building2 className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-foreground tracking-tight">Sys Samba</span>
-          </div>
+          <Link href="/" className="flex items-center">
+            <Logo width={180} height={50} />
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-700">
@@ -268,12 +266,9 @@ export default async function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
             {/* Brand */}
             <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <div className="bg-blue-600 rounded-lg p-1.5">
-                  <Building2 className="h-6 w-6 text-white" />
-                </div>
-                <span className="text-2xl font-bold tracking-tight text-white">Sys Samba</span>
-              </div>
+              <Link href="/" className="flex items-center">
+                <Logo width={180} height={50} className="[&_text]:fill-white" />
+              </Link>
               <p className="text-white/80 text-sm leading-relaxed max-w-xs">
                 La solution immobilière de référence pour l'Afrique de l'Ouest.
               </p>
