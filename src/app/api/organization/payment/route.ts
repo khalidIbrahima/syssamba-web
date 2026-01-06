@@ -88,8 +88,9 @@ export async function POST(request: NextRequest) {
         limit: 1,
       });
 
+      let subscriptionId: string;
       if (existingSubscriptions.length === 0) {
-        await db.insertOne('subscriptions', {
+        const newSubscription = await db.insertOne<{ id: string }>('subscriptions', {
           organization_id: user.organizationId,
           plan_id: plan.id,
           billing_period: validatedData.billingPeriod,
@@ -102,7 +103,15 @@ export async function POST(request: NextRequest) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
+        if (!newSubscription || !newSubscription.id) {
+          return NextResponse.json(
+            { error: 'Failed to create subscription' },
+            { status: 500 }
+          );
+        }
+        subscriptionId = newSubscription.id;
       } else {
+        subscriptionId = existingSubscriptions[0].id;
         await db.update('subscriptions', {
           plan_id: plan.id,
           billing_period: validatedData.billingPeriod,
@@ -112,9 +121,26 @@ export async function POST(request: NextRequest) {
           current_period_end: periodEndDate,
           updated_at: new Date().toISOString(),
         }, {
-          eq: { id: existingSubscriptions[0].id },
+          eq: { id: subscriptionId },
         });
       }
+
+      // Create subscription payment record for dev mode
+      await db.insertOne('subscription_payments', {
+        subscription_id: subscriptionId,
+        organization_id: user.organizationId,
+        amount: price,
+        currency: 'XOF',
+        payment_method: validatedData.paymentMethod,
+        billing_period_start: startDate,
+        billing_period_end: periodEndDate,
+        status: 'completed',
+        transaction_id: `dev_${Date.now()}`,
+        gateway_response: { dev_mode: true, skipped: true },
+        paid_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
 
       return NextResponse.json({
         success: true,
@@ -246,20 +272,67 @@ export async function POST(request: NextRequest) {
       subscriptionData.stripe_subscription_id = paymentResult.transactionId;
     }
 
+    let subscriptionId: string;
     if (existingSubscriptions.length === 0) {
       subscriptionData.created_at = new Date().toISOString();
-      await db.insertOne('subscriptions', subscriptionData);
+      const newSubscription = await db.insertOne<{ id: string }>('subscriptions', subscriptionData);
+      if (!newSubscription || !newSubscription.id) {
+        return NextResponse.json(
+          { error: 'Failed to create subscription' },
+          { status: 500 }
+        );
+      }
+      subscriptionId = newSubscription.id;
     } else {
+      subscriptionId = existingSubscriptions[0].id;
       await db.update('subscriptions', subscriptionData, {
-        eq: { id: existingSubscriptions[0].id },
+        eq: { id: subscriptionId },
       });
     }
+
+    // Create subscription payment record
+    const paymentStatus = paymentResult.status === 'completed' 
+      ? 'completed' 
+      : paymentResult.status === 'pending' 
+      ? 'processing' 
+      : 'failed';
+
+    const subscriptionPaymentData: any = {
+      subscription_id: subscriptionId,
+      organization_id: user.organizationId,
+      amount: price,
+      currency: 'XOF',
+      payment_method: validatedData.paymentMethod,
+      billing_period_start: startDate,
+      billing_period_end: periodEndDate,
+      status: paymentStatus,
+      transaction_id: paymentResult.transactionId || null,
+      provider_customer_id: paymentResult.providerCustomerId || null,
+      provider_subscription_id: paymentResult.providerSubscriptionId || null,
+      gateway_response: paymentResult.gatewayResponse || {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Set timestamps based on status
+    if (paymentStatus === 'completed') {
+      subscriptionPaymentData.paid_at = new Date().toISOString();
+    } else if (paymentStatus === 'failed') {
+      subscriptionPaymentData.failed_at = new Date().toISOString();
+      subscriptionPaymentData.failure_reason = paymentResult.failureReason || 'Payment processing failed';
+    }
+
+    await db.insertOne('subscription_payments', subscriptionPaymentData);
 
     return NextResponse.json({
       success: true,
       message: paymentResult.message || 'Payment processed successfully',
       subscription: {
         status: paymentResult.status === 'completed' ? 'active' : 'trialing',
+        transactionId: paymentResult.transactionId,
+      },
+      payment: {
+        status: paymentStatus,
         transactionId: paymentResult.transactionId,
       },
     });
@@ -282,12 +355,23 @@ export async function POST(request: NextRequest) {
 }
 
 // Payment processor functions
+interface PaymentResult {
+  success: boolean;
+  transactionId?: string;
+  status: 'completed' | 'pending' | 'failed';
+  message: string;
+  providerCustomerId?: string;
+  providerSubscriptionId?: string;
+  gatewayResponse?: Record<string, any>;
+  failureReason?: string;
+}
+
 async function processStripePayment(params: {
   planName: string;
   billingPeriod: 'monthly' | 'yearly';
   organizationId: string;
   paymentData?: Record<string, any>;
-}): Promise<{ success: boolean; transactionId?: string; status: 'completed' | 'pending' | 'failed'; message: string }> {
+}): Promise<PaymentResult> {
   // TODO: Implement Stripe payment processing
   // This would integrate with Stripe API
   // For now, return a mock success response
@@ -305,6 +389,13 @@ async function processStripePayment(params: {
     transactionId: `stripe_${Date.now()}`,
     status: 'completed',
     message: 'Stripe payment processed successfully',
+    providerCustomerId: `cus_${Date.now()}`,
+    providerSubscriptionId: `sub_${Date.now()}`,
+    gatewayResponse: {
+      provider: 'stripe',
+      payment_intent_id: `pi_${Date.now()}`,
+      customer_id: `cus_${Date.now()}`,
+    },
   };
 }
 
@@ -313,7 +404,7 @@ async function processPayPalPayment(params: {
   billingPeriod: 'monthly' | 'yearly';
   organizationId: string;
   paymentData?: Record<string, any>;
-}): Promise<{ success: boolean; transactionId?: string; status: 'completed' | 'pending' | 'failed'; message: string }> {
+}): Promise<PaymentResult> {
   // TODO: Implement PayPal payment processing
   console.log('[Payment] Processing PayPal payment', params);
   
@@ -322,6 +413,13 @@ async function processPayPalPayment(params: {
     transactionId: `paypal_${Date.now()}`,
     status: 'completed',
     message: 'PayPal payment processed successfully',
+    providerCustomerId: `paypal_customer_${Date.now()}`,
+    providerSubscriptionId: `paypal_sub_${Date.now()}`,
+    gatewayResponse: {
+      provider: 'paypal',
+      order_id: `order_${Date.now()}`,
+      payer_id: `payer_${Date.now()}`,
+    },
   };
 }
 
@@ -330,7 +428,7 @@ async function processWavePayment(params: {
   billingPeriod: 'monthly' | 'yearly';
   organizationId: string;
   paymentData?: Record<string, any>;
-}): Promise<{ success: boolean; transactionId?: string; status: 'completed' | 'pending' | 'failed'; message: string }> {
+}): Promise<PaymentResult> {
   // TODO: Implement Wave payment processing
   // This would integrate with Wave API
   console.log('[Payment] Processing Wave payment', params);
@@ -340,6 +438,12 @@ async function processWavePayment(params: {
     transactionId: `wave_${Date.now()}`,
     status: 'completed',
     message: 'Wave payment processed successfully',
+    providerCustomerId: `wave_customer_${Date.now()}`,
+    gatewayResponse: {
+      provider: 'wave',
+      wave_transaction_id: `wave_tx_${Date.now()}`,
+      merchant_id: params.paymentData?.merchantId || null,
+    },
   };
 }
 
@@ -348,7 +452,7 @@ async function processOrangeMoneyPayment(params: {
   billingPeriod: 'monthly' | 'yearly';
   organizationId: string;
   paymentData?: Record<string, any>;
-}): Promise<{ success: boolean; transactionId?: string; status: 'completed' | 'pending' | 'failed'; message: string }> {
+}): Promise<PaymentResult> {
   // TODO: Implement Orange Money payment processing
   // This would integrate with Orange Money API
   console.log('[Payment] Processing Orange Money payment', params);
@@ -358,6 +462,12 @@ async function processOrangeMoneyPayment(params: {
     transactionId: `orange_${Date.now()}`,
     status: 'completed',
     message: 'Orange Money payment processed successfully',
+    providerCustomerId: params.paymentData?.phoneNumber || null,
+    gatewayResponse: {
+      provider: 'orange_money',
+      orange_transaction_id: `orange_tx_${Date.now()}`,
+      phone_number: params.paymentData?.phoneNumber || null,
+    },
   };
 }
 

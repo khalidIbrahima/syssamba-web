@@ -227,9 +227,12 @@ export default function SettingsPage() {
               Plan actuel: <Badge>{plan}</Badge>
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-2">
             <Button className="w-full" asChild>
               <Link href="/settings/subscription">Changer de plan</Link>
+            </Button>
+            <Button variant="outline" className="w-full" asChild>
+              <Link href="/settings/payments">Historique des paiements</Link>
             </Button>
           </CardContent>
         </Card>
