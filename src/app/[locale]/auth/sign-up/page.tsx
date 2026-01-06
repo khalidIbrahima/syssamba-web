@@ -88,9 +88,9 @@ export default function SignUpPage() {
         return;
       }
 
-      // Redirect to dashboard or the redirect URL from query params
-      const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || '/dashboard';
-      router.push(redirectUrl);
+      // Redirect to setup page for new users (organization is not configured yet)
+      // The setup page will allow them to complete organization info and select a plan
+      router.push('/setup');
       router.refresh();
     } catch (err: any) {
       console.error('Sign up error:', err);

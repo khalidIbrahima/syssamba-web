@@ -69,7 +69,91 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     }
 
     if (!dbUser) {
-      // User exists in auth but not in database - create profile
+      // User exists in auth but not in database - create profile and organization
+      
+      // Generate organization name from user's name or email
+      const firstName = user.user_metadata?.first_name || '';
+      const lastName = user.user_metadata?.last_name || '';
+      const orgName = `${firstName} ${lastName}`.trim() || user.email?.split('@')[0] || 'My Organization';
+      
+      // Generate a unique slug and subdomain for the organization
+      const baseSlug = orgName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .substring(0, 50); // Limit length
+
+      let slug = baseSlug;
+      let subdomain = baseSlug;
+      let counter = 1;
+
+      // Ensure both slug and subdomain uniqueness
+      while (true) {
+        // Check if slug exists
+        const existingBySlug = await db.selectOne<{ id: string }>('organizations', {
+          eq: { slug },
+        });
+        
+        // Check if subdomain exists
+        const existingBySubdomain = await db.selectOne<{ id: string }>('organizations', {
+          eq: { subdomain },
+        });
+
+        if (!existingBySlug && !existingBySubdomain) break;
+
+        slug = `${baseSlug}-${counter}`;
+        subdomain = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      // Create the organization
+      const organization = await db.insertOne<{
+        id: string;
+        name: string;
+        slug: string;
+        subdomain: string;
+        type: string;
+        country: string;
+        is_configured: boolean;
+        created_at: string;
+        updated_at: string;
+      }>('organizations', {
+        name: orgName,
+        slug,
+        subdomain,
+        type: 'individual', // Default type
+        country: 'SN', // Default country (Senegal)
+        is_configured: false, // Not fully configured yet
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      if (!organization) {
+        console.error('Failed to create organization in auth fallback.');
+        return null;
+      }
+
+      // Note: We use existing global system profiles instead of creating organization-specific profiles
+      // Global profiles (is_global = TRUE, organization_id = NULL) are shared across all organizations
+
+      // Get System Administrator profile ID (global profile)
+      const systemAdminProfile = await db.selectOne<{
+        id: string;
+        name: string;
+      }>('profiles', {
+        eq: { name: 'System Administrator', is_global: true },
+      });
+
+      if (!systemAdminProfile || !systemAdminProfile.id) {
+        console.error('[Auth Fallback] System Administrator profile not found! Cannot assign profile to new user.');
+        // Return null to prevent user creation without profile
+        return null;
+      }
+
+      console.log(`[Auth Fallback] Found System Administrator profile: ${systemAdminProfile.id}`);
+
+      // Create user profile with organization ID
       const newUser = await db.insertOne<{
         id: string;
         sb_user_id: string | null;
@@ -87,13 +171,13 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         sb_user_id: user.id, // Explicit Supabase user ID link
         email: user.email || null,
         phone: user.phone || null,
-        first_name: user.user_metadata?.first_name || null,
-        last_name: user.user_metadata?.last_name || null,
+        first_name: firstName || null,
+        last_name: lastName || null,
         avatar_url: user.user_metadata?.avatar_url || null,
         role: 'owner', // New signups are owners
         is_active: true,
-        organization_id: null,
-        profile_id: null,
+        profile_id: systemAdminProfile.id, // Assign System Administrator profile
+        organization_id: organization?.id || null,
       });
 
       if (!newUser) return null;

@@ -34,6 +34,7 @@ export default async function AuthLayout({
   const isAdminSelectPage = pathname === '/admin/select-organization' || pathname.startsWith('/admin/select-organization');
   const isAdminPage = pathname.startsWith('/admin'); // Includes /admin and /admin/*
   const isDashboardPage = pathname === '/dashboard' || pathname.startsWith('/dashboard');
+  const isAuthPage = pathname.startsWith('/auth');
 
   // Check if super admin is trying to access setup page - NEVER allow this
   if (isSetupPage) {
@@ -46,7 +47,8 @@ export default async function AuthLayout({
   }
 
   // Check organization configuration
-  if (!isSetupPage && !isAdminSelectPage) {
+  // Allow access to auth pages and setup page without organization checks
+  if (!isAuthPage && !isSetupPage && !isAdminSelectPage) {
     try {
       const dbUser = await db.selectOne<{
         id: string;
@@ -60,9 +62,61 @@ export default async function AuthLayout({
         return;
       }
 
+      // Check if user has System Administrator profile (system admin)
+      const dbUserWithProfile = await db.selectOne<{
+        id: string;
+        profile_id: string | null;
+        organization_id: string | null;
+      }>('users', {
+        eq: { id: user.id },
+      });
+
+      // Get profile name to check if user is System Administrator
+      let isSystemAdmin = false;
+      if (dbUserWithProfile?.profile_id) {
+        const profile = await db.selectOne<{
+          id: string;
+          name: string;
+        }>('profiles', {
+          eq: { id: dbUserWithProfile.profile_id },
+        });
+        isSystemAdmin = profile?.name === 'System Administrator';
+      }
+
       const userIsSuperAdmin = await isSuperAdmin(user.id);
 
-      if (userIsSuperAdmin) {
+      if (isSystemAdmin) {
+        // System admin: check if organization is configured
+        let organizationIsConfigured = false;
+        
+        if (user.organizationId) {
+          const organization = await db.selectOne<{
+            id: string;
+            is_configured: boolean;
+          }>('organizations', {
+            eq: { id: user.organizationId },
+          });
+
+          organizationIsConfigured = organization?.is_configured === true;
+        }
+
+        // CRITICAL: If organization is not configured, BLOCK ALL ROUTES except /setup
+        // System Admins with unconfigured organizations can ONLY access /setup
+        // All other routes (dashboard, properties, settings, etc.) must redirect to /setup
+        if (!organizationIsConfigured) {
+          // Only allow access to /setup page
+          // Block all other routes with immediate redirect
+          if (!isSetupPage) {
+            // Force redirect to setup - user cannot access any other route
+            redirect(`/${locale}/setup`);
+            return;
+          }
+          // User is on /setup page - allow access to complete setup
+        } else {
+          // Organization is configured - allow access to all routes
+          // No restrictions for System Admins with configured organizations
+        }
+      } else if (userIsSuperAdmin) {
         // Super admin: redirect dashboard to /admin (their home page)
         if (isDashboardPage) {
           if (!user.organizationId) {

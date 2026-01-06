@@ -95,14 +95,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Ensure plan is not null at this point
+    // Ensure plan is not null at this point - fallback to freemium if no subscription
     if (!plan) {
-      console.error('[plan-features] Plan is still null after all attempts');
-      return NextResponse.json({
-        plan: null,
-        features: [],
-        message: 'Impossible de déterminer le plan',
-      }, { status: 500 });
+      console.log('[plan-features] No subscription found, falling back to freemium plan');
+      const { data: freemiumPlan, error: freemiumError } = await supabaseAdmin
+        .from('plans')
+        .select('id, name, display_name, description')
+        .eq('name', 'freemium')
+        .single();
+
+      if (freemiumError || !freemiumPlan) {
+        console.error('[plan-features] Freemium plan not found:', freemiumError);
+        return NextResponse.json({
+          plan: null,
+          features: [],
+          message: 'Impossible de déterminer le plan',
+        }, { status: 500 });
+      }
+
+      plan = freemiumPlan;
+      console.log('[plan-features] Using freemium plan:', plan.name);
     }
 
     // Query 3: Get plan_features with features in one join query

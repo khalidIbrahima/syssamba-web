@@ -26,19 +26,11 @@ export default async function AuthLayout({
   const isDashboardPage = pathname === '/dashboard' || pathname.startsWith('/dashboard');
   const isSubscriptionInactivePage = pathname === '/subscription-inactive' || pathname.startsWith('/subscription-inactive');
   const isSubscriptionPage = pathname.includes('/subscription') || pathname.includes('/settings/subscription');
-
-  // Check if super admin is trying to access setup page - NEVER allow this
-  if (isSetupPage) {
-    const userIsSuperAdmin = await isSuperAdmin(user.id);
-    if (userIsSuperAdmin) {
-      // Super admin should NEVER access setup page - redirect to admin
-      redirect('/admin/select-organization');
-      return;
-    }
-  }
+  const isAuthPage = pathname.startsWith('/auth');
 
   // Check organization configuration
-  if (!isSetupPage && !isAdminSelectPage && !isSubscriptionInactivePage) {
+  // Allow access to auth pages and setup page without organization checks
+  if (!isAuthPage && !isSetupPage && !isAdminSelectPage && !isSubscriptionInactivePage) {
     try {
       const dbUser = await db.selectOne<{
         id: string;
@@ -52,10 +44,65 @@ export default async function AuthLayout({
         return;
       }
 
+      // Check if user has System Administrator profile (system admin)
+      const dbUserWithProfile = await db.selectOne<{
+        id: string;
+        profile_id: string | null;
+        organization_id: string | null;
+      }>('users', {
+        eq: { id: user.id },
+      });
+
+      // Get profile name to check if user is System Administrator
+      let isSystemAdmin = false;
+      if (dbUserWithProfile?.profile_id) {
+        const profile = await db.selectOne<{
+          id: string;
+          name: string;
+        }>('profiles', {
+          eq: { id: dbUserWithProfile.profile_id },
+        });
+        isSystemAdmin = profile?.name === 'System Administrator';
+      }
+
+      // Check super admin status (different from system admin)
       const userIsSuperAdmin = await isSuperAdmin(user.id);
 
-      if (userIsSuperAdmin) {
-        // Super admin: redirect dashboard to /admin (their home page)
+      if (isSystemAdmin) {
+        // System admin: check if organization is configured
+        let organizationIsConfigured = false;
+        let hasOrganization = false;
+        
+        if (user.organizationId) {
+          hasOrganization = true;
+          const organization = await db.selectOne<{
+            id: string;
+            is_configured: boolean;
+          }>('organizations', {
+            eq: { id: user.organizationId },
+          });
+
+          organizationIsConfigured = organization?.is_configured === true;
+        }
+
+        // CRITICAL: If organization is not configured, BLOCK ALL ROUTES except /setup
+        // System Admins with unconfigured organizations can ONLY access /setup
+        // All other routes (dashboard, properties, settings, etc.) must redirect to /setup
+        if (!organizationIsConfigured) {
+          // Only allow access to /setup page
+          // Block all other routes with immediate redirect
+          if (!isSetupPage) {
+            // Force redirect to setup - user cannot access any other route
+            redirect('/setup');
+            return;
+          }
+          // User is on /setup page - allow access to complete setup
+        } else {
+          // Organization is configured - allow access to all routes
+          // No restrictions for System Admins with configured organizations
+        }
+      } else if (userIsSuperAdmin) {
+        // Super admin (different from system admin): redirect dashboard to /admin
         if (isDashboardPage) {
           if (!user.organizationId) {
             redirect('/admin/select-organization');

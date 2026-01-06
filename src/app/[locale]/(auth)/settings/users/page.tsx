@@ -1447,8 +1447,8 @@ export default function UsersPage() {
                     {profiles.map((profile: any) => (
                       <SelectItem key={profile.id} value={profile.id}>
                         {profile.name}
-                        {profile.isGlobal && ' (Système)'}
-                        {profile.isSystemProfile && !profile.isGlobal && ' (Système)'}
+                        {!profile.organizationId && ' (Système)'}
+                        {profile.isSystemProfile && profile.organizationId && ' (Système)'}
                       </SelectItem>
                     ))}
                   </SelectContent>

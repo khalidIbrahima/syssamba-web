@@ -291,7 +291,7 @@ export async function signUp(credentials: SignUpCredentials) {
       email: email || phone || '',
       password,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup`,
         data: {
           first_name: firstName,
           last_name: lastName,

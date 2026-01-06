@@ -40,90 +40,265 @@ export async function POST(request: NextRequest) {
     const validatedData = setupSchema.parse(body);
 
     // Check if user already has an organization
+    let organization = null;
     if (user.organizationId) {
-      return NextResponse.json(
-        { error: 'User already has an organization' },
-        { status: 400 }
-      );
-    }
-
-    // Generate a unique slug and subdomain for the organization
-    const baseSlug = validatedData.organizationName
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-
-    let slug = baseSlug;
-    let subdomain = baseSlug; // Use same value for subdomain
-    let counter = 1;
-
-    // Ensure both slug and subdomain uniqueness
-    while (true) {
-      // Check if slug exists
-      const existingBySlug = await db.selectOne<{ id: string }>('organizations', {
-        eq: { slug },
-      });
-      
-      // Check if subdomain exists
-      const existingBySubdomain = await db.selectOne<{ id: string }>('organizations', {
-        eq: { subdomain },
+      // Get existing organization to check if it's configured
+      organization = await db.selectOne<{
+        id: string;
+        is_configured: boolean;
+      }>('organizations', {
+        eq: { id: user.organizationId },
       });
 
-      if (!existingBySlug && !existingBySubdomain) break;
-
-      slug = `${baseSlug}-${counter}`;
-      subdomain = `${baseSlug}-${counter}`;
-      counter++;
+      // If organization is already configured, don't allow setup
+      if (organization && organization.is_configured) {
+        return NextResponse.json(
+          { error: 'Organization is already configured' },
+          { status: 400 }
+        );
+      }
     }
 
-    // Create the organization
-    const organization = await db.insertOne<{
-      id: string;
-      name: string;
-      slug: string;
-      subdomain: string;
-      type: string;
-      country: string;
-      is_configured: boolean;
-      created_at: string;
-      updated_at: string;
-    }>('organizations', {
-      id: crypto.randomUUID(), // Generate new UUID for organization
-      name: validatedData.organizationName,
-      slug,
-      subdomain, // Add subdomain
-      type: validatedData.organizationType,
-      country: validatedData.country,
-      is_configured: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    // If organization exists but is not configured, update it
+    if (organization && !organization.is_configured) {
+      // Generate a unique slug and subdomain for the organization
+      const baseSlug = validatedData.organizationName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
 
-    if (!organization) {
-      return NextResponse.json(
-        { error: 'Failed to create organization' },
-        { status: 500 }
-      );
+      let slug = baseSlug;
+      let subdomain = baseSlug;
+      let counter = 1;
+
+      // Ensure both slug and subdomain uniqueness (excluding current org)
+      while (true) {
+        const existingBySlug = await db.selectOne<{ id: string }>('organizations', {
+          eq: { slug },
+        });
+        
+        const existingBySubdomain = await db.selectOne<{ id: string }>('organizations', {
+          eq: { subdomain },
+        });
+
+        // If slug/subdomain is taken by a different organization, try next
+        if ((!existingBySlug || existingBySlug.id === organization.id) && 
+            (!existingBySubdomain || existingBySubdomain.id === organization.id)) {
+          break;
+        }
+
+        slug = `${baseSlug}-${counter}`;
+        subdomain = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      // Update the existing organization
+      const updatedOrg = await db.updateOne<{
+        id: string;
+        name: string;
+        slug: string;
+        subdomain: string;
+        type: string;
+        country: string;
+        is_configured: boolean;
+        updated_at: string;
+      }>('organizations', {
+        name: validatedData.organizationName,
+        slug,
+        subdomain,
+        type: validatedData.organizationType,
+        country: validatedData.country,
+        is_configured: true,
+        updated_at: new Date().toISOString(),
+      }, {
+        id: organization.id,
+      });
+
+      if (!updatedOrg) {
+        return NextResponse.json(
+          { error: 'Failed to update organization' },
+          { status: 500 }
+        );
+      }
+
+      organization = updatedOrg;
+    } else {
+      // Create new organization
+      // Generate a unique slug and subdomain for the organization
+      const baseSlug = validatedData.organizationName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      let slug = baseSlug;
+      let subdomain = baseSlug; // Use same value for subdomain
+      let counter = 1;
+
+      // Ensure both slug and subdomain uniqueness
+      while (true) {
+        // Check if slug exists
+        const existingBySlug = await db.selectOne<{ id: string }>('organizations', {
+          eq: { slug },
+        });
+        
+        // Check if subdomain exists
+        const existingBySubdomain = await db.selectOne<{ id: string }>('organizations', {
+          eq: { subdomain },
+        });
+
+        if (!existingBySlug && !existingBySubdomain) break;
+
+        slug = `${baseSlug}-${counter}`;
+        subdomain = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      // Create the organization
+      organization = await db.insertOne<{
+        id: string;
+        name: string;
+        slug: string;
+        subdomain: string;
+        type: string;
+        country: string;
+        is_configured: boolean;
+        created_at: string;
+        updated_at: string;
+      }>('organizations', {
+        name: validatedData.organizationName,
+        slug,
+        subdomain, // Add subdomain
+        type: validatedData.organizationType,
+        country: validatedData.country,
+        is_configured: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+
+      if (!organization) {
+        return NextResponse.json(
+          { error: 'Failed to create organization' },
+          { status: 500 }
+        );
+      }
+
+      // Update user with organization ID if they don't have one
+      if (!user.organizationId) {
+        const updatedUser = await db.update('users', {
+          organization_id: organization.id,
+          updated_at: new Date().toISOString(),
+        }, {
+          eq: { id: user.id },
+        });
+
+        if (!updatedUser) {
+          return NextResponse.json(
+            { error: 'Failed to update user organization' },
+            { status: 500 }
+          );
+        }
+      }
     }
 
-    // Update user with organization ID
-    const updatedUser = await db.update('users', {
-      organization_id: organization.id,
-      updated_at: new Date().toISOString(),
-    }, {
-      eq: { id: user.id },
-    });
+    // Create subscription for the organization
+    try {
+      // Get plan details by name
+      const plan = await db.selectOne<{
+        id: string;
+        name: string;
+        price_monthly: number | null;
+        price_yearly: number | null;
+      }>('plans', {
+        eq: { name: validatedData.planName },
+      });
 
-    if (!updatedUser) {
-      return NextResponse.json(
-        { error: 'Failed to update user organization' },
-        { status: 500 }
-      );
+      if (!plan || !plan.id) {
+        console.error(`[Setup] Plan not found: ${validatedData.planName}`);
+        // Continue without subscription - user can set it up later
+      } else {
+        // Calculate price based on billing period
+        const price = validatedData.billingPeriod === 'yearly' 
+          ? (plan.price_yearly || (plan.price_monthly ? plan.price_monthly * 12 * 0.8 : 0))
+          : (plan.price_monthly || 0);
+
+        // Calculate period dates
+        const now = new Date();
+        const startDate = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        let periodEnd: Date;
+        if (validatedData.billingPeriod === 'yearly') {
+          periodEnd = new Date(now);
+          periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+        } else {
+          periodEnd = new Date(now);
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+        }
+        const periodEndDate = periodEnd.toISOString().split('T')[0];
+
+        // Check if subscription already exists
+        const existingSubscriptions = await db.select<{
+          id: string;
+        }>('subscriptions', {
+          eq: { organization_id: organization.id },
+          limit: 1,
+        });
+
+        if (existingSubscriptions.length === 0) {
+          // Create new subscription
+          const subscription = await db.insertOne<{
+            id: string;
+            organization_id: string;
+            plan_id: string;
+            billing_period: string;
+            price: number;
+            currency: string;
+            status: string;
+            start_date: string;
+            current_period_start: string;
+            current_period_end: string;
+            created_at: string;
+            updated_at: string;
+          }>('subscriptions', {
+            organization_id: organization.id,
+            plan_id: plan.id,
+            billing_period: validatedData.billingPeriod,
+            price: price,
+            currency: 'XOF', // West African CFA franc
+            status: validatedData.planName === 'freemium' ? 'active' : 'trialing', // Start with trialing for paid plans
+            start_date: startDate,
+            current_period_start: startDate,
+            current_period_end: periodEndDate,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+          if (subscription) {
+            console.log(`[Setup] Created subscription for organization ${organization.id} with plan ${validatedData.planName}`);
+          } else {
+            console.error(`[Setup] Failed to create subscription for organization ${organization.id}`);
+          }
+        } else {
+          // Update existing subscription
+          await db.update('subscriptions', {
+            plan_id: plan.id,
+            billing_period: validatedData.billingPeriod,
+            price: price,
+            status: validatedData.planName === 'freemium' ? 'active' : 'trialing',
+            current_period_start: startDate,
+            current_period_end: periodEndDate,
+            updated_at: new Date().toISOString(),
+          }, {
+            eq: { id: existingSubscriptions[0].id },
+          });
+          console.log(`[Setup] Updated subscription for organization ${organization.id} with plan ${validatedData.planName}`);
+        }
+      }
+    } catch (error) {
+      console.error('[Setup] Error creating subscription:', error);
+      // Don't fail setup if subscription creation fails - user can set it up later
     }
-
-    // TODO: Create subscription if plan is not freemium
-    // For now, we'll skip subscription creation and let users manage it later
 
     const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
     
@@ -139,6 +314,7 @@ export async function POST(request: NextRequest) {
       },
       subdomainUrl: `https://${organization.subdomain}.${MAIN_DOMAIN}`,
       message: 'Organisation configurée avec succès',
+      redirectTo: '/dashboard', // Explicit redirect path
     });
 
   } catch (error) {

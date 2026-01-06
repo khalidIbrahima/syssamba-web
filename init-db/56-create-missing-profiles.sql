@@ -49,6 +49,7 @@ BEGIN
                 description,
                 organization_id,
                 is_system_profile,
+                is_global,
                 is_active,
                 permissions,
                 created_at,
@@ -59,6 +60,7 @@ BEGIN
                 'Global system administrator profile with full access to all features and data',
                 NULL,
                 TRUE,
+                TRUE, -- Global profile
                 TRUE,
                 '{}'::jsonb,
                 NOW(),
@@ -71,6 +73,7 @@ BEGIN
                 description,
                 organization_id,
                 is_system_profile,
+                is_global,
                 is_active,
                 created_at,
                 updated_at
@@ -80,6 +83,7 @@ BEGIN
                 'Global system administrator profile with full access to all features and data',
                 NULL,
                 TRUE,
+                TRUE, -- Global profile
                 TRUE,
                 NOW(),
                 NOW()
@@ -90,6 +94,7 @@ BEGIN
                 description,
                 organization_id,
                 is_system_profile,
+                is_global,
                 is_active,
                 created_at,
                 updated_at
@@ -98,6 +103,7 @@ BEGIN
                 'Global system administrator profile with full access to all features and data',
                 NULL,
                 TRUE,
+                TRUE, -- Global profile
                 TRUE,
                 NOW(),
                 NOW()

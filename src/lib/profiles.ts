@@ -70,7 +70,7 @@ export async function getProfiles(organizationId: string | null = null, getAll: 
       name: string;
       description: string | null;
       is_system_profile: boolean;
-      is_global: boolean | null;
+      is_global: boolean;
       is_active: boolean;
       created_at: Date;
       updated_at: Date;
@@ -84,7 +84,7 @@ export async function getProfiles(organizationId: string | null = null, getAll: 
         name: string;
         description: string | null;
         is_system_profile: boolean;
-        is_global: boolean | null;
+        is_global: boolean;
         is_active: boolean;
         created_at: Date;
         updated_at: Date;
@@ -100,7 +100,7 @@ export async function getProfiles(organizationId: string | null = null, getAll: 
             name: string;
             description: string | null;
             is_system_profile: boolean;
-            is_global: boolean | null;
+            is_global: boolean;
             is_active: boolean;
             created_at: Date;
             updated_at: Date;
@@ -110,19 +110,19 @@ export async function getProfiles(organizationId: string | null = null, getAll: 
           })
         : [];
       
-      // Get global system profiles (organization_id IS NULL)
+      // Get global system profiles (is_global = TRUE)
       const globalProfiles = await db.select<{
         id: string;
         organization_id: string | null;
         name: string;
         description: string | null;
         is_system_profile: boolean;
-        is_global: boolean | null;
+        is_global: boolean;
         is_active: boolean;
         created_at: Date;
         updated_at: Date;
       }>('profiles', {
-        eq: { organization_id: null },
+        eq: { is_global: true },
         orderBy: { column: 'name', ascending: true },
       });
       
@@ -136,7 +136,7 @@ export async function getProfiles(organizationId: string | null = null, getAll: 
       name: p.name,
       description: p.description,
       isSystemProfile: p.is_system_profile,
-      isGlobal: p.is_global || p.organization_id === null,
+      isGlobal: p.is_global,
       isActive: p.is_active,
       createdAt: p.created_at,
       updatedAt: p.updated_at,
@@ -381,7 +381,7 @@ export async function createDefaultProfilesForOrganization(organizationId: strin
           name: profileDef.name,
           description: profileDef.description,
           is_system_profile: true, // These are system profiles
-          is_global: false, // Organization-specific
+          is_global: false, // Organization-specific profiles
           is_active: true,
         });
 
@@ -432,7 +432,7 @@ export async function createProfile(
       name,
       description: description || null,
       is_system_profile: false,
-      is_global: false,
+      is_global: false, // Organization-specific profile
       is_active: true,
     });
 

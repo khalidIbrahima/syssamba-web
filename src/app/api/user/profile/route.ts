@@ -3,13 +3,13 @@
  * Returns the current user's full profile information
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@/lib/supabase/route-handler';
 import { db } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createRouteHandlerClient();
+    const supabase = await createRouteHandlerClient(request);
 
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();

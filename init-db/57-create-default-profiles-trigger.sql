@@ -1,7 +1,18 @@
 -- =====================================================
 -- Trigger to Create Default Profiles for New Organizations
--- This trigger automatically creates default profiles when a new organization is created
--- Configuration is stored in a configuration table for easy modification
+-- 
+-- NOTE: THIS TRIGGER IS DISABLED
+-- We now use existing global system profiles (is_global = TRUE) instead of
+-- creating organization-specific profiles. See init-db/61-disable-organization-profiles-trigger.sql
+--
+-- This file is kept for reference but the trigger should be disabled.
+-- Global profiles are shared across all organizations:
+--   - System Administrator (for new signups)
+--   - Propriétaire (Owner)
+--   - Administrateur (Admin)
+--   - Comptable (Accountant)
+--   - Agent
+--   - Lecteur (Viewer)
 -- =====================================================
 
 -- 1. Create configuration table for default profiles

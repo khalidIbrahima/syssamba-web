@@ -30,11 +30,11 @@ export async function GET() {
       );
     }
 
+    // If user has no organization, return null (user is in setup phase)
     if (!user.organizationId) {
-      return NextResponse.json(
-        { error: 'User has no organization' },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        organization: null,
+      });
     }
 
     // Get organization info

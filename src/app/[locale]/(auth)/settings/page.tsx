@@ -85,14 +85,22 @@ export default function SettingsPage() {
     const fetchOrgInfo = async () => {
       try {
         const data = await getOrganizationInfo();
-        setOrganizationData(data.organization);
-        // Set form values
-        setOrgValue('name', data.organization.name || '');
-        setOrgValue('type', (data.organization.type || 'individual') as 'agency' | 'sci' | 'syndic' | 'individual');
-        setOrgValue('country', data.organization.country || 'SN');
+        if (data.organization) {
+          setOrganizationData(data.organization);
+          // Set form values
+          setOrgValue('name', data.organization.name || '');
+          setOrgValue('type', (data.organization.type || 'individual') as 'agency' | 'sci' | 'syndic' | 'individual');
+          setOrgValue('country', data.organization.country || 'SN');
+        } else {
+          // User has no organization yet (in setup phase)
+          setOrganizationData(null);
+        }
       } catch (error) {
         console.error('Failed to fetch organization info:', error);
-        toast.error('Erreur lors du chargement des informations de l\'organisation');
+        // Don't show error toast if user is in setup phase
+        if (!window.location.pathname.includes('/setup')) {
+          toast.error('Erreur lors du chargement des informations de l\'organisation');
+        }
       } finally {
         setIsOrgLoading(false);
       }
