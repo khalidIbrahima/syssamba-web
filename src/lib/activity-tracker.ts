@@ -10,7 +10,8 @@ export type EntityType =
   | 'task' 
   | 'user'
   | 'organization'
-  | 'subscription';
+  | 'subscription'
+  | 'owner';
 
 export type ActivityAction = 
   | 'created' 
@@ -98,7 +99,8 @@ export async function logEntityCreated(
                    entityType === 'task' ? 'Tâche' :
                    entityType === 'user' ? 'Utilisateur' :
                    entityType === 'organization' ? 'Organisation' :
-                   'Entité'} "${entityName}" créé${entityType === 'property' ? 'e' : ''}`,
+                   entityType === 'owner' ? 'Propriétaire' :
+                   'Entité'} "${entityName}" créé${entityType === 'property' ? 'e' : entityType === 'owner' ? '' : ''}`,
     metadata,
   });
 }
@@ -141,6 +143,7 @@ export async function logEntityUpdated(
                      entityType === 'journal_entry' ? 'Écriture comptable' :
                      entityType === 'task' ? 'Tâche' :
                      entityType === 'user' ? 'Utilisateur' :
+                     entityType === 'owner' ? 'Propriétaire' :
                      'Entité'} "${entityName}" mis à jour: ${change.fieldName}`,
       metadata,
     });
@@ -160,6 +163,7 @@ export async function logEntityUpdated(
                      entityType === 'journal_entry' ? 'Écriture comptable' :
                      entityType === 'task' ? 'Tâche' :
                      entityType === 'user' ? 'Utilisateur' :
+                     entityType === 'owner' ? 'Propriétaire' :
                      'Entité'} "${entityName}" mis à jour`,
       metadata: {
         ...metadata,
@@ -194,7 +198,8 @@ export async function logEntityDeleted(
                    entityType === 'journal_entry' ? 'Écriture comptable' :
                    entityType === 'task' ? 'Tâche' :
                    entityType === 'user' ? 'Utilisateur' :
-                   'Entité'} "${entityName}" supprimé${entityType === 'property' ? 'e' : ''}`,
+                   entityType === 'owner' ? 'Propriétaire' :
+                   'Entité'} "${entityName}" supprimé${entityType === 'property' ? 'e' : entityType === 'owner' ? '' : ''}`,
     metadata,
   });
 }
@@ -226,6 +231,7 @@ export async function logStatusChanged(
                    entityType === 'tenant' ? 'Locataire' :
                    entityType === 'lease' ? 'Bail' :
                    entityType === 'payment' ? 'Paiement' :
+                   entityType === 'owner' ? 'Propriétaire' :
                    entityType === 'task' ? 'Tâche' :
                    'Entité'} "${entityName}": statut changé de "${oldStatus || 'N/A'}" à "${newStatus}"`,
     metadata,
