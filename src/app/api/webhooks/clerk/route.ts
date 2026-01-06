@@ -80,7 +80,7 @@ export async function POST(req: Request) {
         first_name: (data.first_name as string) || null,
         last_name: (data.last_name as string) || null,
         avatar_url: (data.image_url as string) || null,
-        role: 'viewer', // Default role
+        role: 'owner', // New signups are owners
         is_active: true,
       });
 

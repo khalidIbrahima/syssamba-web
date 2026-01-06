@@ -101,7 +101,7 @@ export async function syncUserWithDatabase(clerkUserId: string) {
       first_name: clerkUser.firstName || null,
       last_name: clerkUser.lastName || null,
       avatar_url: clerkUser.imageUrl || null,
-        role: 'viewer', // Default role
+        role: 'owner', // New signups are owners
       is_active: true,
     });
 
