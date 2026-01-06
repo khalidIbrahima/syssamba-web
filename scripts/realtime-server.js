@@ -125,7 +125,7 @@ io.use(async (socket, next) => {
 
         // Get user from database
         const userQuery = await pgClient.query(
-          'SELECT id, organization_id, tenant_id FROM users WHERE clerk_id = $1 LIMIT 1',
+          'SELECT id, organization_id, tenant_id FROM users WHERE id = $1 OR sb_user_id = $1 LIMIT 1',
           [session.sub]
         );
 

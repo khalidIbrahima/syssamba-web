@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       phone: phone || null,
       first_name: firstName,
       last_name: lastName,
-      role: 'viewer',
+      role: 'owner', // New signups are owners
       is_active: true,
       organization_id: null,
     });

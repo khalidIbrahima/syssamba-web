@@ -157,10 +157,10 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
     
     console.log('[getCurrentAuthUser] User found:', user.id);
 
-    // Get user from database - try by id first, then by clerk_id
-    let dbUser = await db.selectOne<{
+    // Get user from database by id
+    const dbUser = await db.selectOne<{
       id: string;
-      clerk_id: string | null;
+      sb_user_id: string | null;
       email: string | null;
       phone: string | null;
       first_name: string | null;
@@ -172,24 +172,6 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
     }>('users', {
       eq: { id: user.id },
     });
-
-    // If not found by id, try by clerk_id
-    if (!dbUser) {
-      dbUser = await db.selectOne<{
-        id: string;
-        clerk_id: string | null;
-        email: string | null;
-        phone: string | null;
-        first_name: string | null;
-        last_name: string | null;
-        avatar_url: string | null;
-        role: string;
-        is_active: boolean;
-        organization_id: string | null;
-      }>('users', {
-        eq: { clerk_id: user.id },
-      });
-    }
 
     if (dbUser) {
       return {
@@ -208,7 +190,7 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
     // User exists in auth but not in database - create profile
     const newUser = await db.insertOne<{
       id: string;
-      clerk_id: string | null;
+      sb_user_id: string | null;
       email: string | null;
       phone: string | null;
       first_name: string | null;
@@ -219,13 +201,13 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
       organization_id: string | null;
     }>('users', {
       id: user.id,
-      clerk_id: user.id, // Keep for backward compatibility
+      sb_user_id: user.id,
       email: user.email || null,
       phone: user.phone || null,
       first_name: user.user_metadata?.first_name || null,
       last_name: user.user_metadata?.last_name || null,
       avatar_url: user.user_metadata?.avatar_url || null,
-      role: 'viewer',
+      role: 'owner', // New signups are owners
       is_active: true,
       organization_id: null,
     });
@@ -337,12 +319,12 @@ export async function signUp(credentials: SignUpCredentials) {
     if (data.user.id) {
       await db.insertOne('users', {
         id: data.user.id,
-        clerk_id: data.user.id, // Keep for backward compatibility
+        sb_user_id: data.user.id,
         email: email || null,
         phone: phone || null,
         first_name: firstName,
         last_name: lastName,
-        role: 'viewer',
+        role: 'owner', // New signups are owners
         is_active: true,
         organization_id: null,
       });

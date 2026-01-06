@@ -26,14 +26,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https' as const,
-        hostname: 'images.clerk.dev',
-      },
-      {
-        protocol: 'https' as const,
-        hostname: 'img.clerk.com',
-      },
-      {
-        protocol: 'https' as const,
         hostname: 'images.unsplash.com',
       },
       // Allow images from subdomains

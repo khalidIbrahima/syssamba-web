@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
             phone: authUser.phone || null,
             first_name: authUser.raw_user_meta_data?.first_name || authUser.user_metadata?.first_name || null,
             last_name: authUser.raw_user_meta_data?.last_name || authUser.user_metadata?.last_name || null,
-            role: authUser.raw_user_meta_data?.role || authUser.user_metadata?.role || 'viewer',
+            role: authUser.raw_user_meta_data?.role || authUser.user_metadata?.role || 'owner', // New signups are owners
             is_active: authUser.email_confirmed_at ? true : false, // Active if email confirmed
             organization_id: authUser.raw_user_meta_data?.organization_id || authUser.user_metadata?.organization_id || null,
           });

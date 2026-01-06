@@ -90,7 +90,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         first_name: user.user_metadata?.first_name || null,
         last_name: user.user_metadata?.last_name || null,
         avatar_url: user.user_metadata?.avatar_url || null,
-        role: 'viewer',
+        role: 'owner', // New signups are owners
         is_active: true,
         organization_id: null,
         profile_id: null,

@@ -30,7 +30,7 @@ export async function GET() {
     try {
       const { data: users, error: usersError } = await supabaseAdmin
         .from('users')
-        .select('id, clerk_id, email, phone, first_name, last_name, avatar_url, role, is_active, organization_id')
+        .select('id, sb_user_id, email, phone, first_name, last_name, avatar_url, role, is_active, organization_id')
         .eq('organization_id', user.organizationId);
 
       if (usersError) {
@@ -49,7 +49,6 @@ export async function GET() {
         .filter((u) => u.id !== user.id)
         .map((u) => ({
           id: u.id,
-          clerkId: u.clerk_id,
           email: u.email,
           phone: u.phone,
           firstName: u.first_name,

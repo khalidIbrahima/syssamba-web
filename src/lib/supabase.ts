@@ -23,8 +23,8 @@ export const supabase = supabaseUrl && supabaseAnonKey
       },
       auth: {
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-        autoRefreshToken: false, // Disable auto refresh since we use Clerk
-        persistSession: false, // Don't persist session since we use Clerk
+        autoRefreshToken: false,
+        persistSession: false,
       },
     })
   : null;
@@ -60,8 +60,8 @@ export async function getAuthenticatedSupabase(token: string): Promise<SupabaseC
     },
     auth: {
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      autoRefreshToken: false, // Disable auto refresh since we use Clerk
-      persistSession: false, // Don't persist session since we use Clerk
+      autoRefreshToken: false,
+      persistSession: false,
       storageKey: `supabase-auth-token-${token.substring(0, 10)}`, // Unique storage key per token
     },
   });

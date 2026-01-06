@@ -31,7 +31,6 @@ export type Organization = {
 export type User = {
   id: string;
   organizationId?: string;
-  clerkId: string;
   email?: string;
   phone?: string;
   firstName?: string;
