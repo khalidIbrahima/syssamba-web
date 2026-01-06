@@ -121,7 +121,10 @@ export function PermissionToggle({ objectType, action, enabled, disabled }: Perm
     );
   }
 
-  return canAccessObject(objectType, action) ? <>{enabled}</> : <>{disabled}</>;
+  const isOrgAdmin = canAccessObject('Organization', 'edit');
+  const hasAccess = isOrgAdmin || canAccessObject(objectType, action);
+
+  return hasAccess ? <>{enabled}</> : <>{disabled}</>;
 }
 
 interface RequirePermissionProps {
@@ -153,9 +156,12 @@ export function RequirePermission({
     return null;
   }
 
-  const hasAccess = requireAll
-    ? objectTypes.every((ot) => canAccessObject(ot, action))
-    : objectTypes.some((ot) => canAccessObject(ot, action));
+  const isOrgAdmin = canAccessObject('Organization', 'edit');
+  const hasAccess = isOrgAdmin || (
+    requireAll
+      ? objectTypes.every((ot) => canAccessObject(ot, action))
+      : objectTypes.some((ot) => canAccessObject(ot, action))
+  );
 
   if (!hasAccess) {
     return fallback ? <>{fallback}</> : null;

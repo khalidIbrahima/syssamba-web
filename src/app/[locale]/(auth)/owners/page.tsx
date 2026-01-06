@@ -42,7 +42,8 @@ import { useDataQuery } from '@/hooks/use-query';
 import { usePageAccess } from '@/hooks/use-page-access';
 import { PageLoader } from '@/components/ui/page-loader';
 import { FeatureGate } from '@/components/features/FeatureGate';
-import { PermissionGate } from '@/components/permissions/PermissionGate';
+import { PermissionGate, PermissionToggle } from '@/components/permissions/PermissionGate';
+import { CreateOwnerDialog } from '@/components/owners/create-owner-dialog';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -66,6 +67,7 @@ export default function OwnersPage() {
   const { isLoading: isAccessLoading } = usePageAccess();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const { data, isLoading, refetch } = useDataQuery(
     ['owners', search, status],
@@ -114,10 +116,17 @@ export default function OwnersPage() {
           <h1 className="text-2xl font-bold text-foreground">Propriétaires</h1>
           <p className="text-muted-foreground">Gérez vos propriétaires et leurs virements</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Nouveau propriétaire
-        </Button>
+        <PermissionToggle
+          objectType="Property"
+          action="create"
+          enabled={
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nouveau propriétaire
+            </Button>
+          }
+          disabled={null}
+        />
       </div>
 
       {/* Statistics Cards */}
@@ -371,10 +380,17 @@ export default function OwnersPage() {
                   : 'Commencez par créer votre premier propriétaire.'}
               </p>
               {!search && status === 'all' && (
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nouveau propriétaire
-                </Button>
+                <PermissionToggle
+                  objectType="Property"
+                  action="create"
+                  enabled={
+                    <Button onClick={() => setCreateDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nouveau propriétaire
+                    </Button>
+                  }
+                  disabled={null}
+                />
               )}
             </div>
           )}
@@ -382,6 +398,11 @@ export default function OwnersPage() {
       </Card>
     </div>
       </PermissionGate>
+      <CreateOwnerDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => refetch()}
+      />
     </FeatureGate>
   );
 }
