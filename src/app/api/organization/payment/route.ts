@@ -163,13 +163,30 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Get plan details by ID first (needed for payment processing)
+    const plan = await db.selectOne<{
+      id: string;
+      name: string;
+      price_monthly: number | null;
+      price_yearly: number | null;
+    }>('plans', {
+      eq: { id: validatedData.planId },
+    });
+
+    if (!plan || !plan.id) {
+      return NextResponse.json(
+        { error: 'Plan not found' },
+        { status: 404 }
+      );
+    }
+
     // Process actual payment based on payment method
     let paymentResult: PaymentResult;
 
     switch (validatedData.paymentMethod) {
       case 'stripe':
         paymentResult = await processStripePayment({
-          planName: validatedData.planName,
+          planName: plan.name,
           billingPeriod: validatedData.billingPeriod,
           organizationId: user.organizationId,
           paymentData: validatedData.paymentData,
@@ -178,7 +195,7 @@ export async function POST(request: NextRequest) {
 
       case 'paypal':
         paymentResult = await processPayPalPayment({
-          planName: validatedData.planName,
+          planName: plan.name,
           billingPeriod: validatedData.billingPeriod,
           organizationId: user.organizationId,
           paymentData: validatedData.paymentData,
@@ -187,7 +204,7 @@ export async function POST(request: NextRequest) {
 
       case 'wave':
         paymentResult = await processWavePayment({
-          planName: validatedData.planName,
+          planName: plan.name,
           billingPeriod: validatedData.billingPeriod,
           organizationId: user.organizationId,
           paymentData: validatedData.paymentData,
@@ -196,7 +213,7 @@ export async function POST(request: NextRequest) {
 
       case 'orange_money':
         paymentResult = await processOrangeMoneyPayment({
-          planName: validatedData.planName,
+          planName: plan.name,
           billingPeriod: validatedData.billingPeriod,
           organizationId: user.organizationId,
           paymentData: validatedData.paymentData,
@@ -216,16 +233,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Get plan details by ID
-    const plan = await db.selectOne<{
-      id: string;
-      name: string;
-      price_monthly: number | null;
-      price_yearly: number | null;
-    }>('plans', {
-      eq: { id: validatedData.planId },
-    });
 
     if (!plan || !plan.id) {
       return NextResponse.json(
