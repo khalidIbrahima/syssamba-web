@@ -20,7 +20,10 @@ export const countries = pgTable('countries', {
 export const plans = pgTable('plans', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(), // freemium, starter, pro, agency, enterprise
-  displayName: text('display_name').notNull(), // Nom d'affichage
+  displayName: text('display_name').notNull(), // Nom d'affichage (français)
+  displayNameEn: text('display_name_en'), // English display name
+  description: text('description'), // Description (français)
+  descriptionEn: text('description_en'), // English description
   price: decimal('price', { precision: 10, scale: 2 }), // null pour 'custom'
   priceType: text('price_type', { enum: ['fixed', 'custom'] }).default('fixed'),
   
@@ -51,8 +54,10 @@ export const plans = pgTable('plans', {
 export const features = pgTable('features', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(), // Feature key (e.g., "properties.view")
-  displayName: text('display_name').notNull(), // Human readable name
-  description: text('description'), // Feature description
+  displayName: text('display_name').notNull(), // Human readable name (français)
+  nameEn: text('name_en'), // English name
+  description: text('description'), // Feature description (français)
+  descriptionEn: text('description_en'), // English description
   category: text('category').notNull(), // Category (Core Features, Property Management, etc.)
   icon: text('icon'), // Icon name/class
   isActive: boolean('is_active').default(true), // Whether feature is active

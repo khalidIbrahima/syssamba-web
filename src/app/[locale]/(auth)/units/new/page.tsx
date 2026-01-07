@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -65,11 +65,14 @@ type UnitFormValues = z.infer<typeof unitFormSchema>;
 
 // Fetch properties for dropdown
 async function getProperties() {
-  const response = await fetch('/api/properties');
+  const response = await fetch('/api/properties', {
+    credentials: 'include',
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch properties');
   }
-  return response.json();
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
 }
 
 // Fetch custom unit types
@@ -107,11 +110,20 @@ function NewUnitPageContent() {
   const [newTypeSlug, setNewTypeSlug] = useState('');
   const [newTypeDescription, setNewTypeDescription] = useState('');
   const [isCreatingType, setIsCreatingType] = useState(false);
+  const [showAddPropertyDialog, setShowAddPropertyDialog] = useState(false);
+  const [newPropertyName, setNewPropertyName] = useState('');
+  const [newPropertyAddress, setNewPropertyAddress] = useState('');
+  const [newPropertyCity, setNewPropertyCity] = useState('');
+  const [newPropertyType, setNewPropertyType] = useState('');
+  const [isCreatingProperty, setIsCreatingProperty] = useState(false);
 
-  const { data: properties, isLoading: propertiesLoading } = useDataQuery(
+  const { data: propertiesData, isLoading: propertiesLoading, refetch: refetchProperties } = useDataQuery(
     ['properties'],
     getProperties
   );
+  
+  // Ensure properties is always an array
+  const properties = Array.isArray(propertiesData) ? propertiesData : [];
 
   const { data: customTypesData, refetch: refetchCustomTypes } = useDataQuery(
     ['custom-unit-types'],
@@ -196,6 +208,59 @@ function NewUnitPageContent() {
     }
   };
 
+  const handleCreateProperty = async () => {
+    if (!newPropertyName.trim() || !newPropertyAddress.trim() || !newPropertyCity.trim() || !newPropertyType.trim()) {
+      toast.error('Tous les champs sont requis');
+      return;
+    }
+
+    setIsCreatingProperty(true);
+    try {
+      const response = await fetch('/api/properties', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: newPropertyName.trim(),
+          address: newPropertyAddress.trim(),
+          city: newPropertyCity.trim(),
+          propertyType: newPropertyType.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors de la création du bien');
+      }
+
+      const newProperty = await response.json();
+      toast.success('Bien créé avec succès !');
+      
+      // Reset form
+      setNewPropertyName('');
+      setNewPropertyAddress('');
+      setNewPropertyCity('');
+      setNewPropertyType('');
+      setShowAddPropertyDialog(false);
+      
+      // Refresh properties list and wait for it to complete
+      await refetchProperties();
+      
+      // Set the new property as selected after refresh
+      form.setValue('propertyId', newProperty.id);
+      setPropertySearchOpen(false);
+      
+      // Force form validation to show the selected property
+      form.trigger('propertyId');
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la création du bien');
+    } finally {
+      setIsCreatingProperty(false);
+    }
+  };
+
   // Wait for access data to load
   if (isAccessLoading) {
     return <PageLoader message="Vérification des accès..." />;
@@ -213,6 +278,9 @@ function NewUnitPageContent() {
     );
   }
 
+  // Check if user can read properties
+  const canReadProperties = canAccessObject('Property', 'read');
+
   const form = useForm<UnitFormValues>({
     resolver: zodResolver(unitFormSchema),
     defaultValues: {
@@ -229,6 +297,17 @@ function NewUnitPageContent() {
       amenities: [],
     },
   });
+
+  // Update form when propertyIdParam is available and properties are loaded
+  useEffect(() => {
+    if (propertyIdParam && properties.length > 0) {
+      const propertyExists = properties.some((p: any) => p.id === propertyIdParam);
+      if (propertyExists) {
+        form.setValue('propertyId', propertyIdParam);
+        form.trigger('propertyId'); // Trigger validation to show selected property
+      }
+    }
+  }, [propertyIdParam, properties, form]);
 
   const onSubmit = async (data: UnitFormValues) => {
     setIsSubmitting(true);
@@ -322,10 +401,25 @@ function NewUnitPageContent() {
                 name="propertyId"
                 render={({ field }) => {
                   const selectedProperty = properties?.find((p: any) => p.id === field.value);
+                  const isPropertyPreSelected = !!propertyIdParam;
                   
                   return (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Bien *</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Bien *</FormLabel>
+                        {!isPropertyPreSelected && canAccessObject('Property', 'create') && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowAddPropertyDialog(true)}
+                            className="h-7 text-xs"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Créer un bien
+                          </Button>
+                        )}
+                      </div>
                       <Popover open={propertySearchOpen} onOpenChange={setPropertySearchOpen}>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -336,7 +430,7 @@ function NewUnitPageContent() {
                                 "w-full justify-between",
                                 !field.value && "text-muted-foreground"
                               )}
-                              disabled={propertiesLoading}
+                              disabled={propertiesLoading || !canReadProperties || isPropertyPreSelected}
                               type="button"
                             >
                               {field.value && selectedProperty
@@ -356,20 +450,35 @@ function NewUnitPageContent() {
                             />
                           </div>
                           <div className="max-h-[300px] overflow-y-auto">
-                            {properties
-                              ?.filter((property: any) => {
+                            {!canReadProperties ? (
+                              <div className="p-4 text-center text-sm text-muted-foreground">
+                                Vous n'avez pas la permission de voir les biens
+                              </div>
+                            ) : (() => {
+                              const filteredProperties = properties.filter((property: any) => {
                                 if (!propertySearchQuery.trim()) return true;
                                 const searchLower = propertySearchQuery.toLowerCase();
-                                const propertyLabel = `${property.name} - ${property.address}`;
+                                const propertyName = (property.name || '').toLowerCase();
+                                const propertyAddress = (property.address || '').toLowerCase();
+                                const propertyCity = (property.city || '').toLowerCase();
                                 return (
-                                  propertyLabel.toLowerCase().includes(searchLower) ||
-                                  property.name.toLowerCase().includes(searchLower) ||
-                                  property.address.toLowerCase().includes(searchLower) ||
-                                  (property.city && property.city.toLowerCase().includes(searchLower))
+                                  propertyName.includes(searchLower) ||
+                                  propertyAddress.includes(searchLower) ||
+                                  propertyCity.includes(searchLower)
                                 );
-                              })
-                              .map((property: any) => {
-                                const propertyLabel = `${property.name} - ${property.address}`;
+                              });
+
+                              if (filteredProperties.length === 0) {
+                                return (
+                                  <div className="p-4 text-center text-sm text-muted-foreground">
+                                    {properties.length === 0 
+                                      ? "Aucun bien disponible"
+                                      : "Aucun bien trouvé."}
+                                  </div>
+                                );
+                              }
+
+                              return filteredProperties.map((property: any) => {
                                 const isSelected = field.value === property.id;
                                 
                                 const handleSelect = (e: React.MouseEvent) => {
@@ -403,24 +512,8 @@ function NewUnitPageContent() {
                                     </div>
                                   </div>
                                 );
-                              })}
-                            {properties?.filter((property: any) => {
-                              if (!propertySearchQuery.trim()) return true;
-                              const searchLower = propertySearchQuery.toLowerCase();
-                              const propertyLabel = `${property.name} - ${property.address}`;
-                              return (
-                                propertyLabel.toLowerCase().includes(searchLower) ||
-                                property.name.toLowerCase().includes(searchLower) ||
-                                property.address.toLowerCase().includes(searchLower) ||
-                                (property.city && property.city.toLowerCase().includes(searchLower))
-                              );
-                            }).length === 0 && (
-                              <div className="p-4 text-center text-sm text-muted-foreground">
-                                {properties?.length === 0 
-                                  ? "Aucun bien disponible"
-                                  : "Aucun bien trouvé."}
-                              </div>
-                            )}
+                              });
+                            })()}
                           </div>
                         </PopoverContent>
                       </Popover>
@@ -841,6 +934,91 @@ function NewUnitPageContent() {
                 <>
                   <Plus className="h-4 w-4 mr-2" />
                   Créer le type
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Property Dialog */}
+      <Dialog open={showAddPropertyDialog} onOpenChange={setShowAddPropertyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Créer un bien</DialogTitle>
+            <DialogDescription>
+              Créez rapidement un nouveau bien immobilier
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="property-name">Nom du bien *</Label>
+              <Input
+                id="property-name"
+                placeholder="Ex: Résidence Les Palmiers, Immeuble Alpha"
+                value={newPropertyName}
+                onChange={(e) => setNewPropertyName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="property-address">Adresse *</Label>
+              <Input
+                id="property-address"
+                placeholder="Ex: Avenue Léopold Sédar Senghor"
+                value={newPropertyAddress}
+                onChange={(e) => setNewPropertyAddress(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="property-city">Ville *</Label>
+              <Input
+                id="property-city"
+                placeholder="Ex: Dakar"
+                value={newPropertyCity}
+                onChange={(e) => setNewPropertyCity(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="property-type">Type de bien *</Label>
+              <Select value={newPropertyType} onValueChange={setNewPropertyType}>
+                <SelectTrigger id="property-type">
+                  <SelectValue placeholder="Sélectionner un type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="residential">Résidentiel</SelectItem>
+                  <SelectItem value="commercial">Commercial</SelectItem>
+                  <SelectItem value="mixed">Mixte</SelectItem>
+                  <SelectItem value="office">Bureaux</SelectItem>
+                  <SelectItem value="industrial">Industriel</SelectItem>
+                  <SelectItem value="other">Autre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddPropertyDialog(false);
+                setNewPropertyName('');
+                setNewPropertyAddress('');
+                setNewPropertyCity('');
+                setNewPropertyType('');
+              }}
+              disabled={isCreatingProperty}
+            >
+              Annuler
+            </Button>
+            <Button onClick={handleCreateProperty} disabled={isCreatingProperty}>
+              {isCreatingProperty ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Création...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Créer le bien
                 </>
               )}
             </Button>

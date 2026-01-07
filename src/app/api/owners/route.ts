@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { getCurrentUser, getCurrentOrganization } from '@/lib/auth-helpers';
 import { logEntityCreated, getRequestMetadata } from '@/lib/activity-tracker';
+import { getProfileObjectPermissions } from '@/lib/profiles';
 import { z } from 'zod';
 
 const createOwnerSchema = z.object({
@@ -40,6 +41,26 @@ export async function GET(request: Request) {
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Owner read
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const ownerPermission = objectPermissions.find(p => p.objectType === 'Owner');
+      const canReadOwners = ownerPermission?.canRead || false;
+
+      if (!canReadOwners) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to view owners' },
+          { status: 403 }
+        );
+      }
     }
 
     const { searchParams } = new URL(request.url);
@@ -202,6 +223,26 @@ export async function POST(req: Request) {
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Owner creation
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const ownerPermission = objectPermissions.find(p => p.objectType === 'Owner');
+      const canCreateOwners = ownerPermission?.canCreate || false;
+
+      if (!canCreateOwners) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to create owners' },
+          { status: 403 }
+        );
+      }
     }
 
     const organization = await getCurrentOrganization();

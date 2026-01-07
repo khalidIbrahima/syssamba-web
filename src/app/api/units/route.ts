@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { getCurrentUser, getCurrentOrganization } from '@/lib/auth-helpers';
 import { logEntityCreated, getRequestMetadata } from '@/lib/activity-tracker';
+import { getProfileObjectPermissions } from '@/lib/profiles';
 import { z } from 'zod';
 
 const createUnitSchema = z.object({
@@ -41,6 +42,26 @@ export async function POST(req: Request) {
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Unit creation
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const unitPermission = objectPermissions.find(p => p.objectType === 'Unit');
+      const canCreateUnits = unitPermission?.canCreate || false;
+
+      if (!canCreateUnits) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to create units' },
+          { status: 403 }
+        );
+      }
     }
 
     const organization = await getCurrentOrganization();
@@ -218,6 +239,26 @@ export async function GET() {
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Unit read
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const unitPermission = objectPermissions.find(p => p.objectType === 'Unit');
+      const canReadUnits = unitPermission?.canRead || false;
+
+      if (!canReadUnits) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to view units' },
+          { status: 403 }
+        );
+      }
     }
 
     const unitsList = await db.select<{

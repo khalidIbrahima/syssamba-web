@@ -4,7 +4,6 @@ import { db } from '@/lib/db';
 import { checkAuth, getCurrentUser, getCurrentOrganization } from '@/lib/auth-helpers';
 import { logEntityCreated, getRequestMetadata } from '@/lib/activity-tracker';
 import { getProfileObjectPermissions } from '@/lib/profiles';
-import { getEnabledPlanFeatures } from '@/lib/plan-features';
 import { z } from 'zod';
 
 const createPropertySchema = z.object({
@@ -40,6 +39,26 @@ export async function POST(req: Request) {
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Property creation
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const propertyPermission = objectPermissions.find(p => p.objectType === 'Property');
+      const canCreateProperties = propertyPermission?.canCreate || false;
+
+      if (!canCreateProperties) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to create properties' },
+          { status: 403 }
+        );
+      }
     }
 
     const organization = await getCurrentOrganization();
@@ -196,46 +215,31 @@ export async function GET() {
       );
     }
 
-    // Check plan feature - TODO: Get actual plan from organization subscription
-    const planFeatures = await getEnabledPlanFeatures('freemium');
-    if (!planFeatures.has('properties_management')) {
-      return NextResponse.json(
-        { error: 'Forbidden: Properties feature is not available in your plan' },
-        { status: 403 }
-      );
-    }
-
-    // Get user profile permissions
+    // Get user profile permissions for security check
     const userRecord = await db.selectOne<{
       profile_id: string | null;
     }>('users', {
       eq: { id: user.id },
     });
 
-    if (!userRecord?.profile_id) {
-      return NextResponse.json(
-        { error: 'User has no profile assigned' },
-        { status: 403 }
-      );
+    // If user has a profile, check permissions
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const propertyPermission = objectPermissions.find(p => p.objectType === 'Property');
+      const canReadProperties = propertyPermission?.canRead || false;
+
+      if (!canReadProperties) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to view properties' },
+          { status: 403 }
+        );
+      }
     }
-
-    // Check if user can read properties (canRead on Property object)
-    const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
-    const propertyPermission = objectPermissions.find(p => p.objectType === 'Property');
-    const canReadProperties = propertyPermission?.canRead || false;
-
-    if (!canReadProperties) {
-      return NextResponse.json(
-        { error: 'Forbidden: You do not have permission to view properties' },
-        { status: 403 }
-      );
-    }
-
-    // Get properties - users see only properties they created
-    // If user has canViewAll, show all properties in organization
-    const canViewAllProperties = propertyPermission?.canViewAll || false;
+    // If user has no profile, allow access (fallback for backward compatibility)
+    // UI will handle additional permission checks via hooks
     
-    let propertiesList: Array<{
+    // Get all properties for the organization
+    const propertiesList = await db.select<{
       id: string;
       organization_id: string;
       name: string;
@@ -246,43 +250,9 @@ export async function GET() {
       notes: string | null;
       photo_urls: string[] | null;
       created_at: Date | string;
-    }> = [];
-
-    if (canViewAllProperties) {
-      // User can view all properties in organization
-      propertiesList = await db.select<{
-        id: string;
-        organization_id: string;
-        name: string;
-        address: string;
-        city: string | null;
-        property_type: string | null;
-        total_units: number | null;
-        notes: string | null;
-        photo_urls: string[] | null;
-        created_at: Date | string;
-      }>('properties', {
-        eq: { organization_id: user.organizationId },
-      });
-    } else {
-      // User can only see properties they created
-      // Note: Properties don't have a created_by field, so we'll show all for now
-      // In a real scenario, you might want to add created_by to properties table
-      propertiesList = await db.select<{
-        id: string;
-        organization_id: string;
-        name: string;
-        address: string;
-        city: string | null;
-        property_type: string | null;
-        total_units: number | null;
-        notes: string | null;
-        photo_urls: string[] | null;
-        created_at: Date | string;
-      }>('properties', {
-        eq: { organization_id: user.organizationId },
-      });
-    }
+    }>('properties', {
+      eq: { organization_id: user.organizationId },
+    });
 
     // Get units for each property and calculate stats
     const propertiesWithStats = await Promise.all(

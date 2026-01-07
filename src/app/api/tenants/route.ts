@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth-helpers';
 import { logEntityCreated, getRequestMetadata } from '@/lib/activity-tracker';
+import { getProfileObjectPermissions } from '@/lib/profiles';
 import { z } from 'zod';
 
 const createTenantSchema = z.object({
@@ -38,6 +39,26 @@ export async function GET() {
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Tenant read
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const tenantPermission = objectPermissions.find(p => p.objectType === 'Tenant');
+      const canReadTenants = tenantPermission?.canRead || false;
+
+      if (!canReadTenants) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to view tenants' },
+          { status: 403 }
+        );
+      }
     }
 
     const tenantsList = await db.select<{
@@ -241,6 +262,26 @@ export async function POST(req: Request) {
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Tenant creation
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const tenantPermission = objectPermissions.find(p => p.objectType === 'Tenant');
+      const canCreateTenants = tenantPermission?.canCreate || false;
+
+      if (!canCreateTenants) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to create tenants' },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await req.json();

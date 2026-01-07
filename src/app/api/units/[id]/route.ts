@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth-helpers';
 import { logEntityUpdated, logStatusChanged, getRequestMetadata } from '@/lib/activity-tracker';
+import { getProfileObjectPermissions } from '@/lib/profiles';
 import { z } from 'zod';
 
 const updateUnitSchema = z.object({
@@ -232,6 +233,26 @@ export async function PATCH(
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Unit edit
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const unitPermission = objectPermissions.find(p => p.objectType === 'Unit');
+      const canEditUnits = unitPermission?.canEdit || false;
+
+      if (!canEditUnits) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to edit units' },
+          { status: 403 }
+        );
+      }
     }
 
     const resolvedParams = 'then' in params ? await params : params;

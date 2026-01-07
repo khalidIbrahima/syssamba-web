@@ -12,6 +12,8 @@
     "start:realtime": "cross-env NODE_OPTIONS=--max-old-space-size=4096 node scripts/realtime-server.js",
     "lint": "cross-env NODE_OPTIONS=--max-old-space-size=4096 eslint",
     "db:migrate-plans": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/migrate-plans.ts",
+    "db:migrate-plan-translations": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/migrate-plan-translations.ts",
+    "db:migrate-feature-translations": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/migrate-feature-translations.ts",
     "migrate:to-supabase": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/migrate-to-supabase.ts",
     "update-geocoordinates": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/update-geocoordinates.ts",
     "seed:plan-features": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/seed-plan-features.ts",

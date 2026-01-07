@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { getCurrentUser, getCurrentOrganization } from '@/lib/auth-helpers';
 import { logEntityUpdated, getRequestMetadata } from '@/lib/activity-tracker';
+import { getProfileObjectPermissions } from '@/lib/profiles';
 import { z } from 'zod';
 
 const updatePropertySchema = z.object({
@@ -42,6 +43,26 @@ export async function GET(
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Property read
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const propertyPermission = objectPermissions.find(p => p.objectType === 'Property');
+      const canReadProperties = propertyPermission?.canRead || false;
+
+      if (!canReadProperties) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to view properties' },
+          { status: 403 }
+        );
+      }
     }
 
     const resolvedParams = 'then' in params ? await params : params;
@@ -209,6 +230,26 @@ export async function PATCH(
         { error: 'Organization not found' },
         { status: 404 }
       );
+    }
+
+    // Check profile permissions for Property edit
+    const userRecord = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: user.id },
+    });
+
+    if (userRecord?.profile_id) {
+      const objectPermissions = await getProfileObjectPermissions(userRecord.profile_id);
+      const propertyPermission = objectPermissions.find(p => p.objectType === 'Property');
+      const canEditProperties = propertyPermission?.canEdit || false;
+
+      if (!canEditProperties) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to edit properties' },
+          { status: 403 }
+        );
+      }
     }
 
     const resolvedParams = 'then' in params ? await params : params;

@@ -256,10 +256,10 @@ export default function PaymentsPage() {
 
   // Owner transfers data
   const transfersStats = transfersData?.stats || {
-    totalToTransfer: 45750000,
-    transfersMade: 38200000,
-    pending: 7550000,
-    activeOwners: 24,
+    totalToTransfer: 0,
+    transfersMade: 0,
+    pending: 0,
+    activeOwners: 0,
   };
   const transfers = transfersData?.transfers || [];
   const evolution = transfersData?.evolution || [];

@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter, usePathname, Link } from '@/i18n/routing';
+import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { Logo } from '@/components/logo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useUser } from '@/hooks/use-user';
 import {
-  Building2,
   Check,
   X,
   Users,
@@ -31,6 +32,7 @@ import {
 interface PlanFeature {
   text: string;
   included: boolean;
+  category?: string;
 }
 
 interface PricingPlan {
@@ -38,8 +40,10 @@ interface PricingPlan {
   name: string;
   displayName: string;
   description: string;
-  priceMonthly: string;
-  priceYearly: string;
+  priceMonthly: number | null | string; // number | null from API, string for fallback
+  priceYearly: number | null | string; // number | null from API, string for fallback
+  maxUsers: number;
+  maxTenants: number;
   priceType: 'fixed' | 'custom';
   features: PlanFeature[];
   limits: {
@@ -60,7 +64,9 @@ const fallbackPlans: PricingPlan[] = [
     description: 'Parfait pour débuter',
     priceMonthly: '0',
     priceYearly: '0',
+    maxTenants: 5,
     priceType: 'fixed',
+    maxUsers: 1,
     features: [
       { text: 'Lots: 1', included: true },
       { text: 'Utilisateurs: 1', included: true },
@@ -83,6 +89,8 @@ const fallbackPlans: PricingPlan[] = [
     priceMonthly: '15000',
     priceYearly: '12000',
     priceType: 'fixed',
+    maxUsers: 3,
+    maxTenants: 25,
     features: [
       { text: 'Lots: 25', included: true },
       { text: 'Utilisateurs: 3', included: true },
@@ -105,6 +113,8 @@ const fallbackPlans: PricingPlan[] = [
     priceMonthly: '35000',
     priceYearly: '28000',
     priceType: 'fixed',
+    maxUsers: 10,
+    maxTenants: 100,
     features: [
       { text: 'Lots: 100', included: true },
       { text: 'Utilisateurs: 10', included: true },
@@ -127,6 +137,8 @@ const fallbackPlans: PricingPlan[] = [
     priceMonthly: '50000',
     priceYearly: '40000',
     priceType: 'fixed',
+    maxUsers: 0,
+    maxTenants: 300,
     features: [
       { text: 'Lots: 300', included: true },
       { text: 'Utilisateurs: 25', included: true },
@@ -149,6 +161,8 @@ const fallbackPlans: PricingPlan[] = [
     priceMonthly: 'custom',
     priceYearly: 'custom',
     priceType: 'custom',
+    maxUsers: 10,
+    maxTenants: 0,
     features: [
       { text: 'Lots: Illimité', included: true },
       { text: 'Utilisateurs: Illimité', included: true },
@@ -183,7 +197,10 @@ const faqs = [
 export default function PricingPage() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const isLoggedIn = !!user;
-  const [isAnnual, setIsAnnual] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
+  const locale = useLocale();
+  const [isAnnual, setIsAnnual] = useState(false); // Default to Mensuel (monthly)
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -211,21 +228,35 @@ export default function PricingPage() {
     fetchPlans();
   }, []);
 
-  const formatPrice = (price: string, isAnnual: boolean) => {
-    if (price === 'Sur devis' || price === 'custom') return 'Sur devis';
-    if (price === '0') return isAnnual ? '0 FCFA /an' : '0 FCFA /mois';
-    const numPrice = parseInt(price.replace(/,/g, ''));
-    if (isNaN(numPrice)) return 'Sur devis';
-    // Use the price directly (already priceYearly or priceMonthly from the plan)
-    return `${numPrice.toLocaleString('fr-FR')} FCFA ${isAnnual ? '/an' : '/mois'}`;
+  const formatPrice = (price: number | null | string, isAnnual: boolean) => {
+    // Handle null (custom pricing)
+    if (price === null) return 'Sur devis';
+    
+    // Handle string values (for fallback plans)
+    if (typeof price === 'string') {
+      if (price === 'Sur devis' || price === 'custom') return 'Sur devis';
+      if (price === '0') return isAnnual ? '0 FCFA /an' : '0 FCFA /mois';
+      const numPrice = parseInt(price.replace(/,/g, ''));
+      if (isNaN(numPrice)) return 'Sur devis';
+      return `${numPrice.toLocaleString('fr-FR')} FCFA ${isAnnual ? '/an' : '/mois'}`;
+    }
+    
+    // Handle number values (from API)
+    if (typeof price === 'number') {
+      if (price === 0) return isAnnual ? '0 FCFA /an' : '0 FCFA /mois';
+      return `${price.toLocaleString('fr-FR')} FCFA ${isAnnual ? '/an' : '/mois'}`;
+    }
+    
+    return 'Sur devis';
   };
 
   const getCtaText = (plan: PricingPlan) => {
-    if (plan.priceType === 'custom' || plan.name.toLowerCase() === 'enterprise' || plan.name.toLowerCase() === 'enterprise') {
+    if (plan.priceType === 'custom' || plan.displayName.toLowerCase() === 'enterprise') {
       return 'Nous contacter';
     }
     // Check if plan is free (price is 0)
-    const isFree = plan.priceMonthly === '0' || plan.priceYearly === '0';
+    const isFree = plan.priceMonthly === '0' || plan.priceMonthly === 0 || 
+                   plan.priceYearly === '0' || plan.priceYearly === 0;
     return isFree ? 'Essai gratuit' : 'Commencer';
   };
 
@@ -251,11 +282,8 @@ export default function PricingPage() {
       {/* Header - Same as home page */}
       <header className="fixed top-0 left-0 right-0 bg-background border-b border-border z-50 h-20 flex items-center shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="bg-blue-600 rounded-lg p-1.5">
-              <Building2 className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-foreground tracking-tight">Sys Samba</span>
+          <Link href="/" className="flex items-center">
+            <Logo width={180} height={50} />
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
@@ -267,9 +295,30 @@ export default function PricingPage() {
 
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center border border-border rounded-md px-1 py-1 bg-card overflow-hidden">
-              <button className="px-2 py-1 text-xs font-bold text-white bg-primary">FR</button>
-              <button className="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">EN</button>
-              <button className="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">WO</button>
+              <button 
+                onClick={() => {
+                  router.replace(pathname, { locale: 'fr' });
+                }}
+                className={`px-2 py-1 text-xs font-medium ${
+                  locale === 'fr' 
+                    ? 'font-bold text-white bg-primary' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                FR
+              </button>
+              <button 
+                onClick={() => {
+                  router.replace(pathname, { locale: 'en' });
+                }}
+                className={`px-2 py-1 text-xs font-medium ${
+                  locale === 'en' 
+                    ? 'font-bold text-white bg-primary' 
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                EN
+              </button>
             </div>
 
             <div className="flex items-center gap-4">
@@ -363,20 +412,41 @@ export default function PricingPage() {
                 </CardHeader>
 
                 <CardContent className="text-center">
-                  <ul className="space-y-3 mb-6 text-left">
-                    {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start">
-                        {feature.included ? (
-                          <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <X className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                        )}
-                        <span className={`text-sm ${feature.included ? 'text-foreground' : 'text-muted-foreground'}`}>
-                          {feature.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-foreground mb-4 text-left">Fonctionnalités incluses:</h3>
+                    <ul className="space-y-2.5 text-left max-h-[500px] overflow-y-auto">
+                      {plan.features && plan.features.length > 0 ? (
+                        plan.features.map((feature, featureIndex) => {
+                          // Show category separator if category changes
+                          const prevFeature = featureIndex > 0 ? plan.features[featureIndex - 1] : null;
+                          const showCategorySeparator = prevFeature && 
+                            feature.category && 
+                            prevFeature.category !== feature.category &&
+                            feature.category !== 'limits';
+                          
+                          return (
+                            <li key={featureIndex}>
+                              {showCategorySeparator && (
+                                <div className="my-3 border-t border-border"></div>
+                              )}
+                              <div className="flex items-start">
+                                {feature.included ? (
+                                  <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                ) : (
+                                  <X className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                                )}
+                                <span className={`text-sm ${feature.included ? 'text-foreground' : 'text-muted-foreground line-through'}`}>
+                                  {feature.text}
+                                </span>
+                              </div>
+                            </li>
+                          );
+                        })
+                      ) : (
+                        <li className="text-sm text-muted-foreground">Aucune fonctionnalité disponible</li>
+                      )}
+                    </ul>
+                  </div>
 
                   <Button
                     className={`w-full ${
@@ -389,7 +459,7 @@ export default function PricingPage() {
                     size="lg"
                     asChild
                   >
-                    <Link href={plan.priceType === 'custom' || plan.name.toLowerCase() === 'enterprise' ? '/contact' : '/auth/sign-up'}>
+                    <Link href={plan.priceType === 'custom' || plan.displayName.toLowerCase() === 'enterprise' ? '/contact' : '/auth/sign-up'}>
                       {getCtaText(plan)}
                     </Link>
                   </Button>
@@ -462,14 +532,14 @@ export default function PricingPage() {
         <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-orange-500 py-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Prêt à démarrer avec SYS SAMBA?
+              Prêt à démarrer avec SYSSAMBA?
             </h2>
             <p className="text-xl text-white/90 mb-8">
               Commencez gratuitement, aucune carte de crédit requise
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
               {isLoggedIn ? (
-                <Button size="lg" variant="secondary" className="bg-white text-foreground hover:bg-gray-100" asChild>
+                <Button size="lg" variant="secondary" className="bg-white text-foreground hover:bg-gray-100 dark:bg-card dark:text-foreground dark:hover:bg-muted" asChild>
                   <Link href="/dashboard" className="flex items-center">
                     <LayoutDashboard className="h-5 w-5 mr-2" />
                     Accéder au tableau de bord
@@ -477,13 +547,13 @@ export default function PricingPage() {
                 </Button>
               ) : (
                 <>
-                  <Button size="lg" variant="secondary" className="bg-white text-foreground hover:bg-gray-100" asChild>
+                  <Button size="lg" variant="secondary" className="bg-white text-foreground hover:bg-gray-100 dark:bg-card dark:text-foreground dark:hover:bg-muted" asChild>
                     <Link href="/auth/sign-up" className="flex items-center">
                       <Send className="h-5 w-5 mr-2" />
                       Essai gratuit 30 jours
                     </Link>
                   </Button>
-                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" asChild>
+                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 dark:border-foreground dark:text-foreground dark:hover:bg-foreground/10" asChild>
                     <Link href="/contact" className="flex items-center">
                       <Calendar className="h-5 w-5 mr-2" />
                       Demander une démo
@@ -493,7 +563,7 @@ export default function PricingPage() {
               )}
             </div>
             <p className="text-sm text-white/80">
-              Configuration en 5 minutes • Support en français et wolof • Données sécurisées
+              Configuration en 5 minutes • Support en français et anglais • Données sécurisées
             </p>
           </div>
         </div>
@@ -504,11 +574,8 @@ export default function PricingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
               {/* Brand */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="bg-blue-600 rounded-lg p-1.5">
-                    <Building2 className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-2xl font-bold">Sys Samba</span>
+                <div className="flex items-center">
+                  <Logo width={180} height={50} variant="full" />
                 </div>
                 <p className="text-sm text-white/80">
                   sys.samba
@@ -558,7 +625,7 @@ export default function PricingPage() {
             <div className="border-t border-blue-800 pt-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <p className="text-sm text-white/60">
-                    © 2025 SYS SAMBA. Tous droits réservés. Conforme OHADA.
+                    © 2025 SYSSAMBA. Tous droits réservés. Conforme SYSCOHADA.
                 </p>
                 <div className="flex gap-6 text-sm text-white/60">
                   <Link href="#" className="hover:text-white transition-colors">Mentions légales</Link>

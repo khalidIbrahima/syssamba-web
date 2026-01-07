@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +33,7 @@ import {
 interface PlanFeature {
   text: string;
   included: boolean;
+  category?: string;
 }
 
 interface PricingPlan {
@@ -39,8 +41,8 @@ interface PricingPlan {
   name: string;
   displayName: string;
   description: string;
-  priceMonthly: string;
-  priceYearly: string;
+  priceMonthly: number | null | string; // number | null from API, string for fallback
+  priceYearly: number | null | string; // number | null from API, string for fallback
   priceType: 'fixed' | 'custom';
   features: PlanFeature[];
   limits: {
@@ -184,7 +186,9 @@ const faqs = [
 export default function PricingPage() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const isLoggedIn = !!user;
-  const [isAnnual, setIsAnnual] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isAnnual, setIsAnnual] = useState(false); // Default to Mensuel (monthly)
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -212,17 +216,30 @@ export default function PricingPage() {
     fetchPlans();
   }, []);
 
-  const formatPrice = (price: string, isAnnual: boolean) => {
-    if (price === 'Sur devis' || price === 'custom') return 'Sur devis';
-    if (price === '0') return isAnnual ? '0 FCFA /an' : '0 FCFA /mois';
-    const numPrice = parseInt(price.replace(/,/g, ''));
-    if (isNaN(numPrice)) return 'Sur devis';
-    // Use the price directly (already priceYearly or priceMonthly from the plan)
-    return `${numPrice.toLocaleString('fr-FR')} FCFA ${isAnnual ? '/an' : '/mois'}`;
+  const formatPrice = (price: number | null | string, isAnnual: boolean) => {
+    // Handle null (custom pricing)
+    if (price === null) return 'Sur devis';
+    
+    // Handle string values (for fallback plans)
+    if (typeof price === 'string') {
+      if (price === 'Sur devis' || price === 'custom') return 'Sur devis';
+      if (price === '0') return isAnnual ? '0 FCFA /an' : '0 FCFA /mois';
+      const numPrice = parseInt(price.replace(/,/g, ''));
+      if (isNaN(numPrice)) return 'Sur devis';
+      return `${numPrice.toLocaleString('fr-FR')} FCFA ${isAnnual ? '/an' : '/mois'}`;
+    }
+    
+    // Handle number values (from API)
+    if (typeof price === 'number') {
+      if (price === 0) return isAnnual ? '0 FCFA /an' : '0 FCFA /mois';
+      return `${price.toLocaleString('fr-FR')} FCFA ${isAnnual ? '/an' : '/mois'}`;
+    }
+    
+    return 'Sur devis';
   };
 
   const getCtaText = (plan: PricingPlan) => {
-    if (plan.priceType === 'custom' || plan.name.toLowerCase() === 'enterprise' || plan.name.toLowerCase() === 'enterprise') {
+    if (plan.priceType === 'custom' || plan.displayName.toLowerCase() === 'enterprise') {
       return 'Nous contacter';
     }
     // Check if plan is free (price is 0)
@@ -265,9 +282,22 @@ export default function PricingPage() {
 
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center border border-border rounded-md px-1 py-1 bg-card overflow-hidden">
-              <button className="px-2 py-1 text-xs font-bold text-white bg-primary">FR</button>
-              <button className="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">EN</button>
-              <button className="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground">WO</button>
+              <button 
+                onClick={() => {
+                  router.push('/fr/pricing');
+                }}
+                className="px-2 py-1 text-xs font-bold text-white bg-primary"
+              >
+                FR
+              </button>
+              <button 
+                onClick={() => {
+                  router.push('/en/pricing');
+                }}
+                className="px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                EN
+              </button>
             </div>
 
             <div className="flex items-center gap-4">
@@ -361,20 +391,41 @@ export default function PricingPage() {
                 </CardHeader>
 
                 <CardContent className="text-center">
-                  <ul className="space-y-3 mb-6 text-left">
-                    {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start">
-                        {feature.included ? (
-                          <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <X className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                        )}
-                        <span className={`text-sm ${feature.included ? 'text-foreground' : 'text-muted-foreground'}`}>
-                          {feature.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-foreground mb-4 text-left">Fonctionnalités incluses:</h3>
+                    <ul className="space-y-2.5 text-left max-h-[500px] overflow-y-auto">
+                      {plan.features && plan.features.length > 0 ? (
+                        plan.features.map((feature, featureIndex) => {
+                          // Show category separator if category changes
+                          const prevFeature = featureIndex > 0 ? plan.features[featureIndex - 1] : null;
+                          const showCategorySeparator = prevFeature && 
+                            feature.category && 
+                            prevFeature.category !== feature.category &&
+                            feature.category !== 'limits';
+                          
+                          return (
+                            <li key={featureIndex}>
+                              {showCategorySeparator && (
+                                <div className="my-3 border-t border-border"></div>
+                              )}
+                              <div className="flex items-start">
+                                {feature.included ? (
+                                  <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                ) : (
+                                  <X className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                                )}
+                                <span className={`text-sm ${feature.included ? 'text-foreground' : 'text-muted-foreground line-through'}`}>
+                                  {feature.text}
+                                </span>
+                              </div>
+                            </li>
+                          );
+                        })
+                      ) : (
+                        <li className="text-sm text-muted-foreground">Aucune fonctionnalité disponible</li>
+                      )}
+                    </ul>
+                  </div>
 
                   <Button
                     className={`w-full ${
@@ -387,7 +438,7 @@ export default function PricingPage() {
                     size="lg"
                     asChild
                   >
-                    <Link href={plan.priceType === 'custom' || plan.name.toLowerCase() === 'enterprise' ? '/contact' : '/auth/sign-up'}>
+                    <Link href={plan.priceType === 'custom' || plan.displayName.toLowerCase() === 'enterprise' ? '/contact' : '/auth/sign-up'}>
                       {getCtaText(plan)}
                     </Link>
                   </Button>
@@ -467,7 +518,7 @@ export default function PricingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
               {isLoggedIn ? (
-                <Button size="lg" variant="secondary" className="bg-white text-foreground hover:bg-gray-100" asChild>
+                <Button size="lg" variant="secondary" className="bg-white text-foreground hover:bg-gray-100 dark:bg-card dark:text-foreground dark:hover:bg-muted" asChild>
                   <Link href="/dashboard" className="flex items-center">
                     <LayoutDashboard className="h-5 w-5 mr-2" />
                     Accéder au tableau de bord
@@ -475,13 +526,13 @@ export default function PricingPage() {
                 </Button>
               ) : (
                 <>
-                  <Button size="lg" variant="secondary" className="bg-white text-foreground hover:bg-gray-100" asChild>
+                  <Button size="lg" variant="secondary" className="bg-white text-foreground hover:bg-gray-100 dark:bg-card dark:text-foreground dark:hover:bg-muted" asChild>
                     <Link href="/auth/sign-up" className="flex items-center">
                       <Send className="h-5 w-5 mr-2" />
                       Essai gratuit 30 jours
                     </Link>
                   </Button>
-                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" asChild>
+                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 dark:border-foreground dark:text-foreground dark:hover:bg-foreground/10" asChild>
                     <Link href="/contact" className="flex items-center">
                       <Calendar className="h-5 w-5 mr-2" />
                       Demander une démo
@@ -491,7 +542,7 @@ export default function PricingPage() {
               )}
             </div>
             <p className="text-sm text-white/80">
-              Configuration en 5 minutes • Support en français et wolof • Données sécurisées
+              Configuration en 5 minutes • Support en français et anglais • Données sécurisées
             </p>
           </div>
         </div>

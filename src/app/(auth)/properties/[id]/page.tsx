@@ -174,10 +174,29 @@ export default function PropertyDetailsPage() {
               </Button>
             </AccessDeniedAction>
           )}
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Ajouter un lot
-          </Button>
+          <PermissionGate
+            objectType="Unit"
+            action="create"
+            fallback={
+              <AccessDeniedAction
+                requiredPermission="Créer des lots"
+                reason="permission"
+                featureName="Gestion des lots"
+              >
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" disabled>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter un lot
+                </Button>
+              </AccessDeniedAction>
+            }
+          >
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+              <Link href={`/units/new?propertyId=${property.id}`}>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter un lot
+              </Link>
+            </Button>
+          </PermissionGate>
         </div>
       </div>
 

@@ -17,7 +17,7 @@ interface PaymentResult {
 
 // Validation schema for payment data
 const paymentSchema = z.object({
-  planName: z.string().min(1, 'Le nom du plan est requis'),
+  planId: z.string().uuid('L\'ID du plan est requis et doit être un UUID valide'),
   billingPeriod: z.enum(['monthly', 'yearly']),
   paymentMethod: z.enum(['stripe', 'paypal', 'wave', 'orange_money']),
   // Optional payment provider specific data
@@ -56,14 +56,14 @@ export async function POST(request: NextRequest) {
 
     if (skipPayment) {
       console.log('[Payment] Skipping payment in dev mode');
-      // Get plan details
+      // Get plan details by ID
       const plan = await db.selectOne<{
         id: string;
         name: string;
         price_monthly: number | null;
         price_yearly: number | null;
       }>('plans', {
-        eq: { name: validatedData.planName },
+        eq: { id: validatedData.planId },
       });
 
       if (!plan || !plan.id) {
@@ -217,14 +217,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get plan details
+    // Get plan details by ID
     const plan = await db.selectOne<{
       id: string;
       name: string;
       price_monthly: number | null;
       price_yearly: number | null;
     }>('plans', {
-      eq: { name: validatedData.planName },
+      eq: { id: validatedData.planId },
     });
 
     if (!plan || !plan.id) {

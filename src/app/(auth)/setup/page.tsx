@@ -28,6 +28,8 @@ import {
   Sparkles,
   CreditCard,
   Wallet,
+  TrendingUp,
+  BarChart3,
 } from 'lucide-react';
 import { useDataQuery } from '@/hooks/use-query';
 import { toast } from 'sonner';
@@ -64,7 +66,7 @@ async function getCurrentUser() {
   return data.user || null;
 }
 
-// Organization types with plan recommendations
+// Organization types - plan recommendations will be dynamically determined based on active plans
 const organizationTypes = [
   {
     id: 'individual',
@@ -73,59 +75,16 @@ const organizationTypes = [
     icon: Home,
     iconColor: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-50 dark:bg-green-900/20',
-    recommendedPlan: 'freemium',
+    recommendedPlan: 'freemium', // Default, will be updated based on active plans
     features: [
       'Gestion simple',
       'Suivi des revenus',
       'Rapports de base',
     ],
   },
-  {
-    id: 'agency',
-    name: 'Agence',
-    description: 'Agence immobilière gérant plusieurs biens pour différents propriétaires',
-    icon: Building2,
-    iconColor: 'text-blue-600 dark:text-blue-400',
-    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-    recommendedPlan: 'starter',
-    features: [
-      'Multi-propriétaires',
-      'Gestion locative complète',
-      'Extranet personnalisé',
-      'Équipe & collaborateurs',
-    ],
-    recommended: true,
-  },
-  {
-    id: 'sci',
-    name: 'SCI',
-    description: 'Société Civile Immobilière gérant son patrimoine en copropriété',
-    icon: Handshake,
-    iconColor: 'text-purple-600 dark:text-purple-400',
-    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-    recommendedPlan: 'pro',
-    features: [
-      'Gestion de patrimoine',
-      'Comptabilité SYSCOHADA',
-      'Suivi associés',
-      'Rapports financiers',
-    ],
-  },
-  {
-    id: 'syndic',
-    name: 'Syndic',
-    description: 'Syndic de copropriété gérant des immeubles et résidences',
-    icon: Users,
-    iconColor: 'text-orange-600 dark:text-orange-400',
-    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-    recommendedPlan: 'agency',
-    features: [
-      'Gestion multi-résidences',
-      'Charges de copropriété',
-      'Assemblées générales',
-      'Rapports réglementaires',
-    ],
-  },
+  
+  
+
 ];
 
 export default function SetupPage() {
@@ -136,6 +95,7 @@ export default function SetupPage() {
   const [formData, setFormData] = useState({
     organizationName: '',
     organizationType: 'individual',
+    lotsCount: '',
     country: getDefaultCountry().code,
     planName: 'freemium',
     billingPeriod: 'monthly',
@@ -158,13 +118,270 @@ export default function SetupPage() {
     }
   }, [currentUser, formData.organizationName]);
 
-  // Update recommended plan when organization type changes
-  useEffect(() => {
-    const orgType = organizationTypes.find(t => t.id === formData.organizationType);
-    if (orgType) {
-      setFormData(prev => ({ ...prev, planName: orgType.recommendedPlan }));
+  // Function to find a valid plan by name (with fallback)
+  const findValidPlanByName = (preferredName: string): any => {
+    if (!plans || plans.length === 0) return null;
+    
+    // Try exact match (case-insensitive)
+    let plan = plans.find((p: any) => p.name.toLowerCase() === preferredName.toLowerCase());
+    if (plan) return plan;
+    
+    // Try partial match
+    plan = plans.find((p: any) => p.name.toLowerCase().includes(preferredName.toLowerCase()));
+    if (plan) return plan;
+    
+    return null;
+  };
+
+  // Function to get a fallback plan (always returns a valid plan from the 3 active plans)
+  const getFallbackPlan = (): any => {
+    if (!plans || plans.length === 0) return null;
+    
+    // Only use the 3 active plans: Freemium, Starter, Professional
+    const freemium = findValidPlanByName('freemium');
+    if (freemium) return freemium;
+    
+    const starter = findValidPlanByName('entreprise');
+    if (starter) return starter;
+    
+    const professional = findValidPlanByName('professional') || findValidPlanByName('pro');
+    if (professional) return professional;
+    
+    // If none of the 3 active plans exist, return first available plan
+    return plans[0];
+  };
+
+  // Function to get the plan with the highest lots limit
+  const getHighestPlanByLots = (): any => {
+    if (!plans || plans.length === 0) return null;
+    
+    // Get all active plans and sort by lots limit (max_units)
+    const sortedPlans = [...plans]
+      .filter((p: any) => p.isActive !== false)
+      .map((p: any) => ({
+        ...p,
+        lotsLimit: p.max_units ?? 0,
+      }))
+      .sort((a: any, b: any) => {
+        // Treat null/unlimited as highest
+        if (a.lotsLimit === null || a.lotsLimit === -1) return -1;
+        if (b.lotsLimit === null || b.lotsLimit === -1) return 1;
+        return b.lotsLimit - a.lotsLimit;
+      });
+    
+    return sortedPlans[0] || null;
+  };
+
+  // Function to get lot range options - Fixed ranges as specified
+  const getLotRangeOptions = () => {
+    if (!plans || plans.length === 0) {
+      return [];
     }
-  }, [formData.organizationType]);
+
+    const freemiumPlan = findValidPlanByName('freemium');
+    const starterPlan = findValidPlanByName('entreprise');
+    const professionalPlan = findValidPlanByName('professional') || findValidPlanByName('pro');
+
+    const options = [];
+
+    // Option 1: Pas encore de lots → Freemium
+    if (freemiumPlan) {
+      options.push({
+        id: 'none',
+        range: 'Pas encore de lots',
+        description: 'Je démarre dans l\'immobilier',
+        icon: Sparkles,
+        iconColor: 'text-green-600 dark:text-green-400',
+        bgColor: 'bg-green-50 dark:bg-green-900/20',
+        recommendedPlan: freemiumPlan.name,
+        planDisplayName: freemiumPlan.displayName || freemiumPlan.name,
+        minLots: 0,
+        maxLots: 0,
+      });
+    }
+
+    // Option 2: 10 à 50 lots → Starter (supports up to 100 lots)
+    if (starterPlan) {
+      options.push({
+        id: '10-50',
+        range: '10 à 50 lots',
+        description: 'Agence / SCI moyenne',
+        icon: Building2,
+        iconColor: 'text-blue-600 dark:text-blue-400',
+        bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+        recommendedPlan: starterPlan.name,
+        planDisplayName: starterPlan.displayName || starterPlan.name,
+        minLots: 10,
+        maxLots: 50,
+      });
+    }
+
+    // Option 3: 50 à 150 lots → Starter ou Professional selon disponibilité
+    const planFor50_150 = starterPlan || professionalPlan;
+    if (planFor50_150) {
+      options.push({
+        id: '50-150',
+        range: '50 à 150 lots',
+        description: 'Grande agence / SCI importante',
+        icon: Building2,
+        iconColor: 'text-purple-600 dark:text-purple-400',
+        bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+        recommendedPlan: professionalPlan?.name || starterPlan?.name || '',
+        planDisplayName: professionalPlan?.displayName || starterPlan?.displayName || '',
+        minLots: 50,
+        maxLots: 150,
+      });
+    }
+
+    // Option 4: Sur devis (plus de 150 lots) → Professional ou solution sur mesure
+    const highestPlan = professionalPlan || starterPlan || freemiumPlan;
+    if (highestPlan) {
+      options.push({
+        id: 'custom',
+        range: 'Sur devis',
+        description: 'Enterprise / Institutionnel',
+        icon: TrendingUp,
+        iconColor: 'text-blue-600 dark:text-blue-400',
+        bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+        recommendedPlan: highestPlan.name,
+        planDisplayName: 'Solution sur mesure',
+        minLots: 151,
+        maxLots: null,
+        isCustom: true,
+        exceedsPlanLimit: true, // Flag to show warning
+      });
+    }
+
+    return options;
+  };
+
+  // Function to get recommended plan based on lots count
+  const getRecommendedPlanByLots = (lotsCount: string): string | null => {
+    if (!lotsCount || !plans || plans.length === 0) return null;
+
+    // Handle range IDs like "10-50", "50-150", "custom", or "none"
+    const lotOptions = getLotRangeOptions();
+    const matchingOption = lotOptions.find(option => option.id === lotsCount);
+    if (matchingOption) {
+      return matchingOption.recommendedPlan || null;
+    }
+
+    // Handle numeric count (fallback for direct number input)
+    const count = parseInt(lotsCount);
+    if (isNaN(count)) return null;
+
+    // Match based on numeric ranges
+    const numericMatch = lotOptions.find(option => {
+      if (option.id === 'none') return count === 0;
+      if (option.id === 'custom' || option.isCustom) return count > 150;
+      if (option.id === '10-50') return count >= 10 && count <= 50;
+      if (option.id === '50-150') return count > 50 && count <= 150;
+      // Fallback: check min/max if available
+      if (option.minLots !== undefined && option.maxLots !== undefined && option.maxLots !== null) {
+        return count >= option.minLots && count <= option.maxLots;
+      }
+      if (option.minLots !== undefined && option.maxLots === null) {
+        return count > option.minLots;
+      }
+      return false;
+    });
+
+    // If no matching option found, return the highest plan available
+    if (!numericMatch) {
+      const highestPlan = getHighestPlanByLots();
+      return highestPlan?.name || null;
+    }
+
+    return numericMatch?.recommendedPlan || null;
+  };
+
+  // Function to get recommended plan based on organization type and available ACTIVE plans
+  // Uses the 3 active plans: Freemium (7 lots, 1 user, 7 extranet), Starter (100 lots, 3 users, 150 extranet), Professional (200 lots, 10 users, 250 extranet)
+  // Recommendations are based on actual plan limits from the database
+  // If lotsCount is provided, it takes priority over organization type
+  const getRecommendedPlanName = (orgTypeId: string, lotsCount?: string): string => {
+    if (!plans || plans.length === 0) {
+      return 'freemium'; // Fallback
+    }
+
+    // If lots count is provided, use it to determine the plan
+    if (lotsCount) {
+      const planByLots = getRecommendedPlanByLots(lotsCount);
+      if (planByLots) {
+        return planByLots;
+      }
+    }
+
+    // Filter only active plans (should already be filtered by API, but double-check)
+    const activePlans = plans.filter((p: any) => p.isActive !== false);
+
+    // Map of available active plans (Freemium, Starter, Professional)
+    const availablePlans = {
+      freemium: findValidPlanByName('freemium'),
+      starter: findValidPlanByName('starter'),
+      professional: findValidPlanByName('professional') || findValidPlanByName('pro'),
+    };
+
+    // Get the highest plan available (for cases where needs exceed all plan limits)
+    const highestPlan = getHighestPlanByLots();
+
+    let recommendedPlan: any = null;
+
+    switch (orgTypeId) {
+      case 'individual':
+        // For individuals, recommend Freemium (7 lots, 1 user, 7 extranet tenants)
+        // Perfect for personal property management
+        recommendedPlan = availablePlans.freemium;
+        break;
+
+      case 'agency':
+        // For agencies, recommend Starter (100 lots, 3 users, 150 extranet tenants)
+        // Good for small to medium agencies managing multiple properties
+        // If Starter doesn't exist, fallback to Professional for larger agencies
+        recommendedPlan = availablePlans.starter || availablePlans.professional || highestPlan;
+        break;
+
+      case 'sci':
+        // For SCI, recommend Professional (200 lots, 10 users, 250 extranet tenants)
+        // Better suited for larger organizations with more complex needs
+        // If Professional doesn't exist, fallback to Starter
+        recommendedPlan = availablePlans.professional || availablePlans.starter || highestPlan;
+        break;
+
+      case 'syndic':
+        // For syndic, recommend Starter (100 lots, 3 users, 150 extranet tenants)
+        // Good starting point for managing multiple residences
+        // Can upgrade to Professional if managing larger complexes
+        recommendedPlan = availablePlans.starter || availablePlans.professional || highestPlan;
+        break;
+
+      default:
+        recommendedPlan = null;
+    }
+
+    // Always return a valid plan from the active plans
+    // Priority: recommended plan -> highest plan (for needs exceeding limits) -> freemium -> starter -> professional -> first available
+    const finalPlan = recommendedPlan || highestPlan || availablePlans.freemium || availablePlans.starter || availablePlans.professional || activePlans[0];
+    return finalPlan?.name || 'freemium';
+  };
+
+  // Update recommended plan when organization type, lots count, or plans change
+  useEffect(() => {
+    if (plans && plans.length > 0) {
+      const recommendedPlanName = getRecommendedPlanName(formData.organizationType, formData.lotsCount);
+      // Verify the plan exists before setting it
+      const planExists = plans.some((p: any) => p.name === recommendedPlanName);
+      if (planExists) {
+        setFormData(prev => ({ ...prev, planName: recommendedPlanName }));
+      } else {
+        // If recommended plan doesn't exist, use fallback
+        const fallbackPlan = getFallbackPlan();
+        if (fallbackPlan) {
+          setFormData(prev => ({ ...prev, planName: fallbackPlan.name }));
+        }
+      }
+    }
+  }, [formData.organizationType, formData.lotsCount, plans]);
 
   // Check if payment is required
   const isPaymentRequired = () => {
@@ -233,8 +450,11 @@ export default function SetupPage() {
 
       const setupData = await setupResponse.json();
       
+      // Get selected plan to get its ID
+      const selectedPlanForPayment = plans?.find((p: any) => p.name === formData.planName);
+      
       // If payment is required and we're on payment step, process payment
-      if (isPaymentRequired() && currentStep === 3 && paymentMethod) {
+      if (isPaymentRequired() && currentStep === 3 && paymentMethod && selectedPlanForPayment?.id) {
         setIsProcessingPayment(true);
         
         const paymentResponse = await fetch('/api/organization/payment', {
@@ -243,7 +463,7 @@ export default function SetupPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            planName: formData.planName,
+            planId: selectedPlanForPayment.id,
             billingPeriod: formData.billingPeriod,
             paymentMethod: paymentMethod,
           }),
@@ -260,8 +480,11 @@ export default function SetupPage() {
 
       toast.success('Organisation configurée avec succès!');
       
-      // Redirect to dashboard
-      window.location.href = setupData.redirectTo || '/dashboard';
+      // Redirect to dashboard with custom subdomain if available
+      const redirectUrl = setupData.subdomainUrl 
+        ? `${setupData.subdomainUrl}/dashboard`
+        : (setupData.redirectTo || '/dashboard');
+      window.location.href = redirectUrl;
     } catch (error: any) {
       console.error('Setup error:', error);
       toast.error(error.message || 'Erreur lors de la configuration');
@@ -271,8 +494,60 @@ export default function SetupPage() {
     }
   };
 
+  // Helper function to get setup steps info based on active plans
+  const getSetupStepsInfo = () => {
+    if (!plans || plans.length === 0) {
+      return {
+        totalActivePlans: 0,
+        plansInfo: [],
+        hasFreePlan: false,
+        hasPaidPlans: false,
+      };
+    }
+
+    const activePlans = plans.filter((p: any) => p.isActive !== false);
+    const freemiumPlan = findValidPlanByName('freemium');
+    const starterPlan = findValidPlanByName('starter');
+    const professionalPlan = findValidPlanByName('professional') || findValidPlanByName('pro');
+
+    return {
+      totalActivePlans: activePlans.length,
+      plansInfo: [
+        freemiumPlan && {
+          name: freemiumPlan.displayName || freemiumPlan.name,
+          lots: freemiumPlan.max_units ?? 7,
+          users: freemiumPlan.max_users ?? 1,
+          extranetTenants: freemiumPlan.extranet_tenants_limit ?? 7,
+          price: 'Gratuit',
+        },
+        starterPlan && {
+          name: starterPlan.displayName || starterPlan.name,
+          lots: starterPlan.max_units ?? 100,
+          users: starterPlan.max_users ?? 3,
+          extranetTenants: starterPlan.extranet_tenants_limit ?? 150,
+          price: starterPlan.price === 'custom' || starterPlan.price === null || typeof starterPlan.price !== 'number'
+            ? 'Sur devis'
+            : `${starterPlan.price.toLocaleString('fr-FR')} FCFA/mois`,
+        },
+        professionalPlan && {
+          name: professionalPlan.displayName || professionalPlan.name,
+          lots: professionalPlan.max_units ?? 200,
+          users: professionalPlan.max_users ?? 10,
+          extranetTenants: professionalPlan.extranet_tenants_limit ?? 250,
+          price: professionalPlan.price === 'custom' || professionalPlan.price === null || typeof professionalPlan.price !== 'number'
+            ? 'Sur devis'
+            : `${professionalPlan.price.toLocaleString('fr-FR')} FCFA/mois`,
+        },
+      ].filter(Boolean),
+      hasFreePlan: !!freemiumPlan,
+      hasPaidPlans: !!(starterPlan || professionalPlan),
+    };
+  };
+
   const selectedPlan = plans?.find((p: any) => p.name === formData.planName);
-  const recommendedPlan = organizationTypes.find(t => t.id === formData.organizationType)?.recommendedPlan || 'freemium';
+  const recommendedPlan = plans && plans.length > 0 
+    ? getRecommendedPlanName(formData.organizationType, formData.lotsCount)
+    : (organizationTypes.find(t => t.id === formData.organizationType)?.recommendedPlan || 'freemium');
   const price = selectedPlan?.price;
   const displayPrice =
     price === 'custom' || price === null || price === undefined
@@ -282,6 +557,8 @@ export default function SetupPage() {
       : typeof price === 'number'
       ? `${price.toLocaleString('fr-FR')} FCFA/mois`
       : 'Sur devis';
+  
+  const setupStepsInfo = getSetupStepsInfo();
 
   const progress = (currentStep / totalSteps) * 100;
 
@@ -317,7 +594,10 @@ export default function SetupPage() {
             <CardHeader>
               <CardTitle>Informations de votre organisation</CardTitle>
               <CardDescription>
-                Commençons par les informations essentielles
+                Commençons par les informations essentielles. 
+                {!plansLoading && setupStepsInfo.totalActivePlans > 0 && (
+                  <> Nous vous recommanderons le plan le plus adapté parmi les {setupStepsInfo.totalActivePlans} plan{setupStepsInfo.totalActivePlans > 1 ? 's' : ''} disponible{setupStepsInfo.totalActivePlans > 1 ? 's' : ''}.</>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -341,10 +621,33 @@ export default function SetupPage() {
                 {/* Organization Type */}
                 <div className="space-y-4">
                   <Label className="text-base font-semibold">Type d'organisation *</Label>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Cette information nous aide à recommander le plan le plus adapté
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {organizationTypes.map((type) => {
                       const Icon = type.icon;
                       const isSelected = formData.organizationType === type.id;
+                      
+                      // Get recommended plan for this organization type
+                      const recommendedPlanName = plans && plans.length > 0
+                        ? getRecommendedPlanName(type.id, formData.lotsCount)
+                        : type.recommendedPlan;
+                      let recommendedPlan = plans?.find((p: any) => p.name === recommendedPlanName);
+                      
+                      // If recommended plan doesn't exist, use fallback
+                      if (!recommendedPlan && plans && plans.length > 0) {
+                        recommendedPlan = getFallbackPlan();
+                      }
+                      
+                      // Format price
+                      const planPrice = recommendedPlan?.price;
+                      const displayPrice = planPrice === 'custom' || planPrice === null || planPrice === undefined
+                        ? 'Sur devis'
+                        : typeof planPrice === 'number'
+                        ? `${new Intl.NumberFormat('fr-FR').format(planPrice)} XOF/mois`
+                        : planPrice;
+                      
                       return (
                         <Card
                           key={type.id}
@@ -359,7 +662,7 @@ export default function SetupPage() {
                             setFormData({ ...formData, organizationType: type.id })
                           }
                         >
-                          {type.recommended && (
+                          {(type as any).recommended && (
                             <div className="absolute -top-3 right-4">
                               <span className="bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
                                 Recommandé
@@ -381,6 +684,27 @@ export default function SetupPage() {
                                 <CheckCircle2 className="h-6 w-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                               )}
                             </div>
+                            
+                            {/* Recommended Plan Info */}
+                            {recommendedPlan && (
+                              <div className="mb-4 p-3 bg-background/50 rounded-lg border border-border">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground mb-1">Plan recommandé</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {recommendedPlan.displayName || recommendedPlan.name}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-xs text-muted-foreground mb-1">À partir de</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {displayPrice}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
                             <ul className="space-y-2 mt-4">
                               {type.features.map((feature, idx) => (
                                 <li key={idx} className="flex items-center text-sm text-muted-foreground">
@@ -394,6 +718,109 @@ export default function SetupPage() {
                       );
                     })}
                   </div>
+                </div>
+
+                {/* Number of Lots Selection */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="bg-blue-600 dark:bg-blue-500 rounded-lg p-3">
+                      <Building2 className="h-8 w-8 text-white" />
+                    </div>
+                  </div>
+                  <Label className="text-base font-semibold text-center block">
+                    Combien de lots gérez-vous actuellement ?
+                  </Label>
+                  <p className="text-sm text-muted-foreground text-center mb-6">
+                    Cette information nous aide à recommander le plan le plus adapté
+                  </p>
+                  
+                  {plansLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400" />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {getLotRangeOptions().map((option) => {
+                        const Icon = option.icon;
+                        const isSelected = formData.lotsCount === option.id;
+                        const recommendedPlan = plans?.find((p: any) => p.name === option.recommendedPlan);
+                        const planPrice = recommendedPlan?.price;
+                        const displayPrice = planPrice === 'custom' || planPrice === null || planPrice === undefined
+                          ? 'Sur devis'
+                          : typeof planPrice === 'number'
+                          ? `${new Intl.NumberFormat('fr-FR').format(planPrice)} FCFA/mois`
+                          : planPrice === 0 || planPrice === '0'
+                          ? 'Gratuit'
+                          : planPrice;
+
+                        return (
+                          <Card
+                            key={option.id}
+                            className={cn(
+                              'cursor-pointer transition-all relative',
+                              isSelected
+                                ? 'ring-2 ring-blue-600 dark:ring-blue-400 border-blue-600 dark:border-blue-400 shadow-lg'
+                                : 'hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-md',
+                              option.bgColor
+                            )}
+                            onClick={() => {
+                              setFormData({ ...formData, lotsCount: option.id });
+                            }}
+                          >
+                            {isSelected && (
+                              <div className="absolute -top-2 -right-2">
+                                <div className="bg-blue-600 rounded-full p-1">
+                                  <CheckCircle2 className="h-4 w-4 text-white" />
+                                </div>
+                              </div>
+                            )}
+                            <CardContent className="p-6">
+                              <div className="flex items-start gap-4 mb-4">
+                                <div className={cn('p-3 rounded-lg', option.bgColor)}>
+                                  <Icon className={cn('h-6 w-6', option.iconColor)} />
+                                </div>
+                                <div className="flex-1">
+                                  <h3 className="text-lg font-bold text-foreground mb-1">
+                                    {option.range}
+                                  </h3>
+                                  <p className="text-sm text-muted-foreground">{option.description}</p>
+                                </div>
+                              </div>
+                              
+                              {/* Recommended Plan Info */}
+                              {recommendedPlan && (
+                                <div className="mt-4 pt-4 border-t border-border">
+                                  <p className="text-xs text-muted-foreground mb-1">Plan recommandé</p>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className={cn(
+                                      'text-sm font-semibold',
+                                      option.isCustom ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'
+                                    )}>
+                                      {option.planDisplayName}
+                                    </p>
+                                    {!option.isCustom && displayPrice !== 'Sur devis' && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {displayPrice}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {/* Warning if exceeds plan limit */}
+                                  {option.exceedsPlanLimit && recommendedPlan && (
+                                    <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-xs">
+                                      <p className="text-amber-800 dark:text-amber-300">
+                                        <strong>Note:</strong> Le plan {recommendedPlan.displayName || recommendedPlan.name} supporte jusqu'à {recommendedPlan.max_units ?? 0} lots. 
+                                        Pour {option.range.toLowerCase()}, contactez-nous pour une solution sur mesure.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Country */}
@@ -450,25 +877,71 @@ export default function SetupPage() {
             <CardHeader>
               <CardTitle>Choisissez votre plan</CardTitle>
               <CardDescription>
-                Sélectionnez le plan adapté à vos besoins
+                {!plansLoading && setupStepsInfo.totalActivePlans > 0 ? (
+                  <>
+                    {setupStepsInfo.totalActivePlans} plan{setupStepsInfo.totalActivePlans > 1 ? 's' : ''} disponible{setupStepsInfo.totalActivePlans > 1 ? 's' : ''} : 
+                    {setupStepsInfo.plansInfo.map((plan: any, idx: number) => (
+                      <span key={idx}>
+                        {' '}{plan.name}
+                        {idx < setupStepsInfo.plansInfo.length - 1 ? ',' : ''}
+                      </span>
+                    ))}
+                  </>
+                ) : (
+                  'Sélectionnez le plan adapté à vos besoins'
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {/* Recommended Plan Banner */}
-              {recommendedPlan && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-blue-900 dark:text-blue-300">
-                    <strong>Recommandation :</strong> Pour une organisation de type{' '}
-                    <strong>{organizationTypes.find(t => t.id === formData.organizationType)?.name}</strong>,
-                    nous vous recommandons le plan{' '}
-                    <strong>
-                      {plans?.find((p: any) => p.name === recommendedPlan)?.displayName ||
-                        recommendedPlan}
-                    </strong>
-                    . Ce plan est parfaitement adapté à vos besoins !
-                  </p>
-                </div>
-              )}
+              {recommendedPlan && (() => {
+                const selectedPlanData = plans?.find((p: any) => p.name === recommendedPlan);
+                const lotOptions = getLotRangeOptions();
+                const selectedLotOption = formData.lotsCount 
+                  ? lotOptions.find(opt => opt.id === formData.lotsCount)
+                  : null;
+                const exceedsLimit = selectedLotOption?.exceedsPlanLimit || false;
+                const planLimit = selectedPlanData?.max_units ?? 0;
+
+                return (
+                  <div className="space-y-3 mb-6">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <p className="text-sm text-blue-900 dark:text-blue-300">
+                        <strong>Recommandation :</strong> 
+                        {formData.lotsCount ? (
+                          <>
+                            {' '}Basé sur le nombre de lots que vous gérez, nous vous recommandons le plan{' '}
+                            <strong>
+                              {selectedPlanData?.displayName || recommendedPlan}
+                            </strong>
+                            .
+                          </>
+                        ) : (
+                          <>
+                            {' '}Pour une organisation de type{' '}
+                            <strong>{organizationTypes.find(t => t.id === formData.organizationType)?.name}</strong>,
+                            nous vous recommandons le plan{' '}
+                            <strong>
+                              {selectedPlanData?.displayName || recommendedPlan}
+                            </strong>
+                            .
+                          </>
+                        )}
+                        {!exceedsLimit && ' Ce plan est parfaitement adapté à vos besoins !'}
+                      </p>
+                    </div>
+                    {exceedsLimit && (
+                      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                        <p className="text-sm text-amber-800 dark:text-amber-300">
+                          <strong>⚠️ Important :</strong> Le plan {selectedPlanData?.displayName || recommendedPlan} supporte jusqu'à {planLimit} lots. 
+                          {selectedLotOption && ` Vous avez sélectionné "${selectedLotOption.range}", ce qui dépasse cette limite.`}
+                          {' '}Veuillez nous contacter pour discuter d'une solution sur mesure adaptée à vos besoins.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Start Free Option */}
               <div className="mb-6">
@@ -585,13 +1058,13 @@ export default function SetupPage() {
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">Lots</span>
                               <span className="font-semibold text-foreground">
-                                {plan.lots_limit === null || plan.lots_limit === undefined ? 'Illimités' : plan.lots_limit}
+                                {plan.max_units === null || plan.max_units === undefined ? 'Illimités' : plan.max_units}
                               </span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">Utilisateurs</span>
                               <span className="font-semibold text-foreground">
-                                {plan.users_limit === null || plan.users_limit === undefined ? 'Illimités' : plan.users_limit}
+                                {plan.max_users === null || plan.max_users === undefined ? 'Illimités' : plan.max_users}
                               </span>
                             </div>
                             <div className="flex items-center justify-between text-sm">

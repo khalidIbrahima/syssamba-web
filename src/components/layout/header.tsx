@@ -4,7 +4,6 @@ import { usePathname } from '@/i18n/routing';
 import { useState, useEffect } from 'react';
 import { Bell, MessageSquare, Download, Search, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -14,7 +13,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Link } from '@/i18n/routing';
-import { usePlan } from '@/hooks/use-plan';
 import { useAccess } from '@/hooks/use-access';
 import { UserMessageDialog } from '@/components/messaging/user-message-dialog';
 import { useMessageNotifications } from '@/hooks/use-message-notifications';
@@ -42,7 +40,6 @@ async function getCurrentUserOrg() {
 export function Header() {
   const t = useTranslations();
   const pathname = usePathname();
-  const { plan, limits } = usePlan();
   const { canAccessFeature, canPerformAction } = useAccess();
   const [isMounted, setIsMounted] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
@@ -101,10 +98,6 @@ export function Header() {
                            (!isRealtimeDisabled ? (paymentUnreadCount || 0) : 0) + 
                            (supportTicketUnreadCount || 0);
   
-  // Mock data for plan usage
-  const lotsUsed = 47;
-  const lotsLimit = limits.lots === -1 ? 100 : limits.lots;
-  
   // Check if we're on properties page to show different header
   const isPropertiesPage = pathname === '/properties';
   const isDashboardPage = pathname === '/dashboard';
@@ -143,17 +136,6 @@ export function Header() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-x-3 lg:gap-x-4 shrink-0">
-          {/* Plan Info (only on properties page) */}
-          {isPropertiesPage && (
-            <div className="hidden md:flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Plan:</span>
-              <Badge variant="default" className="bg-blue-600 text-white">
-                {plan.charAt(0).toUpperCase() + plan.slice(1)}
-              </Badge>
-              <span className="text-muted-foreground">{lotsUsed}/{lotsLimit} lots</span>
-            </div>
-          )}
-
           {/* Language Switcher */}
           <LanguageSwitcher />
 

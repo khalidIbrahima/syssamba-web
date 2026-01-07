@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkAuth, getCurrentUser } from '@/lib/auth-helpers';
 import { db } from '@/lib/db';
+import { supabaseAdmin } from '@/lib/db';
 import { getPlanLimits, getPlanDefinition } from '@/lib/permissions';
 
 /**
@@ -73,18 +74,15 @@ export async function GET() {
       });
     }
 
-    // Get plan details
-    const planRecord = await db.selectOne<{
-      id: string;
-      name: string;
-      lots_limit: number | null;
-      users_limit: number | null;
-      extranet_tenants_limit: number | null;
-    }>('plans', {
-      eq: { id: subscription.plan_id },
-    });
+    // Get plan details directly from Supabase with correct field names
+    const { data: planRecord, error: planError } = await supabaseAdmin
+      .from('plans')
+      .select('id, name, display_name, max_units, max_users, extranet_tenants_limit')
+      .eq('id', subscription.plan_id)
+      .eq('is_active', true)
+      .single();
 
-    if (!planRecord) {
+    if (planError || !planRecord) {
       // Plan not found, fallback to freemium
       const planName = 'freemium';
       const limits = await getPlanLimits(planName);
@@ -104,8 +102,21 @@ export async function GET() {
 
     // Convert plan record to PlanName type
     const planName = planRecord.name as any; // We'll trust the database has valid plan names
-    const limits = await getPlanLimits(planName);
+    
+    // Build limits from database fields (max_units for lots)
+    const limits = {
+      lots: planRecord.max_units === -1 || planRecord.max_units === null ? -1 : planRecord.max_units,
+      users: planRecord.max_users === -1 || planRecord.max_users === null ? -1 : planRecord.max_users,
+      extranetTenants: planRecord.extranet_tenants_limit === -1 || planRecord.extranet_tenants_limit === null ? -1 : planRecord.extranet_tenants_limit,
+    };
+    
+    // Get definition for additional plan info
     const definition = await getPlanDefinition(planName);
+    
+    // Override display_name with the one from database if available
+    if (planRecord.display_name) {
+      definition.display_name = planRecord.display_name;
+    }
 
     // Get current usage (this could be optimized with actual counts)
     // For now, return zeros - the hook can fetch detailed usage if needed

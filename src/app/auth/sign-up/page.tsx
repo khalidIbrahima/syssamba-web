@@ -354,17 +354,7 @@ export default function SignUpPage() {
             </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="flex items-start gap-3">
-              <CreditCard className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-sm text-foreground">Paiements Wave & Orange Money</p>
-                <p className="text-xs text-muted-foreground">
-                  Intégration native avec les solutions locales
-                </p>
-              </div>
-            </div>
-          </Card>
+          A
         </div>
       </div>
     </div>

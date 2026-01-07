@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useDataQuery } from '@/hooks/use-query';
 import { useAccess } from '@/hooks/use-access';
+import { usePlan } from '@/hooks/use-plan';
 import { AccessDenied } from '@/components/ui/access-denied';
 import { PageLoader } from '@/components/ui/page-loader';
 import { format, parseISO, addMonths } from 'date-fns';
@@ -50,6 +51,7 @@ async function getAllPlans() {
 
 export default function SubscriptionPage() {
   const { canPerformAction, canAccessObject, isLoading: isAccessLoading } = useAccess();
+  const { currentUsage, limits: planLimits, plan: currentPlan, definition: planDefinition } = usePlan();
   const { data: billingData, isLoading: billingLoading } = useDataQuery(
     ['billing-info'],
     getBillingInfo
@@ -78,10 +80,20 @@ export default function SubscriptionPage() {
   }
 
   const subscription = billingData?.subscription;
-  const usage = billingData?.usage || { lots: 0, users: 0, extranetTenants: 0 };
+  // Use real usage data from usePlan hook, fallback to billingData if not available
+  const usage = currentUsage || billingData?.usage || { lots: 0, users: 0, extranetTenants: 0 };
+  // Use plan limits from usePlan hook, fallback to subscription limits
+  const limits = planLimits || subscription?.limits || { lots: -1, users: -1, extranetTenants: -1 };
   const paymentHistory = billingData?.paymentHistory || [];
   const paymentMethod = billingData?.paymentMethod;
   const plans = plansData?.plans || [];
+  
+  // Merge subscription data with current plan data
+  const currentSubscription = subscription ? {
+    ...subscription,
+    limits: limits,
+    planDisplayName: planDefinition?.display_name || subscription.planDisplayName || subscription.planName,
+  } : null;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -113,23 +125,23 @@ export default function SubscriptionPage() {
     return (used / limit) * 100 >= 75;
   };
 
-  const currentPlanName = subscription?.planName || 'freemium';
-  const currentPlanDisplayName = subscription?.planDisplayName || 'Plan Gratuit';
-  const monthlyPrice = subscription?.price || 0;
-  const billingPeriod = subscription?.billingPeriod || 'monthly';
-  const subscriptionStatus = subscription?.status || 'active';
-  const nextBillingDate = subscription?.currentPeriodEnd
-    ? format(parseISO(subscription.currentPeriodEnd), 'dd MMMM yyyy', { locale: fr })
+  const currentPlanName = currentSubscription?.planName || currentPlan || 'freemium';
+  const currentPlanDisplayName = currentSubscription?.planDisplayName || planDefinition?.display_name || 'Plan Gratuit';
+  const monthlyPrice = currentSubscription?.price || 0;
+  const billingPeriod = currentSubscription?.billingPeriod || 'monthly';
+  const subscriptionStatus = currentSubscription?.status || 'active';
+  const nextBillingDate = currentSubscription?.currentPeriodEnd
+    ? format(parseISO(currentSubscription.currentPeriodEnd), 'dd MMMM yyyy', { locale: fr })
     : 'N/A';
-  const isTrial = subscription?.trialStart && subscription?.trialEnd && 
-    new Date(subscription.trialEnd) > new Date();
-  const willCancelAtPeriodEnd = subscription?.cancelAtPeriodEnd || false;
+  const isTrial = currentSubscription?.trialStart && currentSubscription?.trialEnd && 
+    new Date(currentSubscription.trialEnd) > new Date();
+  const willCancelAtPeriodEnd = currentSubscription?.cancelAtPeriodEnd || false;
 
   // Filter available plans (exclude current plan)
   const availablePlans = plans.filter((plan: any) => plan.name !== currentPlanName);
 
   // Check if extranet limit is near
-  const extranetLimit = subscription?.limits?.extranetTenants;
+  const extranetLimit = limits.extranetTenants;
   const extranetNearLimit = isNearLimit(usage.extranetTenants, extranetLimit);
 
   const handleUpgrade = (planName: string) => {
@@ -151,8 +163,8 @@ export default function SubscriptionPage() {
     return (
       <div className="space-y-6 min-h-screen bg-background">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-muted rounded w-1/4 mb-4"></div>
+          <div className="h-64 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -195,12 +207,12 @@ export default function SubscriptionPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-muted-foreground">Utilisateurs</span>
                 <span className="text-sm text-muted-foreground">
-                  {usage.users}/{subscription?.limits?.users === -1 ? '∞' : subscription?.limits?.users || 'N/A'}
+                  {usage.users}/{limits.users === -1 ? '∞' : limits.users || 'N/A'}
                 </span>
               </div>
-              {subscription?.limits?.users && subscription.limits.users !== -1 && (
+              {limits.users && limits.users !== -1 && (
                 <Progress
-                  value={getUsagePercentage(usage.users, subscription.limits.users)}
+                  value={getUsagePercentage(usage.users, limits.users)}
                   className="h-2"
                 />
               )}
@@ -209,14 +221,14 @@ export default function SubscriptionPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-muted-foreground">Lots gérés</span>
                 <span className="text-sm text-muted-foreground">
-                  {usage.lots}/{subscription?.limits?.lots === -1 ? '∞' : subscription?.limits?.lots || 'N/A'}
+                  {usage.lots}/{limits.lots === -1 ? '∞' : limits.lots || 'N/A'}
                 </span>
               </div>
-              {subscription?.limits?.lots && subscription.limits.lots !== -1 && (
+              {limits.lots && limits.lots !== -1 && (
                 <Progress
-                  value={getUsagePercentage(usage.lots, subscription.limits.lots)}
+                  value={getUsagePercentage(usage.lots, limits.lots)}
                   className="h-2"
-                  indicatorClassName={getUsageColor(getUsagePercentage(usage.lots, subscription.limits.lots))}
+                  indicatorClassName={getUsageColor(getUsagePercentage(usage.lots, limits.lots))}
                 />
               )}
             </div>
@@ -224,14 +236,14 @@ export default function SubscriptionPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-muted-foreground">Extranet locataires</span>
                 <span className="text-sm text-muted-foreground">
-                  {usage.extranetTenants}/{subscription?.limits?.extranetTenants === -1 ? '∞' : subscription?.limits?.extranetTenants || 'N/A'}
+                  {usage.extranetTenants}/{limits.extranetTenants === -1 ? '∞' : limits.extranetTenants || 'N/A'}
                 </span>
               </div>
-              {subscription?.limits?.extranetTenants && subscription.limits.extranetTenants !== -1 && (
+              {limits.extranetTenants && limits.extranetTenants !== -1 && (
                 <Progress
-                  value={getUsagePercentage(usage.extranetTenants, subscription.limits.extranetTenants)}
+                  value={getUsagePercentage(usage.extranetTenants, limits.extranetTenants)}
                   className="h-2"
-                  indicatorClassName={getUsageColor(getUsagePercentage(usage.extranetTenants, subscription.limits.extranetTenants))}
+                  indicatorClassName={getUsageColor(getUsagePercentage(usage.extranetTenants, limits.extranetTenants))}
                 />
               )}
             </div>
@@ -239,18 +251,18 @@ export default function SubscriptionPage() {
 
           {/* Upgrade Alert */}
           {extranetNearLimit && extranetLimit && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                 <div className="flex-1">
-                  <h4 className="font-semibold text-yellow-900 mb-1">
+                  <h4 className="font-semibold text-yellow-900 dark:text-yellow-300 mb-1">
                     Limite extranet locataires bientôt atteinte
                   </h4>
-                  <p className="text-sm text-yellow-800 mb-3">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-400 mb-3">
                     Vous avez activé l'extranet pour {usage.extranetTenants} locataires sur les {extranetLimit} autorisés dans votre plan {currentPlanDisplayName}. Pensez à upgrader vers le plan Syndic pour bénéficier de 200 locataires avec extranet.
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600">
                       Upgrader maintenant
                     </Button>
                     <Button variant="ghost" size="sm">
@@ -263,11 +275,11 @@ export default function SubscriptionPage() {
           )}
 
           {/* Next Billing Date */}
-          <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center justify-between pt-4 border-t border-border">
             <div>
               {isTrial ? (
                 <p className="text-sm text-muted-foreground">
-                  Période d'essai jusqu'au : {subscription?.trialEnd ? format(parseISO(subscription.trialEnd), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}
+                  Période d'essai jusqu'au : {currentSubscription?.trialEnd ? format(parseISO(currentSubscription.trialEnd), 'dd MMMM yyyy', { locale: fr }) : 'N/A'}
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -275,7 +287,7 @@ export default function SubscriptionPage() {
                 </p>
               )}
               {willCancelAtPeriodEnd && (
-                <p className="text-xs text-orange-600 mt-1">
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                   L'abonnement sera annulé à la fin de la période
                 </p>
               )}
@@ -300,7 +312,7 @@ export default function SubscriptionPage() {
           </div>
 
           <div className="text-right">
-            <Link href="#" className="text-sm text-blue-600 hover:underline">
+            <Link href="#" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
               Modifier le plan
             </Link>
           </div>
@@ -339,45 +351,45 @@ export default function SubscriptionPage() {
                     <div className="space-y-2">
                       {plan.lotsLimit === -1 ? (
                         <div className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                           <span>Lots illimités</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                           <span>{plan.lotsLimit} lots</span>
                         </div>
                       )}
                       {plan.usersLimit === -1 ? (
                         <div className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                           <span>Utilisateurs illimités</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                           <span>{plan.usersLimit} utilisateurs</span>
                         </div>
                       )}
                       {plan.extranetTenantsLimit === -1 ? (
                         <div className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                           <span>Locataires extranet illimités</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                           <span>{plan.extranetTenantsLimit} locataires extranet</span>
                         </div>
                       )}
                       {plan.name === 'enterprise' && (
                         <>
                           <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                             <span>Marque blanche complète</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                             <span>API & intégrations</span>
                           </div>
                         </>
@@ -385,11 +397,11 @@ export default function SubscriptionPage() {
                       {plan.name === 'syndic' && (
                         <>
                           <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                             <span>Domaine personnalisé</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                             <span>Support prioritaire</span>
                           </div>
                         </>
@@ -397,11 +409,11 @@ export default function SubscriptionPage() {
                       {plan.name === 'individual' && (
                         <>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <X className="h-4 w-4 text-red-500" />
+                            <X className="h-4 w-4 text-red-500 dark:text-red-400" />
                             <span>Pas de domaine personnalisé</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                             <span>Support standard</span>
                           </div>
                         </>
@@ -410,7 +422,7 @@ export default function SubscriptionPage() {
                     <Button
                       className={cn(
                         'w-full mt-4',
-                        isRecommended ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-200 hover:bg-gray-300 text-foreground'
+                        isRecommended ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' : 'bg-muted hover:bg-muted/80 text-foreground'
                       )}
                       onClick={() => isDowngrade ? handleDowngrade() : handleUpgrade(plan.name)}
                     >
@@ -429,7 +441,7 @@ export default function SubscriptionPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Historique des paiements</CardTitle>
-            <Link href="#" className="text-sm text-blue-600 hover:underline">
+            <Link href="#" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
               Voir tout
             </Link>
           </div>
@@ -454,7 +466,7 @@ export default function SubscriptionPage() {
                     {formatCurrency(payment.amount)}
                   </TableCell>
                   <TableCell>
-                    <Badge className="bg-green-100 text-green-800 border-green-200">
+                    <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800">
                       Payé
                     </Badge>
                   </TableCell>
@@ -479,13 +491,13 @@ export default function SubscriptionPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Méthode de paiement</CardTitle>
-            <Link href="#" className="text-sm text-blue-600 hover:underline">
+            <Link href="#" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
               Modifier
             </Link>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4 p-4 border rounded-lg">
+          <div className="flex items-center gap-4 p-4 border border-border rounded-lg">
             <CreditCard className="h-8 w-8 text-muted-foreground" />
             <div>
               <p className="font-medium text-foreground">
@@ -496,12 +508,12 @@ export default function SubscriptionPage() {
               </p>
             </div>
           </div>
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-blue-900 mb-1">Paiements sécurisés</h4>
-                <p className="text-sm text-blue-800">
+                <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-1">Paiements sécurisés</h4>
+                <p className="text-sm text-blue-800 dark:text-blue-400">
                   Nous acceptons les cartes Visa, Mastercard, ainsi que Wave et Orange Money pour les paiements locaux au Sénégal.
                 </p>
               </div>
