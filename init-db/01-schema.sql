@@ -21,6 +21,16 @@ CREATE TABLE organizations (
     type TEXT CHECK (type IN ('agency','sci','syndic','individual')) DEFAULT 'individual',
     plan TEXT CHECK (plan IN ('freemium','starter','pro','agency','enterprise')) DEFAULT 'freemium',
 
+    -- Contact information
+    email TEXT,
+    phone TEXT,
+    phone2 TEXT,                             -- Second phone number
+    phone_verified BOOLEAN DEFAULT FALSE,    -- Phone verification status
+    address TEXT,
+    city TEXT,
+    postal_code TEXT,                        -- Postal/ZIP code
+    state TEXT,                              -- State/Region/Province
+
     -- Limites selon plan
     lots_limit INTEGER DEFAULT 5,
     users_limit INTEGER DEFAULT 1,

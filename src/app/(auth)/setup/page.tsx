@@ -99,6 +99,14 @@ export default function SetupPage() {
     country: getDefaultCountry().code,
     planName: 'freemium',
     billingPeriod: 'monthly',
+    // Contact information
+    email: '',
+    phone: '',
+    phone2: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    state: '',
   });
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'wave' | 'orange_money' | ''>('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -855,6 +863,108 @@ export default function SetupPage() {
                     Espace OHADA - Organisation pour l'Harmonisation en Afrique du Droit des
                     Affaires
                   </p>
+                </div>
+
+                {/* Contact Information Section */}
+                <div className="space-y-4 pt-6 border-t border-border">
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">Informations de contact</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Ces informations sont facultatives et peuvent être complétées plus tard
+                    </p>
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="contact@exemple.com"
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  {/* Phone numbers */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Téléphone principal</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+221 77 123 45 67"
+                        value={formData.phone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone2">Téléphone secondaire</Label>
+                      <Input
+                        id="phone2"
+                        type="tel"
+                        placeholder="+221 78 123 45 67"
+                        value={formData.phone2}
+                        onChange={(e) =>
+                          setFormData({ ...formData, phone2: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Adresse</Label>
+                    <Input
+                      id="address"
+                      placeholder="Rue, avenue, etc."
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  {/* City, Postal Code, State */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Ville</Label>
+                      <Input
+                        id="city"
+                        placeholder="Dakar"
+                        value={formData.city}
+                        onChange={(e) =>
+                          setFormData({ ...formData, city: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="postalCode">Code postal</Label>
+                      <Input
+                        id="postalCode"
+                        placeholder="12500"
+                        value={formData.postalCode}
+                        onChange={(e) =>
+                          setFormData({ ...formData, postalCode: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">Région/Province</Label>
+                      <Input
+                        id="state"
+                        placeholder="Dakar"
+                        value={formData.state}
+                        onChange={(e) =>
+                          setFormData({ ...formData, state: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
 
               <div className="flex justify-end mt-6">

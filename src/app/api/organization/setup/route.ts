@@ -11,6 +11,14 @@ const setupSchema = z.object({
   country: z.string().min(1, 'Le pays est requis'),
   planName: z.string().min(1, 'Le nom du plan est requis'),
   billingPeriod: z.enum(['monthly', 'yearly']),
+  // Contact information (optional)
+  email: z.string().email().optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+  phone2: z.string().optional().or(z.literal('')),
+  address: z.string().optional().or(z.literal('')),
+  city: z.string().optional().or(z.literal('')),
+  postalCode: z.string().optional().or(z.literal('')),
+  state: z.string().optional().or(z.literal('')),
 });
 
 /**
@@ -95,6 +103,25 @@ export async function POST(request: NextRequest) {
       }
 
       // Update the existing organization
+      const updateData: any = {
+        name: validatedData.organizationName,
+        slug,
+        subdomain,
+        type: validatedData.organizationType,
+        country: validatedData.country,
+        is_configured: true,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Add contact information if provided
+      if (validatedData.email) updateData.email = validatedData.email;
+      if (validatedData.phone) updateData.phone = validatedData.phone;
+      if (validatedData.phone2) updateData.phone2 = validatedData.phone2;
+      if (validatedData.address) updateData.address = validatedData.address;
+      if (validatedData.city) updateData.city = validatedData.city;
+      if (validatedData.postalCode) updateData.postal_code = validatedData.postalCode;
+      if (validatedData.state) updateData.state = validatedData.state;
+
       const updatedOrg = await db.updateOne<{
         id: string;
         name: string;
@@ -104,15 +131,7 @@ export async function POST(request: NextRequest) {
         country: string;
         is_configured: boolean;
         updated_at: string;
-      }>('organizations', {
-        name: validatedData.organizationName,
-        slug,
-        subdomain,
-        type: validatedData.organizationType,
-        country: validatedData.country,
-        is_configured: true,
-        updated_at: new Date().toISOString(),
-      }, {
+      }>('organizations', updateData, {
         id: organization.id,
       });
 
@@ -157,6 +176,26 @@ export async function POST(request: NextRequest) {
       }
 
       // Create the organization
+      const insertData: any = {
+        name: validatedData.organizationName,
+        slug,
+        subdomain,
+        type: validatedData.organizationType,
+        country: validatedData.country,
+        is_configured: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Add contact information if provided
+      if (validatedData.email) insertData.email = validatedData.email;
+      if (validatedData.phone) insertData.phone = validatedData.phone;
+      if (validatedData.phone2) insertData.phone2 = validatedData.phone2;
+      if (validatedData.address) insertData.address = validatedData.address;
+      if (validatedData.city) insertData.city = validatedData.city;
+      if (validatedData.postalCode) insertData.postal_code = validatedData.postalCode;
+      if (validatedData.state) insertData.state = validatedData.state;
+
       organization = await db.insertOne<{
         id: string;
         name: string;
@@ -167,16 +206,7 @@ export async function POST(request: NextRequest) {
         is_configured: boolean;
         created_at: string;
         updated_at: string;
-      }>('organizations', {
-        name: validatedData.organizationName,
-        slug,
-        subdomain, // Add subdomain
-        type: validatedData.organizationType,
-        country: validatedData.country,
-        is_configured: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      }>('organizations', insertData);
 
       if (!organization) {
         return NextResponse.json(

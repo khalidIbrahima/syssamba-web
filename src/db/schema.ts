@@ -95,6 +95,16 @@ export const organizations = pgTable('organizations', {
   type: text('type', { enum: ['agency', 'sci', 'syndic', 'individual'] }).default('individual'),
   country: text('country').notNull().default('SN').references(() => countries.code, { onDelete: 'restrict' }), // Code pays ISO 3166-1 alpha-2, référence à countries
   
+  // Contact information
+  email: text('email'),
+  phone: text('phone'),
+  phone2: text('phone2'), // Second phone number
+  phoneVerified: boolean('phone_verified').default(false), // Phone verification status
+  address: text('address'),
+  city: text('city'),
+  postalCode: text('postal_code'), // Postal/ZIP code
+  state: text('state'), // State/Region/Province
+  
   // Compteur réel (mis à jour par trigger ou application)
   extranetTenantsCount: integer('extranet_tenants_count').default(0),
 

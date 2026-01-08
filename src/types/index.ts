@@ -17,6 +17,15 @@ export type Organization = {
   slug: string;
   type: 'agency' | 'sci' | 'syndic' | 'individual';
   country: string; // Code pays ISO 3166-1 alpha-2, référence à Country.code
+  // Contact information
+  email?: string;
+  phone?: string;
+  phone2?: string; // Second phone number
+  phoneVerified?: boolean; // Phone verification status
+  address?: string;
+  city?: string;
+  postalCode?: string; // Postal/ZIP code
+  state?: string; // State/Region/Province
   // Note: planId and limits are in subscriptions and plans tables
   extranetTenantsCount: number;
   customExtranetDomain?: string;
