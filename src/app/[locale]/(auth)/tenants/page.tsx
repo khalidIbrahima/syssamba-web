@@ -171,27 +171,27 @@ export default function TenantsPage() {
   const getStatusBadge = (tenant: any) => {
     if (tenant.paymentStatus === 'late') {
       return (
-        <Badge className="bg-red-100 text-red-800 border-red-200">
+        <Badge className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700">
           En retard
         </Badge>
       );
     }
     if (tenant.leaseStatus === 'notice') {
       return (
-        <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+        <Badge className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-700">
           Préavis
         </Badge>
       );
     }
     if (tenant.leaseStatus === 'expired') {
       return (
-        <Badge className="bg-gray-100 text-foreground border-gray-200">
+        <Badge className="bg-gray-100 dark:bg-gray-800 text-foreground border-gray-200 dark:border-gray-700">
           Expiré
         </Badge>
       );
     }
     return (
-      <Badge className="bg-green-100 text-green-800 border-green-200">
+      <Badge className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700">
         Actif
       </Badge>
     );
@@ -200,10 +200,10 @@ export default function TenantsPage() {
   const getPaymentStatusBar = (tenant: any) => {
     if (tenant.paymentStatus === 'late') {
       return (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-center justify-between">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <span className="text-sm text-red-700 font-medium">
+            <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <span className="text-sm text-red-700 dark:text-red-300 font-medium">
               Retard {tenant.daysLate} jour{tenant.daysLate > 1 ? 's' : ''}
             </span>
           </div>
@@ -212,10 +212,10 @@ export default function TenantsPage() {
     }
     if (tenant.leaseStatus === 'notice' && tenant.leaseEndDate) {
       return (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 flex items-center justify-between">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-yellow-600" />
-            <span className="text-sm text-yellow-700 font-medium">
+            <Calendar className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+            <span className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">
               Fin bail: {formatDate(tenant.leaseEndDate)}
             </span>
           </div>
@@ -223,10 +223,10 @@ export default function TenantsPage() {
       );
     }
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-2 flex items-center justify-between">
+      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <span className="text-sm text-green-700 font-medium">Loyer à jour</span>
+          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <span className="text-sm text-green-700 dark:text-green-300 font-medium">Loyer à jour</span>
         </div>
       </div>
     );
@@ -286,8 +286,8 @@ export default function TenantsPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Locataires actifs</p>
@@ -306,8 +306,8 @@ export default function TenantsPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Extranet activés</p>
@@ -383,12 +383,12 @@ export default function TenantsPage() {
           {[...Array(8)].map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-4">
-                <div className="h-16 w-16 bg-gray-200 rounded-full mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-24 mb-4"></div>
+                <div className="h-16 w-16 bg-gray-200 dark:bg-gray-700 rounded-full mb-4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-4"></div>
                 <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-full"></div>
-                  <div className="h-3 bg-gray-200 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
                 </div>
               </CardContent>
             </Card>
@@ -467,16 +467,16 @@ export default function TenantsPage() {
                   </Button>
                 </div>
 
-                <div className="mt-3 pt-3 border-t flex items-center justify-between">
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {tenant.hasExtranetAccess ? (
                       <>
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
                         <span className="text-xs text-muted-foreground">Extranet: Activé</span>
                       </>
                     ) : (
                       <>
-                        <div className="h-4 w-4 rounded-full bg-gray-300"></div>
+                        <div className="h-4 w-4 rounded-full bg-gray-300 dark:bg-gray-600"></div>
                         <span className="text-xs text-muted-foreground">Extranet: Non activé</span>
                       </>
                     )}
@@ -554,7 +554,7 @@ export default function TenantsPage() {
                   variant={currentPage === page ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setCurrentPage(page)}
-                  className={currentPage === page ? 'bg-blue-600 text-white' : ''}
+                  className={currentPage === page ? 'bg-blue-600 dark:bg-blue-500 text-white' : ''}
                 >
                   {page}
                 </Button>
@@ -573,18 +573,18 @@ export default function TenantsPage() {
       )}
 
       {/* Extranet Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <Globe className="h-5 w-5 text-blue-600" />
+                <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 <h3 className="text-lg font-semibold text-foreground">Extranet Locataires</h3>
               </div>
               {isLoading ? (
                 <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-                  <div className="h-2 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                 </div>
               ) : (
                 <>
@@ -592,13 +592,13 @@ export default function TenantsPage() {
                     {extranetLimit === Infinity || extranetLimit === 0 || !extranetLimit ? (
                       <>
                         {extranetEnabledCount} locataire{extranetEnabledCount > 1 ? 's' : ''} ont accès à leur espace personnel
-                        <span className="ml-2 text-blue-600 font-semibold">(Illimité)</span>
+                        <span className="ml-2 text-blue-600 dark:text-blue-400 font-semibold">(Illimité)</span>
                       </>
                     ) : (
                       <>
                         {extranetEnabledCount} sur {extranetLimit} locataire{extranetLimit > 1 ? 's' : ''} ont accès à leur espace personnel
                         {isExtranetLimitReached && (
-                          <span className="ml-2 text-orange-600 font-semibold">(Limite atteinte)</span>
+                          <span className="ml-2 text-orange-600 dark:text-orange-400 font-semibold">(Limite atteinte)</span>
                         )}
                       </>
                     )}
@@ -609,7 +609,7 @@ export default function TenantsPage() {
                         value={extranetProgress} 
                         className={cn(
                           "h-2",
-                          isExtranetLimitReached && "bg-orange-200"
+                          isExtranetLimitReached && "bg-orange-200 dark:bg-orange-800"
                         )}
                       />
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
