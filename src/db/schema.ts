@@ -451,13 +451,19 @@ export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),
   organizationId: uuid('organization_id').references(() => organizations.id),
   tenantId: uuid('tenant_id').references(() => tenants.id),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }), // For user-specific notifications
   type: text('type').notNull(),
   channel: text('channel', { enum: ['sms', 'email', 'push', 'whatsapp'] }),
   content: text('content'),
   status: text('status', { enum: ['sent', 'delivered', 'failed'] }),
   sentAt: timestamp('sent_at', { withTimezone: true }),
+  readAt: timestamp('read_at', { withTimezone: true }), // Track when notification is read
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-});
+}, (table) => ({
+  idxNotificationsUserId: index('idx_notifications_user_id').on(table.userId),
+  idxNotificationsReadAt: index('idx_notifications_read_at').on(table.readAt),
+  idxNotificationsOrg: index('idx_notifications_org').on(table.organizationId),
+}));
 
 // Messages table
 export const messages = pgTable('messages', {

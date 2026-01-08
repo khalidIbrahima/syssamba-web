@@ -442,13 +442,35 @@ function SidebarContent() {
             
             {/* Admin Section - Show only for super admins */}
             {isSuperAdmin && (
-              <li>
-                <div className="pt-4 border-t border-blue-400">
+              <>
+                <li>
+                  <div className="pt-4 border-t border-blue-400">
+                    <Link
+                      href="/admin/dashboard"
+                      className={cn(
+                        'group flex items-center gap-x-3 rounded-lg p-3 text-sm font-medium leading-6 transition-colors',
+                        pathname === '/admin/dashboard' || pathname.startsWith('/admin/dashboard')
+                          ? 'bg-white text-blue-600'
+                          : 'text-white hover:bg-blue-600/80'
+                      )}
+                    >
+                      <LayoutDashboard
+                        className={cn(
+                          'h-5 w-5 shrink-0',
+                          pathname === '/admin/dashboard' || pathname.startsWith('/admin/dashboard') ? 'text-blue-600' : 'text-white'
+                        )}
+                        aria-hidden="true"
+                      />
+                      Dashboard
+                    </Link>
+                  </div>
+                </li>
+                <li>
                   <Link
                     href="/admin"
                     className={cn(
                       'group flex items-center gap-x-3 rounded-lg p-3 text-sm font-medium leading-6 transition-colors',
-                      pathname.startsWith('/admin')
+                      pathname.startsWith('/admin') && pathname !== '/admin/dashboard' && !pathname.startsWith('/admin/dashboard')
                         ? 'bg-white text-blue-600'
                         : 'text-white hover:bg-blue-600/80'
                     )}
@@ -456,14 +478,14 @@ function SidebarContent() {
                     <Shield
                       className={cn(
                         'h-5 w-5 shrink-0',
-                        pathname.startsWith('/admin') ? 'text-blue-600' : 'text-white'
+                        pathname.startsWith('/admin') && pathname !== '/admin/dashboard' && !pathname.startsWith('/admin/dashboard') ? 'text-blue-600' : 'text-white'
                       )}
                       aria-hidden="true"
                     />
                     Administration
                   </Link>
-                </div>
-              </li>
+                </li>
+              </>
             )}
           </ul>
         </nav>

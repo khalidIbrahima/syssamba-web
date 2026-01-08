@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth, getCurrentUser } from '@/lib/auth-helpers';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { notifySuperAdmins } from '@/lib/admin-notifications';
 
 // Validation schema for setup data
 const setupSchema = z.object({
@@ -200,6 +201,12 @@ export async function POST(request: NextRequest) {
           );
         }
       }
+
+      // Notify super admins that a new organization was created
+      await notifySuperAdmins('organization_created', {
+        organizationId: organization.id,
+        organizationName: organization.name,
+      });
     }
 
     // Create subscription for the organization
@@ -276,6 +283,14 @@ export async function POST(request: NextRequest) {
 
           if (subscription) {
             console.log(`[Setup] Created subscription for organization ${organization.id} with plan ${validatedData.planName}`);
+            
+            // Notify super admins that a new subscription was created
+            await notifySuperAdmins('subscription_created', {
+              organizationId: organization.id,
+              organizationName: organization.name,
+              subscriptionId: subscription.id,
+              planName: validatedData.planName,
+            });
           } else {
             console.error(`[Setup] Failed to create subscription for organization ${organization.id}`);
           }

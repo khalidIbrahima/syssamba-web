@@ -18,7 +18,9 @@ import { UserMessageDialog } from '@/components/messaging/user-message-dialog';
 import { useMessageNotifications } from '@/hooks/use-message-notifications';
 import { usePaymentNotifications } from '@/hooks/use-payment-notifications';
 import { useSupportTicketNotifications } from '@/hooks/use-support-ticket-notifications';
+import { useAdminNotifications } from '@/hooks/use-admin-notifications';
 import { useDataQuery } from '@/hooks/use-query';
+import { useSuperAdmin } from '@/hooks/use-super-admin';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
@@ -91,12 +93,22 @@ export function Header() {
     }
   );
 
-  // Total unread count (messages + payments + support tickets)
+  // Set up admin notifications (only for super-admins)
+  const { isSuperAdmin } = useSuperAdmin();
+  const { unreadCount: adminUnreadCount, markAsRead: markAdminNotificationsAsRead } = useAdminNotifications(
+    (notification) => {
+      // When admin notification is clicked, navigate to admin dashboard
+      window.location.href = '/admin/dashboard';
+    }
+  );
+
+  // Total unread count (messages + payments + support tickets + admin notifications)
   // Only include messages if user has access to messaging
   // Only include payments if realtime is enabled
   const totalUnreadCount = (canAccessMessaging && !isRealtimeDisabled ? (messageUnreadCount || 0) : 0) + 
                            (!isRealtimeDisabled ? (paymentUnreadCount || 0) : 0) + 
-                           (supportTicketUnreadCount || 0);
+                           (supportTicketUnreadCount || 0) +
+                           (isSuperAdmin ? (adminUnreadCount || 0) : 0);
   
   // Check if we're on properties page to show different header
   const isPropertiesPage = pathname === '/properties';
@@ -171,12 +183,19 @@ export function Header() {
             onClick={async () => {
               // Mark all notifications as read when opening
               try {
+                // Mark payment/message notifications as read
                 await fetch('/api/notifications/mark-read', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   credentials: 'include',
                   body: JSON.stringify({}),
                 });
+                
+                // Mark admin notifications as read if super admin
+                if (isSuperAdmin) {
+                  await markAdminNotificationsAsRead();
+                }
+                
                 // Refresh unread count
                 const countResponse = await fetch('/api/notifications/unread-count', {
                   credentials: 'include',
@@ -191,9 +210,9 @@ export function Header() {
             }}
           >
             <Bell className="h-5 w-5 text-muted-foreground" suppressHydrationWarning />
-            {!isRealtimeDisabled && (messageUnreadCount || 0) + (paymentUnreadCount || 0) > 0 && (
+            {totalUnreadCount > 0 && (
               <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs text-white flex items-center justify-center font-bold">
-                {(messageUnreadCount || 0) + (paymentUnreadCount || 0) > 9 ? '9+' : (messageUnreadCount || 0) + (paymentUnreadCount || 0)}
+                {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
               </span>
             )}
           </Button>
