@@ -68,6 +68,33 @@ export default async function AuthLayout({
       // Check super admin status (different from system admin)
       const userIsSuperAdmin = await isSuperAdmin(user.id);
 
+      // Define organization-specific routes that super admins should not access
+      const orgSpecificRoutes = [
+        '/dashboard',
+        '/properties',
+        '/units',
+        '/tenants',
+        '/leases',
+        '/payments',
+        '/accounting',
+        '/tasks',
+        '/owners',
+        '/settings',
+        '/notifications',
+      ];
+      
+      const isOrgSpecificRoute = orgSpecificRoutes.some(route => 
+        pathname === route || pathname.startsWith(`${route}/`)
+      );
+
+      // Redirect super admins away from organization-specific routes
+      if (userIsSuperAdmin && isOrgSpecificRoute && !isAdminPage && !isSubscriptionPage) {
+        // Super admin trying to access org routes - always redirect to admin dashboard
+        // Super admins manage the system from /admin/dashboard, not org-specific routes
+        redirect('/admin/dashboard');
+        return;
+      }
+
       if (isSystemAdmin) {
         // System admin: check if organization is configured
         let organizationIsConfigured = false;
@@ -102,22 +129,9 @@ export default async function AuthLayout({
           // No restrictions for System Admins with configured organizations
         }
       } else if (userIsSuperAdmin) {
-        // Super admin (different from system admin): redirect dashboard to /admin
-        if (isDashboardPage) {
-          if (!user.organizationId) {
-            redirect('/admin/select-organization');
-            return;
-          } else {
-            redirect('/admin');
-            return;
-          }
-        }
-        // Super admin without organization trying to access non-admin pages
-        if (!isAdminPage && !user.organizationId) {
-          redirect('/admin/select-organization');
-          return;
-        }
-        // If on admin pages or has organization, allow access to all pages
+        // Super admin (different from system admin) - already handled above
+        // If they reach here, they're accessing admin pages or other allowed routes
+        // No additional redirects needed - the check above already redirected them from org routes
       } else {
         // Regular user: if no organization, redirect to setup
         if (!user.organizationId) {
