@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAuth, getCurrentUser } from '@/lib/auth-helpers';
 import { getUserProfile } from '@/lib/profiles';
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin, db } from '@/lib/db';
 import { getProfileObjectPermissions } from '@/lib/profiles';
 import { getObjectTypeFromPermission } from '@/lib/permission-mappings';
 import { createRouteHandlerClient } from '@/lib/supabase/route-handler';
@@ -285,14 +285,67 @@ export async function GET(request: NextRequest) {
       console.log('DEBUG: first accessible item sample:', JSON.stringify(accessibleItems[0], null, 2));
     }
 
+    // Fetch real counts for payments and tasks
+    let pendingPaymentsCount = 0;
+    let activeTasksCount = 0;
+
+    try {
+      // Get pending payments count
+      const pendingPayments = await db.select<{
+        id: string;
+      }>('payments', {
+        eq: { organization_id: organizationId, status: 'pending' },
+      });
+      pendingPaymentsCount = pendingPayments?.length || 0;
+    } catch (error) {
+      console.error('Error fetching pending payments count:', error);
+      // Continue with 0 if there's an error
+    }
+
+    try {
+      // Get active tasks count (todo + in_progress) for the current user
+      // Tasks where user is creator OR assigned to
+      const allTasks = await db.select<{
+        id: string;
+        created_by: string | null;
+        assigned_to: string | null;
+        status: string;
+      }>('tasks', {
+        eq: { organization_id: organizationId },
+      });
+
+      // Filter tasks: user must be creator OR assigned to, and status is todo or in_progress
+      const activeTasks = allTasks.filter(
+        (task) =>
+          (task.created_by === userId || task.assigned_to === userId) &&
+          (task.status === 'todo' || task.status === 'in_progress')
+      );
+      activeTasksCount = activeTasks?.length || 0;
+    } catch (error) {
+      console.error('Error fetching active tasks count:', error);
+      // Continue with 0 if there's an error
+    }
+
     // Build hierarchy and apply custom sort orders
     const itemsWithSort = accessibleItems.map((item: any) => {
+      // Use real counts for payments and tasks, otherwise use badge_count from database
+      let badge = item.badge_count;
+      
+      // Check if this is the payments item (by href or key)
+      if (item.href === '/payments' || item.key === 'payments') {
+        badge = pendingPaymentsCount > 0 ? pendingPaymentsCount : null;
+      }
+      // Check if this is the tasks item (by href or key)
+      else if (item.href === '/tasks' || item.key === 'tasks') {
+        badge = activeTasksCount > 0 ? activeTasksCount : null;
+      }
+
       return {
         key: item.key,
         name: item.name,
         href: item.href,
         icon: item.icon,
-        badge: item.badge_count,
+        badge: badge,
         sortOrder: item.profileOverride?.customSortOrder ?? item.sort_order,
         parentKey: item.parent_key,
       };
