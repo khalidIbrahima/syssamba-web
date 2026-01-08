@@ -183,7 +183,7 @@ export default function LeasesPage() {
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="h-16 bg-gray-200 rounded-lg"></div>
+                  <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
                 </div>
               ))}
             </div>
@@ -192,7 +192,7 @@ export default function LeasesPage() {
               {leases.slice(0, 10).map((lease: any) => {
                 const status = getLeaseStatus(lease);
                 return (
-                  <div key={lease.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div key={lease.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     <div className="flex items-center space-x-4 flex-1">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -232,16 +232,16 @@ export default function LeasesPage() {
                         variant={status === 'active' ? 'default' : 'secondary'}
                         className={
                           status === 'active'
-                            ? 'bg-green-100 text-green-800'
+                            ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                             : status === 'expired'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-gray-100 text-foreground'
+                            ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                            : 'bg-gray-100 dark:bg-gray-800 text-foreground'
                         }
                       >
                         {status === 'active' ? 'Actif' : status === 'expired' ? 'Expiré' : 'En attente'}
                       </Badge>
                       {!lease.signed && (
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                        <Badge variant="outline" className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800">
                           Non signé
                         </Badge>
                       )}

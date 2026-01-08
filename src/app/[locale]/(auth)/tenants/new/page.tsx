@@ -419,7 +419,7 @@ function NewTenantPageContent() {
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
                   disabled={isSubmitting || availableUnits.length === 0}
                 >
                   {isSubmitting ? (

@@ -61,7 +61,7 @@ import dynamic from 'next/dynamic';
 // Dynamically import the map component to avoid SSR issues
 const UnitsMapViewer = dynamic(() => import('@/components/ui/units-map-viewer').then(mod => ({ default: mod.UnitsMapViewer })), {
   ssr: false,
-  loading: () => <div className="h-[500px] bg-gray-100 rounded-lg flex items-center justify-center">Chargement de la carte...</div>,
+  loading: () => <div className="h-[500px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">Chargement de la carte...</div>,
 });
 
 // Fetch units from API
@@ -188,7 +188,7 @@ export default function UnitsPage() {
               <ChevronDown className="h-4 w-4 mr-2" />
               Filtres avancés
             </Button>
-            <Button variant="outline" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100">
+            <Button variant="outline" className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30">
               <Upload className="h-4 w-4 mr-2" />
               Importer
             </Button>
@@ -201,14 +201,14 @@ export default function UnitsPage() {
                   reason="permission"
                   featureName="Gestion des lots"
                 >
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white" disabled>
+                  <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white" disabled>
                     <Plus className="h-4 w-4 mr-2" />
                     Nouveau lot
                   </Button>
                 </AccessDeniedAction>
               }
             >
-              <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button asChild className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white">
                 <Link href="/units/new">
                   <Plus className="h-4 w-4 mr-2" />
                   Nouveau lot
@@ -388,22 +388,22 @@ export default function UnitsPage() {
                   [...Array(5)].map((_, i) => (
                     <TableRow key={i}>
                       <TableCell>
-                        <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                       </TableCell>
                       <TableCell>
-                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                       </TableCell>
                       <TableCell>
-                        <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                       </TableCell>
                       <TableCell>
-                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                       </TableCell>
                       <TableCell>
-                        <div className="h-6 w-16 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                       </TableCell>
                       <TableCell>
-                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse ml-auto" />
+                        <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse ml-auto" />
                       </TableCell>
                     </TableRow>
                   ))
@@ -421,7 +421,7 @@ export default function UnitsPage() {
                     const PaymentIcon = paymentStatus.icon;
 
                     return (
-                      <TableRow key={unit.id} className="hover:bg-gray-50">
+                      <TableRow key={unit.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <TableCell>
                           <Checkbox
                             checked={selectedUnits.has(unit.id)}
@@ -561,7 +561,7 @@ export default function UnitsPage() {
                   variant={currentPage === page ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setCurrentPage(page)}
-                  className={currentPage === page ? 'bg-blue-600 text-white' : ''}
+                  className={currentPage === page ? 'bg-blue-600 dark:bg-blue-500 text-white' : ''}
                 >
                   {page}
                 </Button>
@@ -610,7 +610,7 @@ export default function UnitsPage() {
                 height="400px"
               />
             ) : (
-              <div className="relative h-96 w-full rounded-lg overflow-hidden border bg-gray-100">
+              <div className="relative h-96 w-full rounded-lg overflow-hidden border bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
                     <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
@@ -622,23 +622,23 @@ export default function UnitsPage() {
                 </div>
               </div>
             )}
-            <Link href="#" className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            <Link href="#" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1">
               <Maximize2 className="h-4 w-4" />
               Agrandir le plan
             </Link>
 
             {/* Legend */}
-            <div className="space-y-2 pt-4 border-t">
+            <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2 text-sm">
-                <div className="h-3 w-3 rounded-full bg-green-500" />
+                <div className="h-3 w-3 rounded-full bg-green-500 dark:bg-green-400" />
                 <span className="text-muted-foreground">Occupé ({occupiedCount})</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <div className="h-3 w-3 rounded-full bg-gray-400" />
+                <div className="h-3 w-3 rounded-full bg-gray-400 dark:bg-gray-500" />
                 <span className="text-muted-foreground">Vacant ({vacantCount})</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <div className="h-3 w-3 rounded-full bg-red-500" />
+                <div className="h-3 w-3 rounded-full bg-red-500 dark:bg-red-400" />
                 <span className="text-muted-foreground">Impayé ({unpaidCount})</span>
               </div>
             </div>

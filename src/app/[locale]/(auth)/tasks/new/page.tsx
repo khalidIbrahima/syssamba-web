@@ -344,12 +344,12 @@ export default function NewTaskPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Link href="/tasks" className="hover:text-blue-600">Tâches</Link>
+            <Link href="/tasks" className="hover:text-blue-600 dark:hover:text-blue-400">Tâches</Link>
             <span>/</span>
             <span className="text-foreground font-medium">Nouvelle tâche</span>
           </div>
@@ -385,7 +385,7 @@ export default function NewTaskPage() {
                       {...form.register('title')}
                     />
                     {form.formState.errors.title && (
-                      <p className="text-sm text-red-600">{form.formState.errors.title.message}</p>
+                      <p className="text-sm text-red-600 dark:text-red-400">{form.formState.errors.title.message}</p>
                     )}
                   </div>
 
@@ -469,13 +469,13 @@ export default function NewTaskPage() {
                             onClick={() => handleUserSelect(user.id)}
                             className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
                               isSelected
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-blue-500 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/30'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                             }`}
                           >
                             {isSelected && (
                               <div className="absolute top-2 right-2">
-                                <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                                <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                               </div>
                             )}
                             <div className="flex flex-col items-center gap-2">
@@ -497,7 +497,7 @@ export default function NewTaskPage() {
                           </div>
                         );
                       })}
-                      <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors">
+                      <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                         <div className="flex flex-col items-center justify-center gap-2 h-full">
                           <Plus className="h-8 w-8 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Ajouter</span>
@@ -562,12 +562,12 @@ export default function NewTaskPage() {
                       className="pl-10"
                     />
                     {showUnitSearch && filteredUnits.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                         {filteredUnits.map((unit: any) => (
                           <div
                             key={unit.id}
                             onClick={() => handleUnitSelect(unit)}
-                            className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                           >
                             <p className="font-medium">{unit.unitNumber}</p>
                             <p className="text-sm text-muted-foreground">{unit.propertyName}</p>
@@ -604,7 +604,7 @@ export default function NewTaskPage() {
                 <CardContent className="space-y-4">
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                    className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
                   >
                     <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground mb-2">
@@ -626,11 +626,11 @@ export default function NewTaskPage() {
                       {attachments.map((attachment, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
                         >
                           <div className="flex items-center gap-3">
                             {attachment.type === 'image' ? (
-                              <ImageIcon className="h-5 w-5 text-blue-600" />
+                              <ImageIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                             ) : (
                               <FileText className="h-5 w-5 text-muted-foreground" />
                             )}
@@ -700,7 +700,7 @@ export default function NewTaskPage() {
               </Card>
 
               {/* Footer Buttons */}
-              <div className="flex items-center justify-between pt-4 border-t">
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
                 <Link href="/tasks">
                   <Button type="button" variant="ghost">
                     <X className="h-4 w-4 mr-2" />
@@ -717,7 +717,7 @@ export default function NewTaskPage() {
                     <Save className="h-4 w-4 mr-2" />
                     Enregistrer comme brouillon
                   </Button>
-                  <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
+                  <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white">
                     {isSubmitting ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -738,10 +738,10 @@ export default function NewTaskPage() {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* Quick Tips */}
-            <Card className="bg-blue-50 border-blue-200">
+            <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Lightbulb className="h-5 w-5 text-blue-600" />
+                  <Lightbulb className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   <CardTitle className="text-base">Pour une meilleure organisation</CardTitle>
                 </div>
               </CardHeader>
@@ -749,9 +749,9 @@ export default function NewTaskPage() {
                 {quickTips.map((tip, index) => (
                   <div key={index} className="flex items-start gap-2">
                     {tip.checked ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
                     ) : (
-                      <div className="h-5 w-5 rounded-full border-2 border-gray-300 mt-0.5" />
+                      <div className="h-5 w-5 rounded-full border-2 border-gray-300 dark:border-gray-600 mt-0.5" />
                     )}
                     <p className="text-sm text-muted-foreground">{tip.text}</p>
                   </div>
@@ -800,7 +800,7 @@ export default function NewTaskPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-yellow-500" />
+                  <Star className="h-5 w-5 text-yellow-500 dark:text-yellow-400" />
                   <CardTitle className="text-base">Modèles de tâches</CardTitle>
                 </div>
               </CardHeader>
@@ -808,7 +808,7 @@ export default function NewTaskPage() {
                 {taskTemplates.map((template, index) => (
                   <div
                     key={index}
-                    className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
                   >
                     <p className="text-sm font-medium text-foreground">{template.title}</p>
                     <p className="text-xs text-muted-foreground mt-1">{template.description}</p>

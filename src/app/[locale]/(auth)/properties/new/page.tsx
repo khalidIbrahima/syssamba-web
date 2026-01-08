@@ -39,7 +39,7 @@ import dynamic from 'next/dynamic';
 // Dynamically import the map editor to avoid SSR issues
 const PropertyMapEditor = dynamic(() => import('@/components/ui/property-map-editor').then(mod => ({ default: mod.PropertyMapEditor })), {
   ssr: false,
-  loading: () => <div className="h-[400px] bg-gray-100 rounded-lg flex items-center justify-center">Chargement de la carte...</div>,
+  loading: () => <div className="h-[400px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">Chargement de la carte...</div>,
 });
 
 const propertyFormSchema = z.object({
@@ -433,7 +433,7 @@ export default function NewPropertyPage() {
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
                   disabled={isSubmitting || !canCreateMore}
                 >
                   {isSubmitting ? (

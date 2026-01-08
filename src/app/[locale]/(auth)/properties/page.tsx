@@ -63,11 +63,11 @@ export default function PropertiesPage() {
 
   const getOccupancyBadge = (rate: number) => {
     if (rate === 100) {
-      return <Badge className="bg-green-500 text-white">100% occupé</Badge>;
+      return <Badge className="bg-green-500 dark:bg-green-600 text-white">100% occupé</Badge>;
     } else if (rate >= 80) {
-      return <Badge className="bg-orange-500 text-white">{rate}% occupé</Badge>;
+      return <Badge className="bg-orange-500 dark:bg-orange-600 text-white">{rate}% occupé</Badge>;
     } else {
-      return <Badge className="bg-red-500 text-white">{rate}% occupé</Badge>;
+      return <Badge className="bg-red-500 dark:bg-red-600 text-white">{rate}% occupé</Badge>;
     }
   };
 
@@ -94,7 +94,7 @@ export default function PropertiesPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-              <Building2 className="h-8 w-8 text-blue-600" />
+              <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               Gestion des biens
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -110,7 +110,7 @@ export default function PropertiesPage() {
                 reason="permission"
                 featureName="Gestion des biens"
               >
-                <Button className="bg-blue-600 hover:bg-blue-700" disabled>
+                <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white" disabled>
                   <Plus className="h-5 w-5 mr-2" />
                   Ajouter un bien
                 </Button>
@@ -118,7 +118,7 @@ export default function PropertiesPage() {
             }
           >
             <Link href="/properties/new">
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white">
                 <Plus className="h-5 w-5 mr-2" />
                 Ajouter un bien
               </Button>
@@ -177,12 +177,12 @@ export default function PropertiesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <Card key={i} className="animate-pulse overflow-hidden">
-              <div className="h-48 bg-gray-200"></div>
+              <div className="h-48 bg-gray-200 dark:bg-gray-700"></div>
               <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
               </CardContent>
             </Card>
           ))}
@@ -279,7 +279,7 @@ export default function PropertiesPage() {
                   variant={currentPage === page ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setCurrentPage(page)}
-                  className={currentPage === page ? 'bg-blue-600 text-white' : ''}
+                  className={currentPage === page ? 'bg-blue-600 dark:bg-blue-500 text-white' : ''}
                 >
                   {page}
                 </Button>

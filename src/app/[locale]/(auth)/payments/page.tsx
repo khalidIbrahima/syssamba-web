@@ -210,28 +210,28 @@ export default function PaymentsPage() {
     switch (status) {
       case 'completed':
         return (
-          <Badge className="bg-green-100 text-green-800 border-green-200">
+          <Badge className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Payé
           </Badge>
         );
       case 'pending':
         return (
-          <Badge className="bg-orange-100 text-orange-800 border-orange-200">
+          <Badge className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-700">
             <Clock className="h-3 w-3 mr-1" />
             En attente
           </Badge>
         );
       case 'failed':
         return (
-          <Badge className="bg-red-100 text-red-800 border-red-200">
+          <Badge className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700">
             <XCircle className="h-3 w-3 mr-1" />
             Échoué
           </Badge>
         );
       case 'scheduled':
         return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+          <Badge className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700">
             <Calendar className="h-3 w-3 mr-1" />
             Programmé
           </Badge>
@@ -351,8 +351,8 @@ export default function PaymentsPage() {
                       {paymentsLoading ? '...' : formatCurrency(paymentsStats.completedAmount)}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-green-600" />
+                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
               </CardContent>
@@ -367,8 +367,8 @@ export default function PaymentsPage() {
                       {paymentsLoading ? '...' : paymentsStats.completedCount}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-6 w-6 text-blue-600" />
+                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
               </CardContent>
@@ -383,8 +383,8 @@ export default function PaymentsPage() {
                       {paymentsLoading ? '...' : paymentsStats.pendingCount}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-yellow-600" />
+                  <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                   </div>
                 </div>
               </CardContent>
@@ -399,8 +399,8 @@ export default function PaymentsPage() {
                       {paymentsLoading ? '...' : paymentsStats.failedCount}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                    <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                   </div>
                 </div>
               </CardContent>
@@ -456,7 +456,7 @@ export default function PaymentsPage() {
               {paymentsLoading ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-200 rounded animate-pulse"></div>
+                    <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                   ))}
                 </div>
               ) : payments.length > 0 ? (
@@ -664,8 +664,8 @@ export default function PaymentsPage() {
                       {transfersLoading ? '...' : formatCurrency(transfersStats.totalToTransfer)}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                    <FileText className="h-6 w-6 text-blue-600" />
+                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
               </CardContent>
@@ -680,8 +680,8 @@ export default function PaymentsPage() {
                       {transfersLoading ? '...' : formatCurrency(transfersStats.transfersMade)}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                    <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
               </CardContent>
@@ -696,8 +696,8 @@ export default function PaymentsPage() {
                       {transfersLoading ? '...' : formatCurrency(transfersStats.pending)}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-yellow-600" />
+                  <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                   </div>
                 </div>
               </CardContent>
@@ -712,8 +712,8 @@ export default function PaymentsPage() {
                       {transfersLoading ? '...' : `${transfersStats.activeOwners} actifs`}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                    <Users className="h-6 w-6 text-purple-600" />
+                  <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                   </div>
                 </div>
               </CardContent>
@@ -858,7 +858,7 @@ export default function PaymentsPage() {
               {transfersLoading ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-200 rounded animate-pulse"></div>
+                    <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                   ))}
                 </div>
               ) : transfers.length > 0 ? (

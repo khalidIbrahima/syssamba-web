@@ -190,17 +190,17 @@ function SortableTaskCard({ task }: { task: any }) {
                   {priority.label}
                 </Badge>
                 {task.status === 'in_progress' && (
-                  <Badge className="bg-blue-100 text-blue-800" variant="outline">
+                  <Badge className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" variant="outline">
                     En cours
                   </Badge>
                 )}
                 {task.status === 'waiting' && (
-                  <Badge className="bg-yellow-100 text-yellow-800" variant="outline">
+                  <Badge className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200" variant="outline">
                     Révision
                   </Badge>
                 )}
                 {task.status === 'done' && (
-                  <Badge className="bg-green-100 text-green-800" variant="outline">
+                  <Badge className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" variant="outline">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Terminé
                   </Badge>
@@ -228,12 +228,12 @@ function SortableTaskCard({ task }: { task: any }) {
           {dueDateFormatted && (
             <div className={cn(
               "flex items-center gap-2 text-sm mb-2",
-              overdue ? "text-red-600" : "text-muted-foreground"
+              overdue ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
             )}>
               <Calendar className="h-4 w-4" />
               <span>{dueDateFormatted}</span>
               {overdue && (
-                <Badge className="bg-red-100 text-red-800 text-xs">
+                <Badge className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs">
                   En retard
                 </Badge>
               )}
@@ -467,9 +467,9 @@ export default function TasksPage() {
                 {[...Array(2)].map((_, i) => (
                   <Card key={i} className="animate-pulse">
                     <CardContent className="p-4">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
                     </CardContent>
                   </Card>
                 ))}
@@ -524,12 +524,12 @@ export default function TasksPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
               <Button
                 variant={viewMode === 'kanban' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('kanban')}
-                className={viewMode === 'kanban' ? 'bg-white shadow-sm' : ''}
+                className={viewMode === 'kanban' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}
               >
                 Kanban
               </Button>
@@ -537,14 +537,14 @@ export default function TasksPage() {
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
+                className={viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}
               >
                 Liste
               </Button>
             </div>
             {canCreate ? (
               <Link href="/tasks/new">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white">
                   <Plus className="h-4 w-4 mr-2" />
                   Nouvelle tâche
                 </Button>
@@ -555,7 +555,7 @@ export default function TasksPage() {
                 reason="permission"
                 featureName="Gestion des tâches"
               >
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white" disabled>
+                <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white" disabled>
                   <Plus className="h-4 w-4 mr-2" />
                   Nouvelle tâche
                 </Button>
@@ -586,7 +586,7 @@ export default function TasksPage() {
                 <div className="space-y-4">
                   {[...Array(5)].map((_, i) => (
                     <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 rounded"></div>
+                      <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
                     </div>
                   ))}
                 </div>
@@ -607,7 +607,7 @@ export default function TasksPage() {
                   </p>
                   {canCreate ? (
                     <Link href="/tasks/new">
-                      <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white">
                         <Plus className="h-4 w-4 mr-2" />
                         Nouvelle tâche
                       </Button>
@@ -618,7 +618,7 @@ export default function TasksPage() {
                       reason="permission"
                       featureName="Gestion des tâches"
                     >
-                      <Button className="bg-blue-600 hover:bg-blue-700 text-white" disabled>
+                      <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white" disabled>
                         <Plus className="h-4 w-4 mr-2" />
                         Nouvelle tâche
                       </Button>
