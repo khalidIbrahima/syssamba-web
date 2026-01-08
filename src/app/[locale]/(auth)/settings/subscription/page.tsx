@@ -126,7 +126,7 @@ export default function SubscriptionPage() {
   };
 
   const currentPlanName = currentSubscription?.planName || currentPlan || 'freemium';
-  const currentPlanDisplayName = currentSubscription?.planDisplayName || planDefinition?.display_name || 'Plan Gratuit';
+  const currentPlanDisplayName = (currentSubscription?.planDisplayName || planDefinition?.display_name || 'Plan Gratuit')?.replace(/0$/, '');
   const monthlyPrice = currentSubscription?.price || 0;
   const billingPeriod = currentSubscription?.billingPeriod || 'monthly';
   const subscriptionStatus = currentSubscription?.status || 'active';
@@ -341,7 +341,7 @@ export default function SubscriptionPage() {
                     </div>
                   )}
                   <CardHeader>
-                    <CardTitle className="text-lg">{plan.displayName}</CardTitle>
+                    <CardTitle className="text-lg">{plan.displayName?.replace(/0$/, '') || plan.name}</CardTitle>
                     <p className="text-2xl font-bold text-foreground mt-2">
                       {plan.price ? formatCurrency(parseFloat(plan.price.toString())) : 'Sur mesure'}
                       {plan.price && <span className="text-sm font-normal text-muted-foreground">/mois</span>}
@@ -426,7 +426,7 @@ export default function SubscriptionPage() {
                       )}
                       onClick={() => isDowngrade ? handleDowngrade() : handleUpgrade(plan.name)}
                     >
-                      {isDowngrade ? 'Downgrader (non recommandé)' : `Upgrader vers ${plan.displayName}`}
+                      {isDowngrade ? 'Downgrader (non recommandé)' : `Upgrader vers ${plan.displayName?.replace(/0$/, '') || plan.name}`}
                     </Button>
                   </CardContent>
                 </Card>
