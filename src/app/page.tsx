@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/lib/auth';
 import { Logo } from '@/components/logo';
+import { isSuperAdmin } from '@/lib/super-admin';
 import {
   Building2,
   Check,
@@ -28,6 +29,17 @@ const stats = [
 export default async function Home() {
   const user = await getCurrentUser();
   const isLoggedIn = !!user;
+  
+  // Check if user is super admin and redirect to admin dashboard
+  if (user) {
+    const userIsSuperAdmin = await isSuperAdmin(user.id);
+    if (userIsSuperAdmin) {
+      // Redirect to admin dashboard for super admin
+      const { redirect } = await import('next/navigation');
+      redirect('/admin/dashboard');
+      return null; // Prevent rendering the landing page
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
