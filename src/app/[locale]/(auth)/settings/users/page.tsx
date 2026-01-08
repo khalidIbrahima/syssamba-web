@@ -293,7 +293,15 @@ export default function UsersPage() {
   const users = data?.users || [];
   const invitations = data?.invitations || [];
   const totalCount = data?.totalCount || 0;
-  const stats = statsData?.stats || { activeUsers: 0, extranetTenants: 0, roleCounts: {} };
+  const stats = statsData?.stats || { 
+    activeUsers: 0, 
+    extranetTenants: 0, 
+    roleCounts: {},
+    monthlyCommissions: 0,
+    commissionChange: 0,
+    processedMessages: 0,
+    avgResponseTimeHours: 0,
+  };
   const planInfo = statsData?.plan || { usersLimit: 15, extranetTenantsLimit: 100, customDomain: null };
   const activities = activitiesData?.activities || [];
   const customRoles = customRolesData?.roles || [];
@@ -637,7 +645,7 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
                 {errors.invitationMethod && (
-                  <p className="text-sm text-red-600">{errors.invitationMethod.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{errors.invitationMethod.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -652,7 +660,7 @@ export default function UsersPage() {
                   disabled={invitationMethod === 'sms'}
                 />
                 {errors.email && (
-                  <p className="text-sm text-red-600">{errors.email.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -667,7 +675,7 @@ export default function UsersPage() {
                   disabled={invitationMethod === 'email'}
                 />
                 {errors.phone && (
-                  <p className="text-sm text-red-600">{errors.phone.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{errors.phone.message}</p>
                 )}
                 <p className="text-xs text-muted-foreground">
                   {invitationMethod === 'email' && 'Email requis pour cette méthode'}
@@ -684,7 +692,7 @@ export default function UsersPage() {
                     {...register('firstName')}
                   />
                   {errors.firstName && (
-                    <p className="text-sm text-red-600">{errors.firstName.message}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">{errors.firstName.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -695,7 +703,7 @@ export default function UsersPage() {
                     {...register('lastName')}
                   />
                   {errors.lastName && (
-                    <p className="text-sm text-red-600">{errors.lastName.message}</p>
+                    <p className="text-sm text-red-600 dark:text-red-400">{errors.lastName.message}</p>
                   )}
                 </div>
               </div>
@@ -729,7 +737,7 @@ export default function UsersPage() {
                   {...register('profileId')}
                 />
                 {errors.profileId && (
-                  <p className="text-sm text-red-600">{errors.profileId.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{errors.profileId.message}</p>
                 )}
                 {profilesLoading && (
                   <p className="text-xs text-muted-foreground">Chargement des profils...</p>
@@ -754,7 +762,7 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
                 {errors.role && (
-                  <p className="text-sm text-red-600">{errors.role.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{errors.role.message}</p>
                 )}
               </div>
               <DialogFooter>
@@ -776,7 +784,7 @@ export default function UsersPage() {
       </div>
 
       {/* Plan Info Card - Enhanced */}
-      <Card className="bg-gradient-to-br from-blue-50 via-blue-50 to-indigo-50 border-blue-200 shadow-sm">
+      <Card className="bg-gradient-to-br from-blue-50 via-blue-50 to-indigo-50 dark:from-blue-950 dark:via-blue-900 dark:to-indigo-950 border-blue-200 dark:border-blue-800 shadow-sm">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -1024,7 +1032,7 @@ export default function UsersPage() {
 
           {/* KPIs - Enhanced */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+            <Card className="border-l-4 border-l-blue-500 dark:border-l-blue-600 hover:shadow-md transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-muted-foreground">Locataires avec redevance</p>
@@ -1043,32 +1051,42 @@ export default function UsersPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+            <Card className="border-l-4 border-l-green-500 dark:border-l-green-600 hover:shadow-md transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-muted-foreground">Commissions ce mois</p>
-                  <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                 </div>
-                <p className="text-3xl font-bold text-foreground mb-2">1,247</p>
-                <div className="flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3 text-green-600" />
-                  <p className="text-xs font-medium text-green-600">+12% vs mois dernier</p>
-                </div>
+                <p className="text-3xl font-bold text-foreground mb-2">
+                  {stats.monthlyCommissions?.toLocaleString('fr-FR') || '0'}
+                </p>
+                {stats.commissionChange !== undefined && stats.commissionChange !== 0 && (
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className={`h-3 w-3 ${stats.commissionChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
+                    <p className={`text-xs font-medium ${stats.commissionChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {stats.commissionChange >= 0 ? '+' : ''}{stats.commissionChange.toFixed(0)}% vs mois dernier
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
+            <Card className="border-l-4 border-l-purple-500 dark:border-l-purple-600 hover:shadow-md transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-muted-foreground">Messages traités</p>
-                  <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <MessageSquare className="h-5 w-5 text-purple-600" />
+                  <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                    <MessageSquare className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   </div>
                 </div>
-                <p className="text-3xl font-bold text-foreground mb-2">89</p>
-                <p className="text-xs text-muted-foreground">Temps moyen: 2h</p>
+                <p className="text-3xl font-bold text-foreground mb-2">
+                  {stats.processedMessages || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Temps moyen: {stats.avgResponseTimeHours > 0 ? `${stats.avgResponseTimeHours.toFixed(1)}h` : 'N/A'}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -1140,7 +1158,7 @@ export default function UsersPage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="max-h-[600px] overflow-y-auto px-6 pb-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
+              <div className="max-h-[600px] overflow-y-auto px-6 pb-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500">
               {/* Custom Roles */}
               {customRoles.length > 0 && (
                 <>
@@ -1211,7 +1229,7 @@ export default function UsersPage() {
                         {...registerRole('name')}
                       />
                       {roleErrors.name && (
-                        <p className="text-sm text-red-600">{roleErrors.name.message}</p>
+                        <p className="text-sm text-red-600 dark:text-red-400">{roleErrors.name.message}</p>
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1225,7 +1243,7 @@ export default function UsersPage() {
                         Utilisez uniquement des lettres minuscules, chiffres et underscores
                       </p>
                       {roleErrors.slug && (
-                        <p className="text-sm text-red-600">{roleErrors.slug.message}</p>
+                        <p className="text-sm text-red-600 dark:text-red-400">{roleErrors.slug.message}</p>
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1236,7 +1254,7 @@ export default function UsersPage() {
                         {...registerRole('description')}
                       />
                       {roleErrors.description && (
-                        <p className="text-sm text-red-600">{roleErrors.description.message}</p>
+                        <p className="text-sm text-red-600 dark:text-red-400">{roleErrors.description.message}</p>
                       )}
                     </div>
                     <div className="space-y-2">
@@ -1260,7 +1278,7 @@ export default function UsersPage() {
                         </SelectContent>
                       </Select>
                       {roleErrors.color && (
-                        <p className="text-sm text-red-600">{roleErrors.color.message}</p>
+                        <p className="text-sm text-red-600 dark:text-red-400">{roleErrors.color.message}</p>
                       )}
                     </div>
                     <DialogFooter>
@@ -1387,7 +1405,7 @@ export default function UsersPage() {
                   {...registerUser('firstName')}
                 />
                 {userErrors.firstName && (
-                  <p className="text-sm text-red-600">{userErrors.firstName.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{userErrors.firstName.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -1398,7 +1416,7 @@ export default function UsersPage() {
                   {...registerUser('lastName')}
                 />
                 {userErrors.lastName && (
-                  <p className="text-sm text-red-600">{userErrors.lastName.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{userErrors.lastName.message}</p>
                 )}
               </div>
             </div>
@@ -1413,7 +1431,7 @@ export default function UsersPage() {
                   {...registerUser('email')}
                 />
                 {userErrors.email && (
-                  <p className="text-sm text-red-600">{userErrors.email.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{userErrors.email.message}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -1425,7 +1443,7 @@ export default function UsersPage() {
                   {...registerUser('phone')}
                 />
                 {userErrors.phone && (
-                  <p className="text-sm text-red-600">{userErrors.phone.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{userErrors.phone.message}</p>
                 )}
               </div>
             </div>
@@ -1454,7 +1472,7 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
                 {userErrors.profileId && (
-                  <p className="text-sm text-red-600">{userErrors.profileId.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{userErrors.profileId.message}</p>
                 )}
                 {profilesLoading && (
                   <p className="text-xs text-muted-foreground">Chargement des profils...</p>
@@ -1475,16 +1493,16 @@ export default function UsersPage() {
                   </Label>
                 </div>
                 {userErrors.isActive && (
-                  <p className="text-sm text-red-600">{userErrors.isActive.message}</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{userErrors.isActive.message}</p>
                 )}
               </div>
             </div>
 
             {editingUser && editingUser.id === data?.currentUser?.id && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <Info className="h-4 w-4 text-yellow-600" />
-                  <p className="text-sm text-yellow-800">
+                  <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
                     Vous ne pouvez pas modifier votre propre profil.
                   </p>
                 </div>
