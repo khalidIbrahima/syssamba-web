@@ -541,7 +541,7 @@ export default function UsersPage() {
     return (
       <Badge 
         variant={profile.isSystemProfile ? "default" : "outline"}
-        className={profile.isSystemProfile ? "bg-blue-100 text-blue-800 border-blue-200" : ""}
+        className={profile.isSystemProfile ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700" : ""}
       >
         {profile.name}
         {profile.isGlobal && ' (Global)'}
@@ -601,7 +601,7 @@ export default function UsersPage() {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button 
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white"
                 disabled={
                   planInfo.usersLimit !== null && 
                   planInfo.usersLimit !== -1 && 
@@ -798,21 +798,21 @@ export default function UsersPage() {
                 </div>
                 <div className="flex items-center gap-6 mt-2">
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-blue-600" />
+                    <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     <span className="text-sm font-medium text-muted-foreground">
                       {stats.activeUsers}/{planInfo.usersLimit || '∞'} utilisateurs
                     </span>
                     {planInfo.usersLimit && (
-                      <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="w-24 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-blue-600 transition-all duration-300"
+                          className="h-full bg-blue-600 dark:bg-blue-500 transition-all duration-300"
                           style={{ width: `${Math.min((stats.activeUsers / planInfo.usersLimit) * 100, 100)}%` }}
                         />
                       </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-indigo-600" />
+                    <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                     <span className="text-sm font-medium text-muted-foreground">
                       {stats.extranetTenants}/{planInfo.extranetTenantsLimit || '∞'} locataires
                     </span>
@@ -822,9 +822,9 @@ export default function UsersPage() {
             </div>
             <div className="flex items-center gap-3">
               {planInfo.customDomain && (
-                <div className="px-3 py-1.5 bg-white/60 backdrop-blur-sm rounded-lg border border-blue-200">
+                <div className="px-3 py-1.5 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-lg border border-blue-200 dark:border-blue-800">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                    <Sparkles className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                     <span className="text-xs font-medium text-muted-foreground">{planInfo.customDomain}</span>
                   </div>
                 </div>
@@ -832,14 +832,14 @@ export default function UsersPage() {
               {canAccessObject('Organization', 'edit') && (
                 <Button 
                   variant="outline" 
-                  className="bg-white hover:bg-gray-50 shadow-sm border-blue-200"
+                  className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm border-blue-200 dark:border-blue-800 text-foreground"
                   onClick={handleEditFeatures}
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Gérer fonctionnalités
                 </Button>
               )}
-              <Button variant="outline" className="bg-white hover:bg-gray-50 shadow-sm border-blue-200">
+              <Button variant="outline" className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm border-blue-200 dark:border-blue-800 text-foreground">
                 <ArrowUpRight className="h-4 w-4 mr-2" />
                 Upgrader
               </Button>
@@ -861,8 +861,8 @@ export default function UsersPage() {
                     {stats.activeUsers} utilisateur{stats.activeUsers > 1 ? 's' : ''} sur {planInfo.usersLimit || '∞'} autorisé{planInfo.usersLimit !== 1 ? 's' : ''}
                   </CardDescription>
                 </div>
-                <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-blue-600" />
+                <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
             </CardHeader>
@@ -904,7 +904,7 @@ export default function UsersPage() {
               {isLoading ? (
                 <div className="space-y-3">
                   {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-20 bg-gray-200 rounded animate-pulse"></div>
+                    <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                   ))}
                 </div>
               ) : paginatedUsers.length > 0 ? (
@@ -913,18 +913,18 @@ export default function UsersPage() {
                     {paginatedUsers.map((user: any) => (
                       <div
                         key={user.id}
-                        className="group flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md bg-white transition-all duration-200 cursor-pointer"
+                        className="group flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md bg-white dark:bg-gray-800 transition-all duration-200 cursor-pointer"
                       >
                         <div className="flex items-center gap-4 flex-1">
                           <div className="relative">
-                            <Avatar className="h-12 w-12 ring-2 ring-gray-100 group-hover:ring-blue-200 transition-all">
+                            <Avatar className="h-12 w-12 ring-2 ring-gray-100 dark:ring-gray-700 group-hover:ring-blue-200 dark:group-hover:ring-blue-700 transition-all">
                               <AvatarImage src={user.avatarUrl} />
                               <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold">
                                 {user.firstName?.[0] || ''}{user.lastName?.[0] || ''}
                               </AvatarFallback>
                             </Avatar>
                             {user.isActive && (
-                              <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 bg-green-500 border-2 border-white rounded-full"></div>
+                              <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -950,13 +950,13 @@ export default function UsersPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {user.isActive ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              <div className="h-2 w-2 rounded-full bg-green-500 mr-1.5 animate-pulse"></div>
+                            <Badge variant="outline" className="bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700">
+                              <div className="h-2 w-2 rounded-full bg-green-500 dark:bg-green-400 mr-1.5 animate-pulse"></div>
                               Actif
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-gray-50 text-muted-foreground border-gray-200">
-                              <div className="h-2 w-2 rounded-full bg-gray-400 mr-1.5"></div>
+                            <Badge variant="outline" className="bg-gray-50 dark:bg-gray-800 text-muted-foreground border-gray-200 dark:border-gray-700">
+                              <div className="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500 mr-1.5"></div>
                               Inactif
                             </Badge>
                           )}
@@ -1036,8 +1036,8 @@ export default function UsersPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-medium text-muted-foreground">Locataires avec redevance</p>
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-blue-600" />
+                  <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
                 <p className="text-3xl font-bold text-foreground mb-2">
@@ -1106,11 +1106,11 @@ export default function UsersPage() {
                     return (
                       <div 
                         key={activity.id || index} 
-                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
                       >
                         <div className="relative flex-shrink-0">
-                          <div className={`absolute top-0 left-0 h-3 w-3 rounded-full ${activityColor} ring-2 ring-white`}></div>
-                          <Avatar className="h-9 w-9 ring-2 ring-gray-100 group-hover:ring-gray-200 transition-all">
+                          <div className={`absolute top-0 left-0 h-3 w-3 rounded-full ${activityColor} ring-2 ring-white dark:ring-gray-800`}></div>
+                          <Avatar className="h-9 w-9 ring-2 ring-gray-100 dark:ring-gray-700 group-hover:ring-gray-200 dark:group-hover:ring-gray-600 transition-all">
                             <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-600 text-white text-xs font-semibold">
                               {activity.user?.firstName?.[0] || ''}{activity.user?.lastName?.[0] || ''}
                             </AvatarFallback>
@@ -1172,7 +1172,7 @@ export default function UsersPage() {
                     return (
                       <div
                         key={customRole.id}
-                        className="group p-4 border border-gray-200 rounded-lg hover:border-purple-300 hover:shadow-sm bg-white transition-all duration-200"
+                        className="group p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-sm bg-white dark:bg-gray-800 transition-all duration-200"
                       >
                         <div className="flex items-center justify-between mb-3">
                           <Badge className={`${customRole.color || 'bg-gray-100 text-foreground'} text-xs font-semibold px-2.5 py-1`}>
@@ -1189,11 +1189,11 @@ export default function UsersPage() {
                           <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{customRole.description}</p>
                         )}
                         <div className="flex flex-wrap gap-1.5">
-                          <span className="text-xs px-2.5 py-1 bg-purple-100 text-purple-700 rounded-md font-medium">
+                          <span className="text-xs px-2.5 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-md font-medium">
                             Personnalisé
                           </span>
                           {customRole.slug && (
-                            <span className="text-xs px-2.5 py-1 bg-gray-100 text-muted-foreground rounded-md font-medium">
+                            <span className="text-xs px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-muted-foreground rounded-md font-medium">
                               {customRole.slug}
                             </span>
                           )}
@@ -1205,7 +1205,7 @@ export default function UsersPage() {
               )}
               </div>
               {/* Create Role Button - Fixed at bottom */}
-              <div className="px-6 pb-6 pt-4 border-t border-gray-200 bg-gray-50/50">
+              <div className="px-6 pb-6 pt-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                 <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full">
@@ -1340,7 +1340,7 @@ export default function UsersPage() {
                     {features.map((feature: any) => (
                       <div 
                         key={feature.key} 
-                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                       >
                         <div className="flex-1">
                           <Label htmlFor={`feature-${feature.key}`} className="cursor-pointer">
