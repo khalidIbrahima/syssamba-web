@@ -101,31 +101,23 @@ export async function POST(req: Request) {
     }
 
     // Check lots limit from subscription/plan
-    const subscriptions = await db.select<{ plan_id: string }>('subscriptions', {
-      eq: { organization_id: organization.id },
-      orderBy: { column: 'created_at', ascending: true },
-      limit: 1,
-    });
-
-    let lotsLimit: number | null = null;
-    if (subscriptions[0]?.plan_id) {
-      const plan = await db.selectOne<{ lots_limit: number | null }>('plans', {
-        eq: { id: subscriptions[0].plan_id },
-      });
-      
-      lotsLimit = plan?.lots_limit ?? null;
-    }
+    const { getOrganizationPlanLimits } = await import('@/lib/permissions');
+    const { lotsLimit } = await getOrganizationPlanLimits(organization.id);
 
     const currentCount = await db.count('units', {
       organization_id: organization.id,
     });
 
+    // Check if adding one more unit would exceed the limit
     if (lotsLimit !== null && currentCount >= lotsLimit) {
       return NextResponse.json(
         { 
-          error: `Limite de lots dépassée. Vous avez ${currentCount} lots et la limite est de ${lotsLimit}.`,
+          error: `Limite de lots atteinte. Vous avez ${currentCount} lots et la limite de votre plan est de ${lotsLimit}. Veuillez mettre à niveau votre plan pour créer plus de lots.`,
+          limitReached: true,
+          currentCount,
+          limit: lotsLimit,
         },
-        { status: 400 }
+        { status: 403 }
       );
     }
 

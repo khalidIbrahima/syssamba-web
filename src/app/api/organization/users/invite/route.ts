@@ -65,35 +65,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check plan user limits before creating invitation
-    const subscriptions = await db.select<{
-      plan_id: string;
-      status: string;
-    }>('subscriptions', {
-      eq: { organization_id: organization.id },
-      limit: 1,
-    });
-
-    const subscription = subscriptions[0];
-    let usersLimit: number | null = null;
-
-    if (subscription && (subscription.status === 'active' || subscription.status === 'trialing')) {
-      const planRecord = await db.selectOne<{
-        users_limit: number | null;
-      }>('plans', {
-        eq: { id: subscription.plan_id },
-      });
-
-      if (planRecord) {
-        usersLimit = planRecord.users_limit;
-      }
-    }
-
-    // If no plan found, use freemium limits
-    if (usersLimit === null) {
-      const { getPlanLimits } = await import('@/lib/permissions');
-      const limits = await getPlanLimits('freemium');
-      usersLimit = limits.users;
-    }
+    const { getOrganizationPlanLimits } = await import('@/lib/permissions');
+    const { usersLimit } = await getOrganizationPlanLimits(organization.id);
 
     // Count current active users
     const activeUsers = await db.select<{ id: string }>('users', {
@@ -104,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Check if adding one more user would exceed the limit
     // Note: usersLimit can be null (unlimited) or a number
-    if (usersLimit !== null && usersLimit !== -1 && currentUserCount >= usersLimit) {
+    if (usersLimit !== null && currentUserCount >= usersLimit) {
       return NextResponse.json(
         { 
           error: `Limite d'utilisateurs atteinte. Votre plan permet ${usersLimit} utilisateur${usersLimit > 1 ? 's' : ''}. Veuillez mettre à niveau votre plan pour inviter plus d'utilisateurs.`,

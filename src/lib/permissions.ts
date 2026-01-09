@@ -160,3 +160,74 @@ export async function supportsWhiteLabel(plan: PlanName): Promise<boolean> {
   return await canAccessFeature(plan, 'white_label_option') || 
          await canAccessFeature(plan, 'full_white_label');
 }
+
+/**
+ * Get plan limits for an organization
+ * Returns the limits from the active subscription's plan
+ * Falls back to freemium if no active subscription
+ */
+export async function getOrganizationPlanLimits(organizationId: string): Promise<{
+  lotsLimit: number | null;
+  usersLimit: number | null;
+  extranetTenantsLimit: number | null;
+}> {
+  const { db } = await import('./db');
+  
+  try {
+    // Get active subscription for the organization
+    const subscriptions = await db.select<{
+      plan_id: string;
+      status: string;
+    }>('subscriptions', {
+      eq: { organization_id: organizationId },
+      orderBy: { column: 'created_at', ascending: false },
+      limit: 1,
+    });
+
+    const subscription = subscriptions[0];
+
+    // If no active subscription, use freemium limits
+    if (!subscription || (subscription.status !== 'active' && subscription.status !== 'trialing')) {
+      const limits = await getPlanLimits('freemium');
+      return {
+        lotsLimit: limits.lots === -1 ? null : limits.lots,
+        usersLimit: limits.users === -1 ? null : limits.users,
+        extranetTenantsLimit: limits.extranetTenants === -1 ? null : limits.extranetTenants,
+      };
+    }
+
+    // Get plan limits from database
+    const plan = await db.selectOne<{
+      lots_limit: number | null;
+      users_limit: number | null;
+      extranet_tenants_limit: number | null;
+    }>('plans', {
+      eq: { id: subscription.plan_id },
+    });
+
+    if (!plan) {
+      // Fallback to freemium if plan not found
+      const limits = await getPlanLimits('freemium');
+      return {
+        lotsLimit: limits.lots === -1 ? null : limits.lots,
+        usersLimit: limits.users === -1 ? null : limits.users,
+        extranetTenantsLimit: limits.extranetTenants === -1 ? null : limits.extranetTenants,
+      };
+    }
+
+    return {
+      lotsLimit: plan.lots_limit,
+      usersLimit: plan.users_limit,
+      extranetTenantsLimit: plan.extranet_tenants_limit,
+    };
+  } catch (error) {
+    console.error('Error getting organization plan limits:', error);
+    // Fallback to freemium on error
+    const limits = await getPlanLimits('freemium');
+    return {
+      lotsLimit: limits.lots === -1 ? null : limits.lots,
+      usersLimit: limits.users === -1 ? null : limits.users,
+      extranetTenantsLimit: limits.extranetTenants === -1 ? null : limits.extranetTenants,
+    };
+  }
+}

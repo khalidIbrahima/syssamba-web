@@ -74,36 +74,43 @@ export async function POST(req: Request) {
     // Validate input
     const validatedData = createPropertySchema.parse(body);
 
-    // Check lots limit if totalUnits is provided
+    // Check lots limit - always check, even if totalUnits is not provided
+    // because properties can be created without units initially, but we need to ensure
+    // the organization can still create units if needed
+    const { getOrganizationPlanLimits } = await import('@/lib/permissions');
+    const { lotsLimit } = await getOrganizationPlanLimits(organization.id);
+
+    // Get current usage
+    const currentCount = await db.count('units', {
+      organization_id: organization.id,
+    });
+
+    // If totalUnits is provided, check if adding them would exceed the limit
     if (validatedData.totalUnits) {
-      // Get plan limits from subscription/plan
-      const subscriptions = await db.select<{ plan_id: string }>('subscriptions', {
-        eq: { organization_id: organization.id },
-        orderBy: { column: 'created_at', ascending: true },
-        limit: 1,
-      });
-      const subscription = subscriptions[0];
-
-      let lotsLimit: number | null = null;
-      if (subscription?.plan_id) {
-        const plan = await db.selectOne<{ lots_limit: number | null }>('plans', {
-          eq: { id: subscription.plan_id },
-        });
-        
-        lotsLimit = plan?.lots_limit ?? null;
-      }
-
-      // Get current usage
-      const currentCount = await db.count('units', {
-        organization_id: organization.id,
-      });
-
       if (lotsLimit !== null && currentCount + validatedData.totalUnits > lotsLimit) {
         return NextResponse.json(
           { 
-            error: `Limite de lots dépassée. Vous avez ${currentCount} lots et la limite est de ${lotsLimit}. Vous ne pouvez pas ajouter ${validatedData.totalUnits} lots supplémentaires.`,
+            error: `Limite de lots dépassée. Vous avez ${currentCount} lots et la limite de votre plan est de ${lotsLimit}. Vous ne pouvez pas ajouter ${validatedData.totalUnits} lots supplémentaires. Veuillez mettre à niveau votre plan.`,
+            limitReached: true,
+            currentCount,
+            limit: lotsLimit,
+            requestedUnits: validatedData.totalUnits,
           },
-          { status: 400 }
+          { status: 403 }
+        );
+      }
+    } else {
+      // Even without totalUnits, check if the limit is already reached
+      // This prevents creating properties when no more units can be added
+      if (lotsLimit !== null && currentCount >= lotsLimit) {
+        return NextResponse.json(
+          { 
+            error: `Limite de lots atteinte. Vous avez ${currentCount} lots et la limite de votre plan est de ${lotsLimit}. Vous ne pouvez pas créer de nouvelles propriétés. Veuillez mettre à niveau votre plan.`,
+            limitReached: true,
+            currentCount,
+            limit: lotsLimit,
+          },
+          { status: 403 }
         );
       }
     }

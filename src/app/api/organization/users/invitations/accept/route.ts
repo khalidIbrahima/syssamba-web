@@ -93,6 +93,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check plan user limits before creating user
+    const { getOrganizationPlanLimits } = await import('@/lib/permissions');
+    const { usersLimit } = await getOrganizationPlanLimits(invitation.organization_id);
+
+    // Count current active users
+    const activeUsers = await db.select<{ id: string }>('users', {
+      eq: { organization_id: invitation.organization_id, is_active: true },
+    });
+
+    const currentUserCount = activeUsers.length;
+
+    // Check if adding one more user would exceed the limit
+    if (usersLimit !== null && currentUserCount >= usersLimit) {
+      return NextResponse.json(
+        { 
+          error: `Limite d'utilisateurs atteinte. L'organisation a atteint sa limite de ${usersLimit} utilisateur${usersLimit > 1 ? 's' : ''}. Veuillez contacter l'administrateur pour mettre à niveau le plan.`,
+          limitReached: true,
+          currentCount: currentUserCount,
+          limit: usersLimit,
+        },
+        { status: 403 }
+      );
+    }
+
     // Create user in Supabase Auth
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: invitation.email,
