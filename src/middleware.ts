@@ -90,7 +90,61 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Main domain or no subdomain - continue with normal routing
+  // Main domain or no subdomain - check if user should be redirected to their subdomain
+  // Only redirect authenticated users accessing protected routes
+  // Extract locale from pathname for route checking
+  const localeMatch = pathname.match(/^\/(fr|en)(\/|$)/);
+  const pathnameWithoutLocale = localeMatch 
+    ? pathname.replace(`/${localeMatch[1]}`, '') || '/' 
+    : pathname;
+  const isPublicRoute = publicRoutes.some(route => pathnameWithoutLocale === route || pathnameWithoutLocale.startsWith(route + '/'));
+  const isProtectedRoute = protectedRoutes.some(route => pathnameWithoutLocale.startsWith(route));
+  
+  // If it's a protected route, check if user should be redirected to their subdomain
+  if (isProtectedRoute && !isPublicRoute) {
+    try {
+      // Skip during build time
+      if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        // Continue with normal routing
+      } else {
+        const supabase = createMiddlewareClient(req);
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Get user's organization from database
+          const dbUser = await db.selectOne<{
+            id: string;
+            organization_id: string | null;
+          }>('users', {
+            eq: { sb_user_id: user.id },
+          });
+          
+          // If user has an organization, check if it has a subdomain
+          if (dbUser && dbUser.organization_id) {
+            const userOrg = await db.selectOne<{
+              subdomain: string | null;
+            }>('organizations', {
+              eq: { id: dbUser.organization_id },
+            });
+            
+            // Redirect to user's subdomain if it exists
+            if (userOrg?.subdomain) {
+              // Preserve locale and pathname in redirect
+              const userSubdomainUrl = new URL(pathname, `https://${userOrg.subdomain}.${MAIN_DOMAIN}`);
+              userSubdomainUrl.search = url.search;
+              console.log(`[Middleware] Auto-redirecting user ${user.id} to their subdomain: ${userOrg.subdomain}`);
+              return NextResponse.redirect(userSubdomainUrl);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[Middleware] Error checking user subdomain redirect:', error);
+      // Continue with normal routing on error
+    }
+  }
+  
+  // Continue with normal routing
   const response = intlMiddleware(req);
   
   // If intl middleware redirected (e.g., to add locale), return it
