@@ -76,8 +76,21 @@ export async function GET(request: NextRequest) {
         } else if (isSystemAdmin && !dbUser.organization_id) {
           // System Admin without organization - redirect to setup
           redirectPath = '/setup';
+        } else if (!isSystemAdmin && dbUser.organization_id) {
+          // Regular user: check if organization is configured
+          const organization = await db.selectOne<{
+            is_configured: boolean;
+          }>('organizations', {
+            eq: { id: dbUser.organization_id },
+          });
+          
+          // Regular users cannot access unconfigured organizations
+          if (!organization?.is_configured) {
+            redirectPath = '/subscription-inactive';
+          }
+          // else: org is configured, use default /dashboard
         }
-        // else: regular user or admin with configured org, use default /dashboard
+        // else: regular user without org, use default /dashboard
         
         // Check if user's organization has a subdomain and redirect to it
         if (dbUser.organization_id) {

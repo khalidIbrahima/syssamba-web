@@ -133,45 +133,68 @@ export default async function AuthLayout({
         // If they reach here, they're accessing admin pages or other allowed routes
         // No additional redirects needed - the check above already redirected them from org routes
       } else {
-        // Regular user: allow access even without organization
-        // Only System Administrators are redirected to setup when org is not configured
-        // Regular users can access the dashboard and other features
+        // Regular user: check if organization is configured
+        if (user.organizationId) {
+          // Check if organization is configured
+          const organization = await db.selectOne<{
+            id: string;
+            is_configured: boolean;
+          }>('organizations', {
+            eq: { id: user.organizationId },
+          });
 
-        // Check subscription status for users with organization
-        const subscriptions = await db.select<{
-          id: string;
-          status: string;
-        }>('subscriptions', {
-          eq: { organization_id: user.organizationId },
-          limit: 1,
-        });
+          const organizationIsConfigured = organization?.is_configured === true;
 
-        const subscription = subscriptions[0];
-        const hasActiveSubscription = subscription && 
-          (subscription.status === 'active' || subscription.status === 'trialing');
-
-        // Check if user is organization admin (can edit Organization)
-        const canEditOrg = await canUserAccessObject(user.id, 'Organization', 'edit');
-        
-        // If subscription is inactive, handle redirects
-        if (!hasActiveSubscription && !isSubscriptionPage) {
-          if (canEditOrg) {
-            // Admin user: redirect to subscription setup page
-            redirect('/settings/subscription');
-            return;
-          } else {
-            // Non-admin user: redirect to inactive subscription page
-            redirect('/subscription-inactive');
-            return;
+          // Block regular users from accessing unconfigured organizations
+          if (!organizationIsConfigured) {
+            // Regular user cannot access unconfigured organization
+            // Redirect to a message page or show error
+            if (!isSubscriptionInactivePage) {
+              redirect('/subscription-inactive'); // Reuse this page or create a new one
+              return;
+            }
           }
-        }
 
-        if (canEditOrg) {
-          // Organization admin - allow access to all pages including dashboard
-          // No redirect needed
+          // Organization is configured - continue with normal checks
+          // Check subscription status for users with organization
+          const subscriptions = await db.select<{
+            id: string;
+            status: string;
+          }>('subscriptions', {
+            eq: { organization_id: user.organizationId },
+            limit: 1,
+          });
+
+          const subscription = subscriptions[0];
+          const hasActiveSubscription = subscription && 
+            (subscription.status === 'active' || subscription.status === 'trialing');
+
+          // Check if user is organization admin (can edit Organization)
+          const canEditOrg = await canUserAccessObject(user.id, 'Organization', 'edit');
+          
+          // If subscription is inactive, handle redirects
+          if (!hasActiveSubscription && !isSubscriptionPage) {
+            if (canEditOrg) {
+              // Admin user: redirect to subscription setup page
+              redirect('/settings/subscription');
+              return;
+            } else {
+              // Non-admin user: redirect to inactive subscription page
+              redirect('/subscription-inactive');
+              return;
+            }
+          }
+
+          if (canEditOrg) {
+            // Organization admin - allow access to all pages including dashboard
+            // No redirect needed
+          } else {
+            // Regular user with configured organization - allow access (permissions checked in page components)
+            // User has configured organization - allow access to dashboard and other pages
+          }
         } else {
-          // Regular user with organization - allow access (permissions checked in page components)
-          // User has organization - allow access to dashboard and other pages
+          // Regular user without organization - allow access (no organization to check)
+          // They can access the dashboard but won't see organization-specific data
         }
       }
     } catch (error) {

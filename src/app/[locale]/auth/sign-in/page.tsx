@@ -160,8 +160,12 @@ export default function SignInPage() {
       } else if (isSystemAdmin && !hasOrganization) {
         // System Admin without organization - redirect to setup
         redirectPath = '/setup';
+      } else if (!isSystemAdmin && hasOrganization && !organizationConfigured) {
+        // Regular user with unconfigured organization - redirect to subscription inactive page
+        // They cannot access the organization until it's configured by an admin
+        redirectPath = '/subscription-inactive';
       } else {
-        // Regular user or admin with configured org - go to dashboard
+        // Regular user with configured org or admin with configured org - go to dashboard
         redirectPath = isValidRedirect ? redirectParam : '/dashboard';
       }
 
