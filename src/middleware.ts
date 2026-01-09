@@ -106,6 +106,7 @@ async function handleNormalRouting(
   response: NextResponse,
   pathname: string
 ): Promise<NextResponse> {
+  const url = new URL(req.url);
   // Extract locale from pathname
   const localeMatch = pathname.match(/^\/(fr|en)(\/|$)/);
   const locale = localeMatch ? localeMatch[1] : 'fr';
