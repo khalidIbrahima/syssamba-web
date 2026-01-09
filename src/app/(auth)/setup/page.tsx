@@ -116,6 +116,30 @@ export default function SetupPage() {
   const { data: currentUser } = useDataQuery(['currentUser'], getCurrentUser);
   const countries = countriesData?.countries || [];
 
+  // CRITICAL: Check if organization is already configured and redirect away
+  useEffect(() => {
+    async function checkOrganizationStatus() {
+      if (currentUser?.organizationId) {
+        try {
+          const response = await fetch('/api/organization/status');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.isConfigured) {
+              // Organization is already configured - redirect to dashboard
+              router.push('/dashboard');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking organization status:', error);
+        }
+      }
+    }
+    
+    if (currentUser) {
+      checkOrganizationStatus();
+    }
+  }, [currentUser, router]);
+
   // Pre-fill organization name from user data
   useEffect(() => {
     if (currentUser && !formData.organizationName) {

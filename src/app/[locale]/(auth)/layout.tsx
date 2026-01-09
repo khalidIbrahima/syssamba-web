@@ -36,18 +36,46 @@ export default async function AuthLayout({
   const isDashboardPage = pathname === '/dashboard' || pathname.startsWith('/dashboard');
   const isAuthPage = pathname.startsWith('/auth');
 
-  // Check if super admin is trying to access setup page - NEVER allow this
+  // CRITICAL: Check setup page access FIRST - must block if org is already configured
   if (isSetupPage) {
     const userIsSuperAdmin = await isSuperAdmin(user.id);
-      if (userIsSuperAdmin) {
-        // Super admin should NEVER access setup page - redirect to admin
-        redirect(`/${locale}/admin/select-organization`);
-        return;
+    if (userIsSuperAdmin) {
+      // Super admin should NEVER access setup page - redirect to admin
+      redirect(`/${locale}/admin/select-organization`);
+      return;
+    }
+
+    // Check if organization is already configured and redirect away
+    try {
+      const dbUser = await db.selectOne<{
+        id: string;
+        organization_id: string | null;
+      }>('users', {
+        eq: { id: user.id },
+      });
+
+      if (dbUser?.organization_id) {
+        // Check if organization is configured
+        const organization = await db.selectOne<{
+          id: string;
+          is_configured: boolean;
+        }>('organizations', {
+          eq: { id: dbUser.organization_id },
+        });
+
+        // If organization is already configured, redirect away from setup
+        if (organization?.is_configured === true) {
+          redirect(`/${locale}/dashboard`);
+          return;
+        }
       }
+    } catch (error) {
+      console.error('Error checking organization configuration for setup page:', error);
+    }
   }
 
   // Check organization configuration
-  // Allow access to auth pages and setup page without organization checks
+  // Allow access to auth pages and setup page without organization checks (setup is checked above)
   if (!isAuthPage && !isSetupPage && !isAdminSelectPage) {
     try {
       const dbUser = await db.selectOne<{

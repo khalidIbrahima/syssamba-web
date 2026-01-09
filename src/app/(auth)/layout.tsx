@@ -28,8 +28,38 @@ export default async function AuthLayout({
   const isSubscriptionPage = pathname.includes('/subscription') || pathname.includes('/settings/subscription');
   const isAuthPage = pathname.startsWith('/auth');
 
+  // CRITICAL: Check setup page access FIRST - must block if org is already configured
+  if (isSetupPage) {
+    try {
+      const dbUser = await db.selectOne<{
+        id: string;
+        organization_id: string | null;
+      }>('users', {
+        eq: { id: user.id },
+      });
+
+      if (dbUser?.organization_id) {
+        // Check if organization is configured
+        const organization = await db.selectOne<{
+          id: string;
+          is_configured: boolean;
+        }>('organizations', {
+          eq: { id: dbUser.organization_id },
+        });
+
+        // If organization is already configured, redirect away from setup
+        if (organization?.is_configured === true) {
+          redirect('/dashboard');
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error checking organization configuration for setup page:', error);
+    }
+  }
+
   // Check organization configuration
-  // Allow access to auth pages and setup page without organization checks
+  // Allow access to auth pages and setup page without organization checks (setup is checked above)
   if (!isAuthPage && !isSetupPage && !isAdminSelectPage && !isSubscriptionInactivePage) {
     try {
       const dbUser = await db.selectOne<{
