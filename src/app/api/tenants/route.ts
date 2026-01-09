@@ -22,7 +22,7 @@ const createTenantSchema = z.object({
  * GET /api/tenants
  * Get all tenants for the current organization
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await checkAuth();
     
@@ -38,6 +38,16 @@ export async function GET() {
       return NextResponse.json(
         { error: 'Organization not found' },
         { status: 404 }
+      );
+    }
+
+    // Validate domain access - ensure user can only access their organization's domain
+    const { validateDomainAccess } = await import('@/lib/auth-helpers');
+    const domainValidation = await validateDomainAccess(req);
+    if (!domainValidation.isValid) {
+      return NextResponse.json(
+        { error: domainValidation.error || 'Access denied' },
+        { status: 403 }
       );
     }
 
@@ -261,6 +271,16 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Organization not found' },
         { status: 404 }
+      );
+    }
+
+    // Validate domain access - ensure user can only access their organization's domain
+    const { validateDomainAccess } = await import('@/lib/auth-helpers');
+    const domainValidation = await validateDomainAccess(req);
+    if (!domainValidation.isValid) {
+      return NextResponse.json(
+        { error: domainValidation.error || 'Access denied' },
+        { status: 403 }
       );
     }
 

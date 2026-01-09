@@ -140,6 +140,42 @@ async function handleNormalRouting(
         signInUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(signInUrl);
       }
+
+      // Validate domain access: ensure user can only access their organization's subdomain
+      const organizationIdFromHeader = req.headers.get('x-organization-id');
+      if (organizationIdFromHeader) {
+        // Get user's organization from database
+        const dbUser = await db.selectOne<{
+          id: string;
+          organization_id: string | null;
+        }>('users', {
+          eq: { sb_user_id: user.id },
+        });
+
+        // If user exists in database, validate organization access
+        if (dbUser && dbUser.organization_id) {
+          if (dbUser.organization_id !== organizationIdFromHeader) {
+            console.log(`[Middleware] User ${user.id} attempted to access organization ${organizationIdFromHeader} but belongs to ${dbUser.organization_id}`);
+            // Redirect to their own organization's subdomain or main domain
+            const userOrg = await db.selectOne<{
+              subdomain: string | null;
+            }>('organizations', {
+              eq: { id: dbUser.organization_id },
+            });
+
+            if (userOrg?.subdomain) {
+              const userSubdomainUrl = new URL(pathnameWithoutLocale, `https://${userOrg.subdomain}.${MAIN_DOMAIN}`);
+              userSubdomainUrl.search = url.search;
+              return NextResponse.redirect(userSubdomainUrl);
+            } else {
+              // Redirect to main domain if no subdomain
+              const mainDomainUrl = new URL(pathnameWithoutLocale, `https://${MAIN_DOMAIN}`);
+              mainDomainUrl.search = url.search;
+              return NextResponse.redirect(mainDomainUrl);
+            }
+          }
+        }
+      }
     } catch (error) {
       console.log(`[Middleware] Auth error for ${pathnameWithoutLocale}:`, error);
       const signInUrl = new URL(`/${locale}/auth/sign-in`, req.url);

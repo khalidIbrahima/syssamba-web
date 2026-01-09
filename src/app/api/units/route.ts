@@ -44,6 +44,16 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate domain access - ensure user can only access their organization's domain
+    const { validateDomainAccess } = await import('@/lib/auth-helpers');
+    const domainValidation = await validateDomainAccess(req);
+    if (!domainValidation.isValid) {
+      return NextResponse.json(
+        { error: domainValidation.error || 'Access denied' },
+        { status: 403 }
+      );
+    }
+
     // Check profile permissions for Unit creation
     const userRecord = await db.selectOne<{
       profile_id: string | null;
@@ -214,7 +224,7 @@ export async function POST(req: Request) {
  * GET /api/units
  * Get all units for the current organization
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const { userId } = await checkAuth();
     
@@ -230,6 +240,16 @@ export async function GET() {
       return NextResponse.json(
         { error: 'Organization not found' },
         { status: 404 }
+      );
+    }
+
+    // Validate domain access - ensure user can only access their organization's domain
+    const { validateDomainAccess } = await import('@/lib/auth-helpers');
+    const domainValidation = await validateDomainAccess(req);
+    if (!domainValidation.isValid) {
+      return NextResponse.json(
+        { error: domainValidation.error || 'Access denied' },
+        { status: 403 }
       );
     }
 

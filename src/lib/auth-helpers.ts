@@ -38,6 +38,7 @@ export async function getCurrentOrganization() {
     id: string;
     name: string;
     slug: string;
+    subdomain: string | null;
     type: string;
     country: string | null;
     is_configured: boolean;
@@ -58,6 +59,7 @@ export async function getCurrentOrganization() {
     id: organization.id,
     name: organization.name,
     slug: organization.slug,
+    subdomain: organization.subdomain,
     type: organization.type,
     country: organization.country,
     isConfigured: organization.is_configured,
@@ -67,4 +69,97 @@ export async function getCurrentOrganization() {
     createdAt: organization.created_at,
     updatedAt: organization.updated_at,
   };
+}
+
+/**
+ * Validate that the user can access the organization from the subdomain
+ * This ensures users can only access their own organization's domain
+ * 
+ * @param request - The incoming request (for extracting headers/subdomain)
+ * @returns Object with isValid flag and error message if invalid
+ */
+export async function validateDomainAccess(request?: Request): Promise<{
+  isValid: boolean;
+  error?: string;
+  organizationId?: string;
+}> {
+  const user = await getAuthUser();
+  
+  if (!user || !user.organizationId) {
+    return {
+      isValid: false,
+      error: 'User not authenticated or has no organization',
+    };
+  }
+
+  // If no request provided, skip subdomain validation (for API routes without subdomain context)
+  if (!request) {
+    return {
+      isValid: true,
+      organizationId: user.organizationId,
+    };
+  }
+
+  // Extract subdomain from request headers (set by middleware)
+  const subdomain = request.headers.get('x-subdomain');
+  const organizationIdFromHeader = request.headers.get('x-organization-id');
+
+  // If no subdomain in headers, allow access (main domain or no subdomain routing)
+  if (!subdomain && !organizationIdFromHeader) {
+    return {
+      isValid: true,
+      organizationId: user.organizationId,
+    };
+  }
+
+  // Get user's organization with subdomain
+  const organization = await db.selectOne<{
+    id: string;
+    subdomain: string | null;
+    slug: string;
+  }>('organizations', {
+    eq: { id: user.organizationId },
+  });
+
+  if (!organization) {
+    return {
+      isValid: false,
+      error: 'Organization not found',
+    };
+  }
+
+  // Validate subdomain matches user's organization
+  if (subdomain && organization.subdomain !== subdomain) {
+    return {
+      isValid: false,
+      error: 'Access denied: You do not have permission to access this domain',
+    };
+  }
+
+  // Validate organization ID from header matches user's organization
+  if (organizationIdFromHeader && organizationIdFromHeader !== user.organizationId) {
+    return {
+      isValid: false,
+      error: 'Access denied: You do not have permission to access this organization',
+    };
+  }
+
+  return {
+    isValid: true,
+    organizationId: user.organizationId,
+  };
+}
+
+/**
+ * Require domain access - throws error if user cannot access the domain
+ * Use this in API routes to ensure users can only access their own organization's domain
+ */
+export async function requireDomainAccess(request?: Request): Promise<string> {
+  const validation = await validateDomainAccess(request);
+  
+  if (!validation.isValid) {
+    throw new Error(validation.error || 'Access denied');
+  }
+
+  return validation.organizationId!;
 }
