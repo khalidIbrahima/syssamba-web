@@ -36,15 +36,46 @@ export async function GET(request: NextRequest) {
         // Check if user is super admin
         const userIsSuperAdmin = await isSuperAdmin(dbUser.id);
         
+        // Check if user is System Administrator (admin)
+        const dbUserWithProfile = await db.selectOne<{
+          profile_id: string | null;
+        }>('users', {
+          eq: { id: dbUser.id },
+        });
+        
+        let isSystemAdmin = false;
+        if (dbUserWithProfile?.profile_id) {
+          const profile = await db.selectOne<{
+            name: string;
+          }>('profiles', {
+            eq: { id: dbUserWithProfile.profile_id },
+          });
+          isSystemAdmin = profile?.name === 'System Administrator';
+        }
+        
         // Determine redirect URL
         let redirectUrl = '/dashboard'; // Default
         
         if (userIsSuperAdmin) {
           redirectUrl = '/admin';
-        } else if (!dbUser.organization_id) {
+        } else if (isSystemAdmin && dbUser.organization_id) {
+          // System Admin: check if organization is configured
+          const organization = await db.selectOne<{
+            is_configured: boolean;
+          }>('organizations', {
+            eq: { id: dbUser.organization_id },
+          });
+          
+          // Redirect to setup only if admin AND org not configured
+          if (!organization?.is_configured) {
+            redirectUrl = '/setup';
+          }
+          // else: org is configured, use default /dashboard
+        } else if (isSystemAdmin && !dbUser.organization_id) {
+          // System Admin without organization - redirect to setup
           redirectUrl = '/setup';
         }
-        // else: has organization, use default /dashboard
+        // else: regular user or admin with configured org, use default /dashboard
         
         return NextResponse.redirect(new URL(redirectUrl, request.url));
       }

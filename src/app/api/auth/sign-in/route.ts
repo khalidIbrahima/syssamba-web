@@ -218,6 +218,23 @@ export async function POST(request: NextRequest) {
     // Check if user is super-admin
     const userIsSuperAdmin = await isSuperAdmin(dbUser.id);
 
+    // Check if user is System Administrator (admin)
+    const dbUserWithProfile = await db.selectOne<{
+      profile_id: string | null;
+    }>('users', {
+      eq: { id: dbUser.id },
+    });
+    
+    let isSystemAdmin = false;
+    if (dbUserWithProfile?.profile_id) {
+      const profile = await db.selectOne<{
+        name: string;
+      }>('profiles', {
+        eq: { id: dbUserWithProfile.profile_id },
+      });
+      isSystemAdmin = profile?.name === 'System Administrator';
+    }
+
     // Check if user has an organization and if it's configured
     let organizationConfigured = false;
     let organizationSubdomain: string | null = null;
@@ -263,6 +280,7 @@ export async function POST(request: NextRequest) {
       organizationConfigured,
       organizationSubdomain,
       isSuperAdmin: userIsSuperAdmin,
+      isSystemAdmin,
     });
 
     // The createRouteHandlerClient already sets cookies in the response

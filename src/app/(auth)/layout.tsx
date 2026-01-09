@@ -133,11 +133,9 @@ export default async function AuthLayout({
         // If they reach here, they're accessing admin pages or other allowed routes
         // No additional redirects needed - the check above already redirected them from org routes
       } else {
-        // Regular user: if no organization, redirect to setup
-        if (!user.organizationId) {
-          redirect('/setup');
-          return;
-        }
+        // Regular user: allow access even without organization
+        // Only System Administrators are redirected to setup when org is not configured
+        // Regular users can access the dashboard and other features
 
         // Check subscription status for users with organization
         const subscriptions = await db.select<{

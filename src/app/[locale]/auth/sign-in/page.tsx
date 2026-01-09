@@ -135,8 +135,14 @@ export default function SignInPage() {
       // Check if user is super-admin
       const isSuperAdmin = data.isSuperAdmin || false;
       
+      // Check if user is System Administrator (admin)
+      const isSystemAdmin = data.isSystemAdmin || false;
+      
       // Check if user has an organization
       const hasOrganization = data.hasOrganization || !!data.user?.organizationId;
+      
+      // Check if organization is configured
+      const organizationConfigured = data.organizationConfigured || false;
       
       // Get organization subdomain if available
       const organizationSubdomain = data.organizationSubdomain || null;
@@ -148,12 +154,15 @@ export default function SignInPage() {
       if (isSuperAdmin) {
         // Super admin - always go to /admin
         redirectPath = isValidRedirect ? redirectParam : '/admin';
-      } else if (hasOrganization) {
-        // Regular user with organization - go to dashboard
-        redirectPath = isValidRedirect ? redirectParam : '/dashboard';
-      } else {
-        // Regular user without organization - go to setup
+      } else if (isSystemAdmin && hasOrganization && !organizationConfigured) {
+        // System Admin with unconfigured organization - redirect to setup
         redirectPath = '/setup';
+      } else if (isSystemAdmin && !hasOrganization) {
+        // System Admin without organization - redirect to setup
+        redirectPath = '/setup';
+      } else {
+        // Regular user or admin with configured org - go to dashboard
+        redirectPath = isValidRedirect ? redirectParam : '/dashboard';
       }
 
       // Construct full URL with subdomain if available
