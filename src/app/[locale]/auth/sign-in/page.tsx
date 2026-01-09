@@ -149,7 +149,12 @@ export default function SignInPage() {
       
       // Check for redirect parameter (only if valid)
       const redirectParam = new URLSearchParams(window.location.search).get('redirect');
-      const isValidRedirect = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('/auth');
+      // Don't allow redirect to /setup via parameter - only System Admins should access setup
+      const isValidRedirect = redirectParam && 
+        redirectParam.startsWith('/') && 
+        !redirectParam.startsWith('/auth') &&
+        redirectParam !== '/setup' &&
+        !redirectParam.startsWith('/setup/');
       
       if (isSuperAdmin) {
         // Super admin - always go to /admin

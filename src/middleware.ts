@@ -193,7 +193,14 @@ async function handleNormalRouting(
       if (!user) {
         console.log(`[Middleware] Redirecting unauthenticated user from ${pathnameWithoutLocale} to sign-in`);
         const signInUrl = new URL(`/${locale}/auth/sign-in`, req.url);
-        signInUrl.searchParams.set('redirect', pathname);
+        
+        // Don't set redirect parameter for /setup - setup should only be accessed by System Administrators
+        // They will be redirected there by the auth logic after login, not via redirect parameter
+        if (pathnameWithoutLocale !== '/setup' && !pathnameWithoutLocale.startsWith('/setup/')) {
+          signInUrl.searchParams.set('redirect', pathname);
+        }
+        // If redirecting from /setup, don't set redirect param - let auth logic handle it
+        
         return NextResponse.redirect(signInUrl);
       }
 
@@ -235,7 +242,12 @@ async function handleNormalRouting(
     } catch (error) {
       console.log(`[Middleware] Auth error for ${pathnameWithoutLocale}:`, error);
       const signInUrl = new URL(`/${locale}/auth/sign-in`, req.url);
-      signInUrl.searchParams.set('redirect', pathname);
+      
+      // Don't set redirect parameter for /setup - setup should only be accessed by System Administrators
+      if (pathnameWithoutLocale !== '/setup' && !pathnameWithoutLocale.startsWith('/setup/')) {
+        signInUrl.searchParams.set('redirect', pathname);
+      }
+      
       return NextResponse.redirect(signInUrl);
     }
   }

@@ -136,22 +136,39 @@ export default function SignInPage() {
       // Check if user is super-admin
       const isSuperAdmin = data.isSuperAdmin || false;
       
+      // Check if user is System Administrator (admin)
+      const isSystemAdmin = data.isSystemAdmin || false;
+      
       // Check if user has an organization
       const hasOrganization = data.hasOrganization || !!data.user?.organizationId;
       
+      // Check if organization is configured
+      const organizationConfigured = data.organizationConfigured || false;
+      
       // Check for redirect parameter (only if valid)
       const redirectParam = new URLSearchParams(window.location.search).get('redirect');
-      const isValidRedirect = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('/auth');
+      // Don't allow redirect to /setup via parameter - only System Admins should access setup
+      const isValidRedirect = redirectParam && 
+        redirectParam.startsWith('/') && 
+        !redirectParam.startsWith('/auth') &&
+        redirectParam !== '/setup' &&
+        !redirectParam.startsWith('/setup/');
       
       if (isSuperAdmin) {
         // Super admin - always go to /admin
         redirectUrl = isValidRedirect ? redirectParam : '/admin';
-      } else if (hasOrganization) {
-        // Regular user with organization - go to dashboard
-        redirectUrl = isValidRedirect ? redirectParam : '/dashboard';
-      } else {
-        // Regular user without organization - go to setup
+      } else if (isSystemAdmin && hasOrganization && !organizationConfigured) {
+        // System Admin with unconfigured organization - redirect to setup
         redirectUrl = '/setup';
+      } else if (isSystemAdmin && !hasOrganization) {
+        // System Admin without organization - redirect to setup
+        redirectUrl = '/setup';
+      } else if (!isSystemAdmin && hasOrganization && !organizationConfigured) {
+        // Regular user with unconfigured organization - redirect to subscription inactive page
+        redirectUrl = '/subscription-inactive';
+      } else {
+        // Regular user with configured org or admin with configured org - go to dashboard
+        redirectUrl = isValidRedirect ? redirectParam : '/dashboard';
       }
 
       // Use window.location for a hard redirect to ensure cookies are sent
