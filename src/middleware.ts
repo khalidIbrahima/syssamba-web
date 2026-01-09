@@ -91,17 +91,18 @@ export async function middleware(req: NextRequest) {
   }
 
   // Main domain or no subdomain - check if user should be redirected to their subdomain
-  // Only redirect authenticated users accessing protected routes
+  // Only redirect authenticated users accessing protected routes (NOT auth routes)
   // Extract locale from pathname for route checking
   const localeMatch = pathname.match(/^\/(fr|en)(\/|$)/);
   const pathnameWithoutLocale = localeMatch 
     ? pathname.replace(`/${localeMatch[1]}`, '') || '/' 
     : pathname;
   const isPublicRoute = publicRoutes.some(route => pathnameWithoutLocale === route || pathnameWithoutLocale.startsWith(route + '/'));
+  const isAuthRoute = pathnameWithoutLocale.startsWith('/auth');
   const isProtectedRoute = protectedRoutes.some(route => pathnameWithoutLocale.startsWith(route));
   
-  // If it's a protected route, check if user should be redirected to their subdomain
-  if (isProtectedRoute && !isPublicRoute) {
+  // If it's a protected route (and NOT an auth route), check if user should be redirected to their subdomain
+  if (isProtectedRoute && !isPublicRoute && !isAuthRoute) {
     try {
       // Skip during build time
       if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_SUPABASE_URL) {

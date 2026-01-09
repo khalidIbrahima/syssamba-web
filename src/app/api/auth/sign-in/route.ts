@@ -220,15 +220,18 @@ export async function POST(request: NextRequest) {
 
     // Check if user has an organization and if it's configured
     let organizationConfigured = false;
+    let organizationSubdomain: string | null = null;
     if (dbUser.organization_id) {
       const organization = await db.selectOne<{
         id: string;
         is_configured: boolean;
+        subdomain: string | null;
       }>('organizations', {
         eq: { id: dbUser.organization_id },
       });
 
       organizationConfigured = organization?.is_configured || false;
+      organizationSubdomain = organization?.subdomain || null;
     }
 
     // Get session to ensure cookies are set
@@ -258,6 +261,7 @@ export async function POST(request: NextRequest) {
       },
       hasOrganization: !!dbUser.organization_id,
       organizationConfigured,
+      organizationSubdomain,
       isSuperAdmin: userIsSuperAdmin,
     });
 

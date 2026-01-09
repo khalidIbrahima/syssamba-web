@@ -130,7 +130,7 @@ export default function SignInPage() {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // Determine redirect based on user's status
-      let redirectUrl: string;
+      let redirectPath: string;
       
       // Check if user is super-admin
       const isSuperAdmin = data.isSuperAdmin || false;
@@ -138,19 +138,40 @@ export default function SignInPage() {
       // Check if user has an organization
       const hasOrganization = data.hasOrganization || !!data.user?.organizationId;
       
+      // Get organization subdomain if available
+      const organizationSubdomain = data.organizationSubdomain || null;
+      
       // Check for redirect parameter (only if valid)
       const redirectParam = new URLSearchParams(window.location.search).get('redirect');
       const isValidRedirect = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('/auth');
       
       if (isSuperAdmin) {
         // Super admin - always go to /admin
-        redirectUrl = isValidRedirect ? redirectParam : '/admin';
+        redirectPath = isValidRedirect ? redirectParam : '/admin';
       } else if (hasOrganization) {
         // Regular user with organization - go to dashboard
-        redirectUrl = isValidRedirect ? redirectParam : '/dashboard';
+        redirectPath = isValidRedirect ? redirectParam : '/dashboard';
       } else {
         // Regular user without organization - go to setup
-        redirectUrl = '/setup';
+        redirectPath = '/setup';
+      }
+
+      // Construct full URL with subdomain if available
+      // Check if we're on main domain and need to redirect to subdomain
+      const currentHost = window.location.hostname;
+      const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
+      const isMainDomain = currentHost === MAIN_DOMAIN || currentHost === `www.${MAIN_DOMAIN}`;
+      
+      let redirectUrl: string;
+      
+      if (organizationSubdomain && isMainDomain) {
+        // User is on main domain and has subdomain - redirect to subdomain
+        const protocol = window.location.protocol;
+        redirectUrl = `${protocol}//${organizationSubdomain}.${MAIN_DOMAIN}${redirectPath}`;
+        console.log(`[Sign In] Redirecting to subdomain: ${redirectUrl}`);
+      } else {
+        // Use relative path (will work on current domain)
+        redirectUrl = redirectPath;
       }
 
       // Use window.location for a hard redirect to ensure cookies are sent
