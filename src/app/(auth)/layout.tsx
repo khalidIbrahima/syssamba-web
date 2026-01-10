@@ -126,38 +126,10 @@ export default async function AuthLayout({
       }
 
       if (isSystemAdmin) {
-        // System admin: check if organization is configured
-        let organizationIsConfigured = false;
-        let hasOrganization = false;
-        
-        if (user.organizationId) {
-          hasOrganization = true;
-          const organization = await db.selectOne<{
-            id: string;
-            is_configured: boolean;
-          }>('organizations', {
-            eq: { id: user.organizationId },
-          });
-
-          organizationIsConfigured = organization?.is_configured === true;
-        }
-
-        // CRITICAL: If organization is not configured, BLOCK ALL ROUTES except /setup
-        // System Admins with unconfigured organizations can ONLY access /setup
-        // All other routes (dashboard, properties, settings, etc.) must redirect to /setup
-        if (!organizationIsConfigured) {
-          // Only allow access to /setup page
-          // Block all other routes with immediate redirect
-          if (!isSetupPage) {
-            // Force redirect to setup - user cannot access any other route
-            redirect('/setup');
-            return;
-          }
-          // User is on /setup page - allow access to complete setup
-        } else {
-          // Organization is configured - allow access to all routes
-          // No restrictions for System Admins with configured organizations
-        }
+        // System admin: allow access to any route regardless of organization configuration
+        // System Administrators should be able to access all routes even if org is not configured
+        // This allows them to manage and configure the organization from any page
+        // No restrictions - allow access to all routes
       } else if (userIsSuperAdmin) {
         // Super admin (different from system admin) - already handled above
         // If they reach here, they're accessing admin pages or other allowed routes
