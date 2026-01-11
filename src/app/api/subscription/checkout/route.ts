@@ -9,7 +9,7 @@ import Stripe from 'stripe';
 // Initialize Stripe (only if STRIPE_SECRET_KEY is set)
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-11-17.clover',
 }) : null;
 
 // Schema for checkout request
