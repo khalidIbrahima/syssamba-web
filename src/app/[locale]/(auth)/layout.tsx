@@ -7,6 +7,9 @@ import { canUserAccessObject } from '@/lib/user-permissions';
 import { db } from '@/lib/db';
 import { routing } from '@/i18n/routing';
 
+// Force dynamic rendering for authenticated routes (uses cookies/headers)
+export const dynamic = 'force-dynamic';
+
 export default async function AuthLayout({
   children,
   params,
