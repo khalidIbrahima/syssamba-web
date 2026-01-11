@@ -156,9 +156,15 @@ export async function POST(request: Request) {
     const isDevelopment = process.env.NODE_ENV === 'development';
     let baseUrl: string;
     if (isDevelopment) {
-      // Use current request origin to keep the same domain/subdomain
-      const origin = request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/');
-      baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      // Use current request URL origin to keep the same domain/subdomain
+      try {
+        const requestUrl = new URL(request.url);
+        baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+      } catch {
+        // Fallback if URL parsing fails
+        const origin = request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/');
+        baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      }
     } else {
       baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     }
