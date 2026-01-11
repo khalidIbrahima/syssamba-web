@@ -84,6 +84,7 @@ export async function POST(request: Request) {
       price: number;
       current_period_start: string;
       current_period_end: string;
+      stripe_customer_id: string | null;
     }>('subscriptions', {
       eq: { organization_id: user.organizationId },
       limit: 1,
