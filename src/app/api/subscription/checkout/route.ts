@@ -120,6 +120,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!stripe) {
+      return NextResponse.json(
+        { error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.' },
+        { status: 500 }
+      );
+    }
+
     // Get or create Stripe customer
     let customerId = currentSubscription?.stripe_customer_id || organization.stripeCustomerId;
     
@@ -141,13 +148,6 @@ export async function POST(request: Request) {
         stripe_customer_id: customerId,
         updated_at: new Date().toISOString(),
       }, { id: user.organizationId });
-    }
-
-    if (!stripe) {
-      return NextResponse.json(
-        { error: 'Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.' },
-        { status: 500 }
-      );
     }
 
     // Get base URL
