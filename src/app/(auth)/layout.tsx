@@ -253,9 +253,12 @@ export default async function AuthLayout({
     } catch (error) {
       // Don't catch NEXT_REDIRECT errors - let them bubble up
       // Only catch actual errors
-      if (error && typeof error === 'object' && 'digest' in error && error.digest?.includes('NEXT_REDIRECT')) {
-        // Re-throw NEXT_REDIRECT errors so Next.js can handle them
-        throw error;
+      if (error && typeof error === 'object' && 'digest' in error) {
+        const digest = (error as { digest?: string }).digest;
+        if (digest && typeof digest === 'string' && digest.includes('NEXT_REDIRECT')) {
+          // Re-throw NEXT_REDIRECT errors so Next.js can handle them
+          throw error;
+        }
       }
       console.error('Error checking organization:', error);
     }
