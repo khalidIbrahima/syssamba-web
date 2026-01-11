@@ -52,15 +52,23 @@ export async function GET(request: Request) {
       );
     }
 
-    // Retrieve the Stripe checkout session
+    // Retrieve the Stripe checkout session (payment mode, not subscription)
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription'],
+      expand: ['payment_intent'],
     });
 
     if (!session.metadata || !session.metadata.organizationId || session.metadata.organizationId !== user.organizationId) {
       return NextResponse.json(
         { error: 'Invalid session' },
         { status: 403 }
+      );
+    }
+
+    // Verify payment was successful
+    if (session.payment_status !== 'paid') {
+      return NextResponse.json(
+        { error: 'Payment not completed' },
+        { status: 400 }
       );
     }
 
@@ -113,8 +121,8 @@ export async function GET(request: Request) {
 
     const currentSubscription = subscriptions[0];
 
-    // Update or create subscription
-    const subscriptionId = session.subscription as string;
+    // Get payment intent ID (for payment mode, not subscription ID)
+    const paymentIntentId = session.payment_intent as string;
     const customerId = session.customer as string;
 
     const now = new Date();
@@ -126,13 +134,12 @@ export async function GET(request: Request) {
     }
 
     if (currentSubscription) {
-      // Update existing subscription
+      // Update existing subscription (no stripe_subscription_id for payment mode)
       await db.update('subscriptions', {
         plan_id: planId,
         billing_period: billingPeriod,
         price: price,
         status: 'active',
-        stripe_subscription_id: subscriptionId,
         stripe_customer_id: customerId,
         current_period_start: now.toISOString().split('T')[0],
         current_period_end: periodEnd.toISOString().split('T')[0],
@@ -141,14 +148,13 @@ export async function GET(request: Request) {
         updated_at: new Date().toISOString(),
       }, { id: currentSubscription.id });
     } else {
-      // Create new subscription
+      // Create new subscription (no stripe_subscription_id for payment mode)
       await db.insertOne('subscriptions', {
         organization_id: user.organizationId,
         plan_id: planId,
         billing_period: billingPeriod,
         price: price,
         status: 'active',
-        stripe_subscription_id: subscriptionId,
         stripe_customer_id: customerId,
         start_date: now.toISOString().split('T')[0],
         current_period_start: now.toISOString().split('T')[0],

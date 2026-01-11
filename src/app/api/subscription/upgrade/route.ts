@@ -230,11 +230,11 @@ export async function POST(request: Request) {
       // Get base URL
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-      // Create Stripe Checkout session
+      // Create Stripe Checkout session (payment mode, not subscription)
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
-        mode: 'subscription',
+        mode: 'payment',
         line_items: [
           {
             price_data: {
@@ -244,9 +244,6 @@ export async function POST(request: Request) {
                 description: `Plan ${targetPlan.display_name}`,
               },
               unit_amount: Math.round(price * 100), // Convert to cents (XOF doesn't use decimals, but Stripe expects smallest unit)
-              recurring: {
-                interval: validatedData.billingPeriod === 'yearly' ? 'year' : 'month',
-              },
             },
             quantity: 1,
           },
@@ -258,13 +255,6 @@ export async function POST(request: Request) {
           planId: validatedData.planId,
           billingPeriod: validatedData.billingPeriod,
           upgrade: 'true',
-        },
-        subscription_data: {
-          metadata: {
-            organizationId: user.organizationId,
-            planId: validatedData.planId,
-            upgrade: 'true',
-          },
         },
       });
 
