@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       };
 
       // Add contact information if provided
-      if (validatedData.email) updateData.email = validatedData.email;
+      if (validatedData.email) updateData.contact_email = validatedData.email;
       if (validatedData.phone) updateData.phone = validatedData.phone;
       if (validatedData.phone2) updateData.phone2 = validatedData.phone2;
       if (validatedData.address) updateData.address = validatedData.address;
