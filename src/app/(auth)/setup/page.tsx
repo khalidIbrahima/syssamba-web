@@ -35,6 +35,9 @@ import { useDataQuery } from '@/hooks/use-query';
 import { toast } from 'sonner';
 import { getDefaultCountry } from '@/lib/countries';
 import { cn } from '@/lib/utils';
+import { useSuperAdmin } from '@/hooks/use-super-admin';
+import { AccessDenied } from '@/components/ui/access-denied';
+import { PageLoader } from '@/components/ui/page-loader';
 
 // Fetch available plans
 async function getPlans() {
@@ -111,10 +114,29 @@ export default function SetupPage() {
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'wave' | 'orange_money' | ''>('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
+  // Check super admin access
+  const { isSuperAdmin, isLoading: isSuperAdminLoading } = useSuperAdmin();
   const { data: plans, isLoading: plansLoading } = useDataQuery(['plans'], getPlans);
   const { data: countriesData, isLoading: countriesLoading } = useDataQuery(['countries'], getCountries);
   const { data: currentUser } = useDataQuery(['currentUser'], getCurrentUser);
   const countries = countriesData?.countries || [];
+
+  // Wait for super admin check to complete
+  if (isSuperAdminLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
+
+  // CRITICAL: Only super admins can access the setup page
+  if (!isSuperAdmin) {
+    return (
+      <AccessDenied
+        title="Accès refusé"
+        message="Seuls les super-administrateurs peuvent accéder à cette page."
+        requiredPermission="Super-admin access"
+        featureName="Configuration d'organisation"
+      />
+    );
+  }
 
   // CRITICAL: Check if organization is already configured and redirect away
   useEffect(() => {
@@ -415,6 +437,23 @@ export default function SetupPage() {
     }
   }, [formData.organizationType, formData.lotsCount, plans]);
 
+  // If user is on payment step (step 3) but selects a free plan, go back to step 2
+  useEffect(() => {
+    if (currentStep === 3) {
+      const selectedPlan = plans?.find((p: any) => p.name === formData.planName);
+      const requiresPayment = formData.planName !== 'freemium' && selectedPlan && 
+        selectedPlan.price !== 'custom' && 
+        selectedPlan.price !== null && 
+        selectedPlan.price !== undefined && 
+        typeof selectedPlan.price === 'number' && 
+        selectedPlan.price > 0;
+      
+      if (!requiresPayment) {
+        setCurrentStep(2);
+      }
+    }
+  }, [formData.planName, currentStep, plans]);
+
   // Check if payment is required
   const isPaymentRequired = () => {
     if (formData.planName === 'freemium') return false;
@@ -424,7 +463,9 @@ export default function SetupPage() {
     return price !== 'custom' && price !== null && price !== undefined && typeof price === 'number' && price > 0;
   };
 
-  // Calculate total steps
+  // Calculate total steps dynamically based on payment requirement
+  // If payment is required, show 3 steps (info + plan selection + payment)
+  // If no payment required (freemium), show 2 steps (info + plan selection)
   const totalSteps = isPaymentRequired() ? 3 : 2;
 
   // Handle step navigation
@@ -437,14 +478,16 @@ export default function SetupPage() {
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      // If payment is required, go to payment step
+      // On step 2 (plan selection)
       if (isPaymentRequired()) {
+        // If payment is required, go to payment step
         setCurrentStep(3);
       } else {
-        // Otherwise, submit directly
+        // If no payment required (freemium), submit directly
         handleSubmit();
       }
     }
+    // Step 3 is payment - handled in handleSubmit
   };
 
   const handleBack = () => {
@@ -454,16 +497,22 @@ export default function SetupPage() {
   };
 
   const handleStartFree = async () => {
-    // Set to freemium and submit
-    setFormData(prev => ({ ...prev, planName: 'freemium', billingPeriod: 'monthly' }));
-    await handleSubmit();
+    // Set to freemium and submit directly (no payment step needed)
+    const freemiumFormData = { ...formData, planName: 'freemium', billingPeriod: 'monthly' };
+    // Update state for UI consistency, but use formDataOverride in handleSubmit to avoid race conditions
+    setFormData(freemiumFormData);
+    // Use the freemium formData directly - this will skip payment processing
+    await handleSubmit(undefined, freemiumFormData);
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent, formDataOverride?: typeof formData) => {
     if (e) {
       e.preventDefault();
     }
     setIsSubmitting(true);
+
+    // Use formDataOverride if provided (for handleStartFree), otherwise use state formData
+    const dataToSubmit = formDataOverride || formData;
 
     try {
       // First, setup the organization
@@ -472,7 +521,7 @@ export default function SetupPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSubmit),
       });
 
       if (!setupResponse.ok) {
@@ -481,38 +530,70 @@ export default function SetupPage() {
       }
 
       const setupData = await setupResponse.json();
+
+      // Get selected plan to get its ID for payment processing
+      const planNameForPayment = dataToSubmit.planName;
+      const selectedPlanForPayment = plans?.find((p: any) => p.name === planNameForPayment);
       
-      // Get selected plan to get its ID
-      const selectedPlanForPayment = plans?.find((p: any) => p.name === formData.planName);
+      // Check if payment is required for this plan
+      const paymentRequired = planNameForPayment !== 'freemium' && selectedPlanForPayment && 
+        selectedPlanForPayment.price !== 'custom' && 
+        selectedPlanForPayment.price !== null && 
+        selectedPlanForPayment.price !== undefined && 
+        typeof selectedPlanForPayment.price === 'number' && 
+        selectedPlanForPayment.price > 0;
       
-      // If payment is required and we're on payment step, process payment
-      if (isPaymentRequired() && currentStep === 3 && paymentMethod && selectedPlanForPayment?.id) {
+      // If payment is required and we're on payment step (step 3), process payment
+      if (paymentRequired && currentStep === 3 && paymentMethod && selectedPlanForPayment?.id) {
         setIsProcessingPayment(true);
         
-        const paymentResponse = await fetch('/api/organization/payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            planId: selectedPlanForPayment.id,
-            billingPeriod: formData.billingPeriod,
-            paymentMethod: paymentMethod,
-          }),
-        });
+        try {
+          const paymentResponse = await fetch('/api/organization/payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              planId: selectedPlanForPayment.id,
+              billingPeriod: dataToSubmit.billingPeriod,
+              paymentMethod: paymentMethod,
+            }),
+          });
 
-        if (!paymentResponse.ok) {
-          const error = await paymentResponse.json();
-          throw new Error(error.error || 'Payment failed');
+          if (!paymentResponse.ok) {
+            const error = await paymentResponse.json();
+            const errorMessage = error.error || error.message || 'Échec du paiement';
+            toast.error(errorMessage);
+            setIsProcessingPayment(false);
+            return; // Don't proceed with redirect on payment failure
+          }
+
+          const paymentData = await paymentResponse.json();
+          
+          // Check if payment was successful
+          if (paymentData.success && paymentData.payment?.status === 'completed') {
+            toast.success('Paiement traité avec succès!');
+          } else if (paymentData.payment?.status === 'processing') {
+            toast.info('Paiement en cours de traitement. Vous recevrez une confirmation par email.');
+          } else {
+            toast.warning('Le paiement est en attente de confirmation.');
+          }
+        } catch (paymentError: any) {
+          console.error('Payment processing error:', paymentError);
+          toast.error(paymentError.message || 'Erreur lors du traitement du paiement');
+          setIsProcessingPayment(false);
+          return; // Don't proceed with redirect on payment error
+        } finally {
+          setIsProcessingPayment(false);
         }
-
-        const paymentData = await paymentResponse.json();
-        toast.success('Paiement traité avec succès!');
       }
 
       toast.success('Organisation configurée avec succès!');
       
-      // Redirect to dashboard with custom subdomain if available
+      // Small delay to ensure user sees success message
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Redirect to dashboard after successful setup (and payment if required)
       const redirectUrl = setupData.subdomainUrl 
         ? `${setupData.subdomainUrl}/dashboard`
         : (setupData.redirectTo || '/dashboard');
@@ -1291,6 +1372,139 @@ export default function SetupPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Step 3: Payment */}
+        {currentStep === 3 && isPaymentRequired() && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Paiement</CardTitle>
+              <CardDescription>
+                Finalisez votre abonnement {selectedPlan?.displayName || selectedPlan?.name}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Plan Summary */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Plan sélectionné</span>
+                  <span className="font-semibold">{selectedPlan?.displayName || selectedPlan?.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Période de facturation</span>
+                  <span className="font-semibold capitalize">
+                    {formData.billingPeriod === 'yearly' ? 'Annuel (-20%)' : 'Mensuel'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <span className="text-base font-semibold">Total</span>
+                  <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{displayPrice}</span>
+                </div>
+              </div>
+
+              {/* Payment Method Selection */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Méthode de paiement *</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card
+                    className={cn(
+                      'cursor-pointer transition-all',
+                      paymentMethod === 'stripe'
+                        ? 'ring-2 ring-blue-600 dark:ring-blue-400 border-blue-600 dark:border-blue-400'
+                        : 'hover:border-blue-300 dark:hover:border-blue-700',
+                    )}
+                    onClick={() => setPaymentMethod('stripe')}
+                  >
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <CreditCard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      <div className="flex-1">
+                        <p className="font-semibold">Carte bancaire</p>
+                        <p className="text-sm text-muted-foreground">Visa, Mastercard</p>
+                      </div>
+                      {paymentMethod === 'stripe' && (
+                        <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card
+                    className={cn(
+                      'cursor-pointer transition-all',
+                      paymentMethod === 'wave'
+                        ? 'ring-2 ring-blue-600 dark:ring-blue-400 border-blue-600 dark:border-blue-400'
+                        : 'hover:border-blue-300 dark:hover:border-blue-700',
+                    )}
+                    onClick={() => setPaymentMethod('wave')}
+                  >
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Wallet className="h-6 w-6 text-green-600 dark:text-green-400" />
+                      <div className="flex-1">
+                        <p className="font-semibold">Wave</p>
+                        <p className="text-sm text-muted-foreground">Mobile Money</p>
+                      </div>
+                      {paymentMethod === 'wave' && (
+                        <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card
+                    className={cn(
+                      'cursor-pointer transition-all',
+                      paymentMethod === 'orange_money'
+                        ? 'ring-2 ring-blue-600 dark:ring-blue-400 border-blue-600 dark:border-blue-400'
+                        : 'hover:border-blue-300 dark:hover:border-blue-700',
+                    )}
+                    onClick={() => setPaymentMethod('orange_money')}
+                  >
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Wallet className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                      <div className="flex-1">
+                        <p className="font-semibold">Orange Money</p>
+                        <p className="text-sm text-muted-foreground">Mobile Money</p>
+                      </div>
+                      {paymentMethod === 'orange_money' && (
+                        <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Payment Security Note */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-800 dark:text-blue-400">
+                  <strong>🔒 Paiement sécurisé:</strong> Vos informations de paiement sont cryptées et sécurisées. 
+                  Nous ne stockons pas vos données de carte bancaire.
+                </p>
+              </div>
+
+              <div className="flex justify-between pt-4 border-t border-border">
+                <Button variant="outline" onClick={handleBack} disabled={isSubmitting || isProcessingPayment}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={isSubmitting || isProcessingPayment || !paymentMethod}
+                >
+                  {isSubmitting || isProcessingPayment ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {isProcessingPayment ? 'Traitement du paiement...' : 'Configuration...'}
+                    </>
+                  ) : (
+                    <>
+                      Payer et finaliser
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
       </div>
     </div>
   );

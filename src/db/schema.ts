@@ -280,8 +280,9 @@ export const units = pgTable('units', {
   rentAmount: decimal('rent_amount', { precision: 12, scale: 2 }).notNull().default('0'),
   chargesAmount: decimal('charges_amount', { precision: 12, scale: 2 }).default('0'),
   depositAmount: decimal('deposit_amount', { precision: 12, scale: 2 }).default('0'),
+  salePrice: decimal('sale_price', { precision: 12, scale: 2 }).default('0'), // Prix de vente pour les lots destinés à la vente
   photoUrls: text('photo_urls').array(), // Array of photo URLs for the unit
-  status: text('status', { enum: ['vacant', 'occupied', 'maintenance', 'reserved'] }).default('vacant'),
+  status: text('status', { enum: ['vacant', 'occupied', 'maintenance', 'reserved', 'for_sale'] }).default('vacant'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
   idxUnitsOrg: index('idx_units_org').on(table.organizationId),
@@ -357,6 +358,35 @@ export const payments = pgTable('payments', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 }, (table) => ({
   idxPaymentsOrg: index('idx_payments_org').on(table.organizationId),
+}));
+
+// Sales table - transactions de vente de biens immobiliers
+export const sales = pgTable('sales', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  organizationId: uuid('organization_id').references(() => organizations.id, { onDelete: 'cascade' }),
+  unitId: uuid('unit_id').references(() => units.id, { onDelete: 'set null' }),
+  propertyId: uuid('property_id').references(() => properties.id, { onDelete: 'set null' }),
+  buyerFirstName: text('buyer_first_name').notNull(),
+  buyerLastName: text('buyer_last_name').notNull(),
+  buyerEmail: text('buyer_email'),
+  buyerPhone: text('buyer_phone'),
+  buyerIdNumber: text('buyer_id_number'), // Numéro de pièce d'identité de l'acheteur
+  salePrice: decimal('sale_price', { precision: 12, scale: 2 }).notNull(),
+  commissionRate: decimal('commission_rate', { precision: 5, scale: 2 }).default('0'), // Taux de commission en pourcentage
+  commissionAmount: decimal('commission_amount', { precision: 12, scale: 2 }).default('0'), // Montant de la commission
+  depositAmount: decimal('deposit_amount', { precision: 12, scale: 2 }).default('0'), // Acompte versé
+  saleDate: date('sale_date').notNull(), // Date de la vente
+  closingDate: date('closing_date'), // Date de clôture/acte de vente
+  status: text('status', { enum: ['pending', 'in_progress', 'completed', 'cancelled'] }).default('pending'),
+  paymentMethodId: uuid('payment_method_id').references(() => paymentMethods.id),
+  notes: text('notes'),
+  documents: text('documents').array(), // Tableau des URLs des documents (acte de vente, etc.)
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  idxSalesOrg: index('idx_sales_org').on(table.organizationId),
+  idxSalesUnit: index('idx_sales_unit').on(table.unitId),
+  idxSalesStatus: index('idx_sales_status').on(table.status),
 }));
 
 // Accounts table (SYSCOHADA)

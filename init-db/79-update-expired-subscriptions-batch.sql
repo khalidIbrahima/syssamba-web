@@ -167,3 +167,6 @@ COMMENT ON VIEW subscriptions_expiring_soon IS
 'Vue des souscriptions qui vont expirer dans les 10 prochains jours.
 Utile pour envoyer des notifications avant expiration.';
 
+
+
+

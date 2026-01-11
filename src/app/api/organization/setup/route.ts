@@ -346,6 +346,7 @@ export async function POST(request: NextRequest) {
     }
 
     const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
+    const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
     
     return NextResponse.json({
       success: true,
@@ -357,7 +358,8 @@ export async function POST(request: NextRequest) {
         type: organization.type,
         country: organization.country,
       },
-      subdomainUrl: `https://${organization.subdomain}.${MAIN_DOMAIN}`,
+      // Don't return subdomainUrl in development mode
+      subdomainUrl: IS_DEVELOPMENT ? null : `https://${organization.subdomain}.${MAIN_DOMAIN}`,
       message: 'Organisation configurée avec succès',
       redirectTo: '/dashboard', // Explicit redirect path
     });

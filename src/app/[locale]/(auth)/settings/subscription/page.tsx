@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +52,9 @@ async function getAllPlans() {
 }
 
 export default function SubscriptionPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { canPerformAction, canAccessObject, isLoading: isAccessLoading } = useAccess();
   const { currentUsage, limits: planLimits, plan: currentPlan, definition: planDefinition } = usePlan();
   const { data: billingData, isLoading: billingLoading } = useDataQuery(
@@ -60,6 +65,44 @@ export default function SubscriptionPage() {
     ['all-plans'],
     getAllPlans
   );
+
+  // Handle payment success callback
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const sessionId = searchParams.get('session_id');
+    const canceled = searchParams.get('canceled');
+
+    if (success === 'true' && sessionId) {
+      // Finalize the upgrade after successful payment
+      fetch('/api/subscription/success?session_id=' + sessionId, {
+        credentials: 'include',
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (res.ok) {
+            toast.success(data.message || 'Paiement réussi! Plan mis à jour.');
+            // Remove query params
+            router.replace('/settings/subscription');
+            // Invalidate and refetch queries to refresh data without full reload
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['organization-plan'] }),
+              queryClient.invalidateQueries({ queryKey: ['billing-info'] }),
+            ]);
+          } else {
+            toast.error(data.error || 'Erreur lors de la finalisation du paiement');
+            router.replace('/settings/subscription');
+          }
+        })
+        .catch((error) => {
+          console.error('Error finalizing payment:', error);
+          toast.error('Erreur lors de la finalisation du paiement');
+          router.replace('/settings/subscription');
+        });
+    } else if (canceled === 'true') {
+      toast.info('Paiement annulé');
+      router.replace('/settings/subscription');
+    }
+  }, [searchParams, router, queryClient]);
 
   // Wait for access data to load
   if (isAccessLoading) {
@@ -144,14 +187,79 @@ export default function SubscriptionPage() {
   const extranetLimit = limits.extranetTenants;
   const extranetNearLimit = isNearLimit(usage.extranetTenants, extranetLimit);
 
-  const handleUpgrade = (planName: string) => {
-    toast.info(`Mise à niveau vers ${planName}...`);
-    // TODO: Implement upgrade logic
+  const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
+
+  const handleUpgrade = async (planId: string, planName: string, isDowngrade: boolean) => {
+    if (isUpgrading) return; // Prevent double clicks
+    
+    setIsUpgrading(planId);
+    
+    try {
+      const response = await fetch('/api/subscription/upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          planId,
+          billingPeriod: billingPeriod || 'monthly', // Use current billing period
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle validation errors with details
+        if (data.details && Array.isArray(data.details)) {
+          toast.error(data.error || 'Erreur lors du changement de plan', {
+            description: data.details.join(' '),
+            duration: 8000,
+          });
+        } else {
+          toast.error(data.error || 'Erreur lors du changement de plan', {
+            description: data.details || 'Une erreur est survenue. Veuillez réessayer.',
+            duration: 6000,
+          });
+        }
+        return;
+      }
+
+      // Check if payment is required (paid plans)
+      if (data.requiresPayment && data.checkoutUrl) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.checkoutUrl;
+        return; // Don't reset loading state, page will redirect
+      }
+
+      // Success (for free plans)
+      toast.success(data.message || 'Plan mis à jour avec succès!', {
+        duration: 5000,
+      });
+
+      // Refresh data
+      window.location.reload(); // Simple reload to refresh all data
+    } catch (error: any) {
+      console.error('Error upgrading plan:', error);
+      toast.error('Erreur lors du changement de plan', {
+        description: error.message || 'Une erreur est survenue. Veuillez réessayer.',
+        duration: 6000,
+      });
+      setIsUpgrading(null);
+    }
   };
 
-  const handleDowngrade = () => {
-    toast.warning('Le downgrade n\'est pas recommandé. Vos données pourraient être affectées.');
-    // TODO: Implement downgrade logic
+  const handleDowngrade = async (planId: string, planName: string) => {
+    // Show confirmation dialog for downgrade
+    const confirmed = window.confirm(
+      '⚠️ Attention: Le downgrade n\'est pas recommandé.\n\n' +
+      'Vos données pourraient être affectées et certaines fonctionnalités peuvent ne plus être disponibles.\n\n' +
+      'Êtes-vous sûr de vouloir continuer?'
+    );
+
+    if (!confirmed) return;
+
+    await handleUpgrade(planId, planName, true);
   };
 
   const handleDownloadInvoice = (invoiceId: string) => {
@@ -328,7 +436,20 @@ export default function SubscriptionPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {availablePlans.map((plan: any) => {
               const isRecommended = plan.name === 'syndic';
-              const isDowngrade = ['freemium', 'starter', 'individual'].includes(plan.name);
+              
+              // Determine if this is a downgrade by comparing limits
+              const currentLotsLimit = limits.lots === -1 ? Infinity : limits.lots;
+              const targetLotsLimit = plan.lotsLimit === -1 ? Infinity : plan.lotsLimit;
+              const currentUsersLimit = limits.users === -1 ? Infinity : limits.users;
+              const targetUsersLimit = plan.usersLimit === -1 ? Infinity : plan.usersLimit;
+              const currentExtranetLimit = limits.extranetTenants === -1 ? Infinity : limits.extranetTenants;
+              const targetExtranetLimit = plan.extranetTenantsLimit === -1 ? Infinity : plan.extranetTenantsLimit;
+              
+              const isDowngrade = targetLotsLimit < currentLotsLimit || 
+                                  targetUsersLimit < currentUsersLimit || 
+                                  targetExtranetLimit < currentExtranetLimit;
+              
+              const isLoading = isUpgrading === plan.id;
               
               return (
                 <Card key={plan.id} className={cn(
@@ -422,11 +543,18 @@ export default function SubscriptionPage() {
                     <Button
                       className={cn(
                         'w-full mt-4',
-                        isRecommended ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' : 'bg-muted hover:bg-muted/80 text-foreground'
+                        isRecommended ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' : 'bg-muted hover:bg-muted/80 text-foreground',
+                        isLoading && 'opacity-50 cursor-not-allowed'
                       )}
-                      onClick={() => isDowngrade ? handleDowngrade() : handleUpgrade(plan.name)}
+                      onClick={() => isDowngrade ? handleDowngrade(plan.id, plan.displayName || plan.name) : handleUpgrade(plan.id, plan.displayName || plan.name, false)}
+                      disabled={isLoading}
                     >
-                      {isDowngrade ? 'Downgrader (non recommandé)' : `Upgrader vers ${plan.displayName?.replace(/0$/, '') || plan.name}`}
+                      {isLoading 
+                        ? 'Traitement...' 
+                        : isDowngrade 
+                          ? 'Downgrader (non recommandé)' 
+                          : `Upgrader vers ${plan.displayName?.replace(/0$/, '') || plan.name}`
+                      }
                     </Button>
                   </CardContent>
                 </Card>

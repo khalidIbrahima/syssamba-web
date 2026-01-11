@@ -62,14 +62,28 @@ export async function GET() {
       const limits = await getPlanLimits(planName);
       const definition = await getPlanDefinition(planName);
 
+      // Get current usage even for freemium
+      const lotsCount = await db.count('units', {
+        organization_id: user.organizationId,
+      });
+
+      const usersCount = await db.count('users', {
+        organization_id: user.organizationId,
+      });
+
+      const extranetTenants = await db.select<{ id: string }>('tenants', {
+        eq: { organization_id: user.organizationId, has_extranet_access: true },
+      });
+      const extranetTenantsCount = extranetTenants.length;
+
       return NextResponse.json({
         plan: planName,
         limits,
         definition,
         currentUsage: {
-          lots: 0, // Will be calculated by the hook if needed
-          users: 0,
-          extranetTenants: 0,
+          lots: lotsCount,
+          users: usersCount,
+          extranetTenants: extranetTenantsCount,
         },
       });
     }
@@ -88,14 +102,28 @@ export async function GET() {
       const limits = await getPlanLimits(planName);
       const definition = await getPlanDefinition(planName);
 
+      // Get current usage even when plan not found
+      const lotsCount = await db.count('units', {
+        organization_id: user.organizationId,
+      });
+
+      const usersCount = await db.count('users', {
+        organization_id: user.organizationId,
+      });
+
+      const extranetTenants = await db.select<{ id: string }>('tenants', {
+        eq: { organization_id: user.organizationId, has_extranet_access: true },
+      });
+      const extranetTenantsCount = extranetTenants.length;
+
       return NextResponse.json({
         plan: planName,
         limits,
         definition,
         currentUsage: {
-          lots: 0,
-          users: 0,
-          extranetTenants: 0,
+          lots: lotsCount,
+          users: usersCount,
+          extranetTenants: extranetTenantsCount,
         },
       });
     }
@@ -118,12 +146,25 @@ export async function GET() {
       definition.display_name = planRecord.display_name;
     }
 
-    // Get current usage (this could be optimized with actual counts)
-    // For now, return zeros - the hook can fetch detailed usage if needed
+    // Get current usage - calculate actual counts from database
+    const lotsCount = await db.count('units', {
+      organization_id: user.organizationId,
+    });
+
+    const usersCount = await db.count('users', {
+      organization_id: user.organizationId,
+    });
+
+    // Count extranet tenants (tenants with has_extranet_access = true)
+    const extranetTenants = await db.select<{ id: string }>('tenants', {
+      eq: { organization_id: user.organizationId, has_extranet_access: true },
+    });
+    const extranetTenantsCount = extranetTenants.length;
+
     const currentUsage = {
-      lots: 0,
-      users: 0,
-      extranetTenants: 0,
+      lots: lotsCount,
+      users: usersCount,
+      extranetTenants: extranetTenantsCount,
     };
 
     return NextResponse.json({

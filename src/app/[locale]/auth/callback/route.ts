@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { isSuperAdmin } from '@/lib/super-admin';
 
 const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -92,8 +93,8 @@ export async function GET(request: NextRequest) {
         }
         // else: regular user without org, use default /dashboard
         
-        // Check if user's organization has a subdomain and redirect to it
-        if (dbUser.organization_id) {
+        // Check if user's organization has a subdomain and redirect to it (skip in development)
+        if (dbUser.organization_id && !IS_DEVELOPMENT) {
           const userOrg = await db.selectOne<{
             subdomain: string | null;
           }>('organizations', {
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
           }
         }
         
-        // No subdomain, redirect to main domain
+        // No subdomain or in development, redirect to current domain
         const redirectUrl = new URL(redirectPath, request.url);
         redirectUrl.search = requestUrl.search;
         return NextResponse.redirect(redirectUrl);

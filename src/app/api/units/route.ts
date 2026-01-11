@@ -16,7 +16,8 @@ const createUnitSchema = z.object({
   rentAmount: z.number().min(0).default(0),
   chargesAmount: z.number().min(0).default(0),
   depositAmount: z.number().min(0).default(0),
-  status: z.enum(['vacant', 'occupied', 'maintenance', 'reserved']).default('vacant'),
+  salePrice: z.number().min(0).optional(), // Prix de vente pour les lots destinés à la vente
+  status: z.enum(['vacant', 'occupied', 'maintenance', 'reserved', 'for_sale']).default('vacant'),
   photoUrls: z.array(z.string()).optional(),
   amenities: z.array(z.string()).optional(),
 });
@@ -143,6 +144,7 @@ export async function POST(req: Request) {
       rent_amount: string;
       charges_amount: string;
       deposit_amount: string;
+      sale_price: string | null;
       status: string;
       photo_urls: string[] | null;
       amenities: string[] | null;
@@ -157,6 +159,7 @@ export async function POST(req: Request) {
       rent_amount: validatedData.rentAmount.toString(),
       charges_amount: validatedData.chargesAmount.toString(),
       deposit_amount: validatedData.depositAmount.toString(),
+      sale_price: validatedData.salePrice ? validatedData.salePrice.toString() : null,
       status: validatedData.status,
       photo_urls: validatedData.photoUrls || [],
       amenities: validatedData.amenities || [],
@@ -199,6 +202,7 @@ export async function POST(req: Request) {
       rentAmount: newUnit.rent_amount,
       chargesAmount: newUnit.charges_amount,
       depositAmount: newUnit.deposit_amount,
+      salePrice: newUnit.sale_price,
       status: newUnit.status,
       photoUrls: newUnit.photo_urls,
       amenities: newUnit.amenities || [],
@@ -283,6 +287,7 @@ export async function GET(req: Request) {
       rent_amount: string;
       charges_amount: string;
       deposit_amount: string;
+      sale_price: string | null;
       status: string;
       photo_urls: string[] | null;
       amenities: string[] | null;
@@ -347,6 +352,7 @@ export async function GET(req: Request) {
           rentAmount: parseFloat(unit.rent_amount || '0'),
           chargesAmount: parseFloat(unit.charges_amount || '0'),
           depositAmount: parseFloat(unit.deposit_amount || '0'),
+          salePrice: unit.sale_price ? parseFloat(unit.sale_price) : null,
           status: unit.status,
           tenantName: tenant ? `${tenant.first_name} ${tenant.last_name}` : null,
           tenantPhone: tenant?.phone || null,

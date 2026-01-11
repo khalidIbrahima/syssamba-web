@@ -58,7 +58,8 @@ const unitFormSchema = z.object({
   rentAmount: z.number().min(0, 'Le loyer doit être positif'),
   chargesAmount: z.number().min(0, 'Les charges doivent être positives'),
   depositAmount: z.number().min(0, 'La caution doit être positive'),
-  status: z.enum(['vacant', 'occupied', 'maintenance', 'reserved']),
+  salePrice: z.number().min(0, 'Le prix de vente doit être positif').optional(),
+  status: z.enum(['vacant', 'occupied', 'maintenance', 'reserved', 'for_sale']),
   photoUrls: z.array(z.string()).optional(),
 });
 

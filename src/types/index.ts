@@ -75,8 +75,9 @@ export type Unit = {
   rentAmount: string;
   chargesAmount: string;
   depositAmount: string;
+  salePrice?: string; // Prix de vente pour les lots destinés à la vente
   photoUrls?: string[]; // Array of photo URLs for the unit
-  status: 'vacant' | 'occupied' | 'maintenance' | 'reserved';
+  status: 'vacant' | 'occupied' | 'maintenance' | 'reserved' | 'for_sale';
   createdAt: Date;
 };
 

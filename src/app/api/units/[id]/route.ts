@@ -16,7 +16,8 @@ const updateUnitSchema = z.object({
   rentAmount: z.number().min(0).optional(),
   chargesAmount: z.number().min(0).optional(),
   depositAmount: z.number().min(0).optional(),
-  status: z.enum(['vacant', 'occupied', 'maintenance', 'reserved']).optional(),
+  salePrice: z.number().min(0).optional(), // Prix de vente pour les lots destinés à la vente
+  status: z.enum(['vacant', 'occupied', 'maintenance', 'reserved', 'for_sale']).optional(),
   photoUrls: z.array(z.string()).optional(),
 });
 
@@ -78,6 +79,7 @@ export async function GET(
       rent_amount: string | null;
       charges_amount: string | null;
       deposit_amount: string | null;
+      sale_price: string | null;
       status: string;
       photo_urls: string[] | null;
       amenities: string[] | null;
@@ -181,6 +183,7 @@ export async function GET(
       rentAmount: parseFloat(unit.rent_amount || '0'),
       chargesAmount: parseFloat(unit.charges_amount || '0'),
       depositAmount: parseFloat(unit.deposit_amount || '0'),
+      salePrice: unit.sale_price ? parseFloat(unit.sale_price) : null,
       status: unit.status,
       photos,
       amenities: unit.amenities || [],
@@ -296,6 +299,7 @@ export async function PATCH(
       rent_amount: string | null;
       charges_amount: string | null;
       deposit_amount: string | null;
+      sale_price: string | null;
       status: string;
       photo_urls: string[] | null;
     }>('units', {
@@ -409,6 +413,17 @@ export async function PATCH(
         });
       }
       updateData.deposit_amount = newDeposit;
+    }
+    if (validatedData.salePrice !== undefined) {
+      const newSalePrice = validatedData.salePrice.toString();
+      if (unit.sale_price !== newSalePrice) {
+        changes.push({
+          fieldName: 'salePrice',
+          oldValue: unit.sale_price || null,
+          newValue: newSalePrice,
+        });
+      }
+      updateData.sale_price = newSalePrice || null;
     }
     if (validatedData.status !== undefined) {
       updateData.status = validatedData.status;
