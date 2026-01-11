@@ -151,7 +151,17 @@ export async function POST(request: Request) {
     }
 
     // Get base URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // In development, use current request URL to preserve domain/subdomain
+    // In production, use NEXT_PUBLIC_APP_URL
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    let baseUrl: string;
+    if (isDevelopment) {
+      // Use current request origin to keep the same domain/subdomain
+      const origin = request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/');
+      baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    } else {
+      baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    }
 
     // Create Stripe Checkout session (payment mode, not subscription)
     const session = await stripe.checkout.sessions.create({
