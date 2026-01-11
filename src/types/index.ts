@@ -18,7 +18,7 @@ export type Organization = {
   type: 'agency' | 'sci' | 'syndic' | 'individual';
   country: string; // Code pays ISO 3166-1 alpha-2, référence à Country.code
   // Contact information
-  email?: string;
+  contactEmail?: string;
   phone?: string;
   phone2?: string; // Second phone number
   phoneVerified?: boolean; // Phone verification status

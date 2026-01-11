@@ -96,7 +96,7 @@ export const organizations = pgTable('organizations', {
   country: text('country').notNull().default('SN').references(() => countries.code, { onDelete: 'restrict' }), // Code pays ISO 3166-1 alpha-2, référence à countries
   
   // Contact information
-  email: text('email'),
+  contactEmail: text('contact_email'),
   phone: text('phone'),
   phone2: text('phone2'), // Second phone number
   phoneVerified: boolean('phone_verified').default(false), // Phone verification status

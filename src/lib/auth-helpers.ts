@@ -45,7 +45,7 @@ export async function getCurrentOrganization() {
     custom_extranet_domain: string | null;
     extranet_tenants_count: number | null;
     stripe_customer_id: string | null;
-    email: string | null;
+    contact_email: string | null;
     created_at: Date | string;
     updated_at: Date | string;
   }>('organizations', {
@@ -67,7 +67,7 @@ export async function getCurrentOrganization() {
     customExtranetDomain: organization.custom_extranet_domain,
     extranetTenantsCount: organization.extranet_tenants_count,
     stripeCustomerId: organization.stripe_customer_id,
-    email: organization.email,
+    contactEmail: organization.contact_email,
     createdAt: organization.created_at,
     updatedAt: organization.updated_at,
   };
