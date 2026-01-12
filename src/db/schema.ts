@@ -7,6 +7,7 @@ export const countries = pgTable('countries', {
   nameEn: text('name_en'), // Nom en anglais (optionnel)
   currency: text('currency').notNull(), // Code devise ISO 4217
   currencySymbol: text('currency_symbol').notNull(), // Symbole de la devise
+  tva: decimal('tva', { precision: 5, scale: 2 }).default('0.00'), // Taux de TVA en pourcentage
   isActive: boolean('is_active').default(true),
   isOhada: boolean('is_ohada').default(false), // Membre de l'OHADA
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -31,6 +32,7 @@ export const plans = pgTable('plans', {
   yearlyDiscountRate: decimal('yearly_discount_rate', { precision: 5, scale: 2 }), // Taux de remise en % pour calculer yearly_price
   
   // Limites
+  maxProperties: integer('max_properties'), // null pour illimité
   lotsLimit: integer('lots_limit'), // null pour illimité
   usersLimit: integer('users_limit'), // null pour illimité
   extranetTenantsLimit: integer('extranet_tenants_limit'), // null pour illimité

@@ -13,6 +13,7 @@ const createPlanSchema = z.object({
   priceMonthly: z.number().nullable().optional(),
   priceYearly: z.number().nullable().optional(),
   yearlyDiscountRate: z.number().min(0).max(100).nullable().optional(), // Taux de remise en % (0-100)
+  maxProperties: z.number().nullable().optional(),
   lotsLimit: z.number().nullable().optional(),
   usersLimit: z.number().nullable().optional(),
   extranetTenantsLimit: z.number().nullable().optional(),
@@ -29,6 +30,7 @@ const updatePlanSchema = z.object({
   priceMonthly: z.number().nullable().optional(),
   priceYearly: z.number().nullable().optional(),
   yearlyDiscountRate: z.number().min(0).max(100).nullable().optional(), // Taux de remise en % (0-100)
+  maxProperties: z.number().nullable().optional(),
   lotsLimit: z.number().nullable().optional(),
   usersLimit: z.number().nullable().optional(),
   extranetTenantsLimit: z.number().nullable().optional(),
@@ -80,6 +82,7 @@ export async function GET() {
       price_yearly: number | null;
       yearly_discount_rate: number | null;
       max_properties: number | null;
+      lots_limit: number | null;
       max_users: number | null;
       extranet_tenants_limit: number | null;
       features: any;
@@ -111,7 +114,8 @@ export async function GET() {
         price_monthly: plan.price_monthly,
         price_yearly: yearlyPrice,
         yearly_discount_rate: plan.yearly_discount_rate,
-        lots_limit: plan.max_properties,
+        max_properties: plan.max_properties,
+        lots_limit: plan.max_properties, // Keep backward compatibility - lots_limit maps to max_properties
         users_limit: plan.max_users,
         extranet_tenants_limit: plan.extranet_tenants_limit,
         features: plan.features || {},
@@ -131,6 +135,7 @@ export async function GET() {
         priceMonthly: plan.price_monthly ? parseFloat(plan.price_monthly) : null,
         priceYearly: plan.price_yearly ? parseFloat(plan.price_yearly) : null,
         yearlyDiscountRate: plan.yearly_discount_rate ? parseFloat(plan.yearly_discount_rate) : null,
+        maxProperties: plan.max_properties,
         lotsLimit: plan.lots_limit,
         usersLimit: plan.users_limit,
         extranetTenantsLimit: plan.extranet_tenants_limit,
@@ -203,7 +208,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Build update object with only provided fields
-    // Map to actual database column names (max_properties, max_users)
+    // Map to actual database column names (max_properties, lots_limit, max_users)
     const updateData: {
       display_name?: string;
       description?: string | null;
@@ -211,6 +216,7 @@ export async function PATCH(request: NextRequest) {
       price_yearly?: number | null;
       yearly_discount_rate?: number | null;
       max_properties?: number | null;
+      lots_limit?: number | null;
       max_users?: number | null;
       extranet_tenants_limit?: number | null;
       features?: any;
@@ -251,9 +257,13 @@ export async function PATCH(request: NextRequest) {
     if (updates.priceYearly !== undefined) {
       updateData.price_yearly = updates.priceYearly;
     }
-    // Map lotsLimit to max_properties (actual column name)
+    // Handle maxProperties
+    if (updates.maxProperties !== undefined) {
+      updateData.max_properties = updates.maxProperties;
+    }
+    // Map lotsLimit to lots_limit (for backward compatibility)
     if (updates.lotsLimit !== undefined) {
-      updateData.max_properties = updates.lotsLimit;
+      updateData.lots_limit = updates.lotsLimit;
     }
     // Map usersLimit to max_users (actual column name)
     if (updates.usersLimit !== undefined) {
@@ -292,6 +302,7 @@ export async function PATCH(request: NextRequest) {
       price_yearly: number | null;
       yearly_discount_rate: number | null;
       max_properties: number | null;
+      lots_limit: number | null;
       max_users: number | null;
       extranet_tenants_limit: number | null;
       features: any;
@@ -321,7 +332,8 @@ export async function PATCH(request: NextRequest) {
         priceMonthly: updatedPlan.price_monthly ? parseFloat(String(updatedPlan.price_monthly)) : null,
         priceYearly: calculatedYearlyPrice ? parseFloat(String(calculatedYearlyPrice)) : null,
         yearlyDiscountRate: updatedPlan.yearly_discount_rate ? parseFloat(String(updatedPlan.yearly_discount_rate)) : null,
-        lotsLimit: updatedPlan.max_properties,
+        maxProperties: updatedPlan.max_properties,
+        lotsLimit: updatedPlan.lots_limit || updatedPlan.max_properties, // Use lots_limit if available, otherwise max_properties for backward compatibility
         usersLimit: updatedPlan.max_users,
         extranetTenantsLimit: updatedPlan.extranet_tenants_limit,
         features: typeof updatedPlan.features === 'string' ? JSON.parse(updatedPlan.features) : (updatedPlan.features || {}),
@@ -413,7 +425,8 @@ export async function POST(request: NextRequest) {
       price_monthly: validatedData.priceMonthly ?? null,
       price_yearly: calculatedYearlyPrice,
       yearly_discount_rate: validatedData.yearlyDiscountRate ?? null,
-      max_properties: validatedData.lotsLimit ?? null,
+      max_properties: validatedData.maxProperties ?? null,
+      lots_limit: validatedData.lotsLimit ?? null,
       max_users: validatedData.usersLimit ?? null,
       extranet_tenants_limit: validatedData.extranetTenantsLimit ?? null,
       features: validatedData.features || {},
@@ -431,6 +444,7 @@ export async function POST(request: NextRequest) {
       price_yearly: number | null;
       yearly_discount_rate: number | null;
       max_properties: number | null;
+      lots_limit: number | null;
       max_users: number | null;
       extranet_tenants_limit: number | null;
       features: any;
@@ -458,7 +472,8 @@ export async function POST(request: NextRequest) {
         priceMonthly: newPlan.price_monthly ? parseFloat(String(newPlan.price_monthly)) : null,
         priceYearly: newPlan.price_yearly ? parseFloat(String(newPlan.price_yearly)) : null,
         yearlyDiscountRate: newPlan.yearly_discount_rate ? parseFloat(String(newPlan.yearly_discount_rate)) : null,
-        lotsLimit: newPlan.max_properties,
+        maxProperties: newPlan.max_properties,
+        lotsLimit: newPlan.lots_limit || newPlan.max_properties, // Use lots_limit if available, otherwise max_properties
         usersLimit: newPlan.max_users,
         extranetTenantsLimit: newPlan.extranet_tenants_limit,
         features: typeof newPlan.features === 'string' ? JSON.parse(newPlan.features) : (newPlan.features || {}),

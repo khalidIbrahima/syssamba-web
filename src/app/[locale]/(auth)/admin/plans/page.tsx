@@ -24,6 +24,7 @@ import {
   Home,
   Globe,
   Plus,
+  Building2,
 } from 'lucide-react';
 import { useDataQuery } from '@/hooks/use-query';
 import { toast } from 'sonner';
@@ -102,6 +103,7 @@ export default function PlansAdminPage() {
     priceMonthly: '',
     priceYearly: '',
     yearlyDiscountRate: '',
+    maxProperties: '',
     lotsLimit: '',
     usersLimit: '',
     extranetTenantsLimit: '',
@@ -118,6 +120,7 @@ export default function PlansAdminPage() {
     priceMonthly: '',
     priceYearly: '',
     yearlyDiscountRate: '',
+    maxProperties: '',
     lotsLimit: '',
     usersLimit: '',
     extranetTenantsLimit: '',
@@ -137,6 +140,7 @@ export default function PlansAdminPage() {
       priceMonthly: plan.priceMonthly !== null && plan.priceMonthly !== undefined ? plan.priceMonthly.toString() : '',
       priceYearly: plan.priceYearly !== null && plan.priceYearly !== undefined ? plan.priceYearly.toString() : '',
       yearlyDiscountRate: plan.yearlyDiscountRate !== null && plan.yearlyDiscountRate !== undefined ? plan.yearlyDiscountRate.toString() : '',
+      maxProperties: plan.maxProperties !== null && plan.maxProperties !== undefined ? plan.maxProperties.toString() : '',
       lotsLimit: plan.lotsLimit !== null && plan.lotsLimit !== undefined ? plan.lotsLimit.toString() : '',
       usersLimit: plan.usersLimit !== null && plan.usersLimit !== undefined ? plan.usersLimit.toString() : '',
       extranetTenantsLimit: plan.extranetTenantsLimit !== null && plan.extranetTenantsLimit !== undefined ? plan.extranetTenantsLimit.toString() : '',
@@ -164,6 +168,7 @@ export default function PlansAdminPage() {
         priceMonthly: createFormData.priceMonthly === '' ? null : parseFloat(createFormData.priceMonthly),
         priceYearly: createFormData.priceYearly === '' ? null : parseFloat(createFormData.priceYearly),
         yearlyDiscountRate: createFormData.yearlyDiscountRate === '' ? null : parseFloat(createFormData.yearlyDiscountRate),
+        maxProperties: createFormData.maxProperties === '' ? null : parseInt(createFormData.maxProperties),
         lotsLimit: createFormData.lotsLimit === '' ? null : parseInt(createFormData.lotsLimit),
         usersLimit: createFormData.usersLimit === '' ? null : parseInt(createFormData.usersLimit),
         extranetTenantsLimit: createFormData.extranetTenantsLimit === '' ? null : parseInt(createFormData.extranetTenantsLimit),
@@ -192,6 +197,7 @@ export default function PlansAdminPage() {
         priceMonthly: '',
         priceYearly: '',
         yearlyDiscountRate: '',
+        maxProperties: '',
         lotsLimit: '',
         usersLimit: '',
         extranetTenantsLimit: '',
@@ -226,6 +232,9 @@ export default function PlansAdminPage() {
       }
       // Always include yearlyDiscountRate to allow setting it to null
       updates.yearlyDiscountRate = formData.yearlyDiscountRate === '' ? null : (formData.yearlyDiscountRate ? parseFloat(formData.yearlyDiscountRate) : null);
+      if (formData.maxProperties !== '') {
+        updates.maxProperties = formData.maxProperties === '' ? null : parseInt(formData.maxProperties);
+      }
       if (formData.lotsLimit !== '') {
         updates.lotsLimit = formData.lotsLimit === '' ? null : parseInt(formData.lotsLimit);
       }
@@ -372,6 +381,17 @@ export default function PlansAdminPage() {
 
                   {/* Limits */}
                   <div className="space-y-2 pt-2 border-t">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Propriétés:</span>
+                      <span className="text-foreground">
+                        {plan.maxProperties !== null && plan.maxProperties !== undefined
+                          ? plan.maxProperties === -1
+                            ? 'Illimité'
+                            : plan.maxProperties
+                          : 'Illimité'}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Home className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Lots:</span>
@@ -524,7 +544,18 @@ export default function PlansAdminPage() {
                   </p>
 
                   {/* Limits */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="max-properties">Limite Propriétés</Label>
+                      <Input
+                        id="max-properties"
+                        type="number"
+                        placeholder="Illimité (laisser vide)"
+                        value={formData.maxProperties}
+                        onChange={(e) => setFormData(prev => ({ ...prev, maxProperties: e.target.value }))}
+                        disabled={savingPlan}
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="lots-limit">Limite Lots</Label>
                       <Input
@@ -739,7 +770,18 @@ export default function PlansAdminPage() {
                 </p>
 
                 {/* Limits */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="create-max-properties">Limite Propriétés</Label>
+                    <Input
+                      id="create-max-properties"
+                      type="number"
+                      placeholder="Illimité (laisser vide)"
+                      value={createFormData.maxProperties}
+                      onChange={(e) => setCreateFormData(prev => ({ ...prev, maxProperties: e.target.value }))}
+                      disabled={creatingPlan}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="create-lots-limit">Limite Lots</Label>
                     <Input
@@ -846,6 +888,7 @@ export default function PlansAdminPage() {
                         priceMonthly: '',
                         priceYearly: '',
                         yearlyDiscountRate: '',
+                        maxProperties: '',
                         lotsLimit: '',
                         usersLimit: '',
                         extranetTenantsLimit: '',
