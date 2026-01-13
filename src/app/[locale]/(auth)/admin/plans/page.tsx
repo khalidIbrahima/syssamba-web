@@ -232,17 +232,18 @@ export default function PlansAdminPage() {
       }
       // Always include yearlyDiscountRate to allow setting it to null
       updates.yearlyDiscountRate = formData.yearlyDiscountRate === '' ? null : (formData.yearlyDiscountRate ? parseFloat(formData.yearlyDiscountRate) : null);
-      if (formData.maxProperties !== '') {
+      if (formData.maxProperties !== undefined) {
         updates.maxProperties = formData.maxProperties === '' ? null : parseInt(formData.maxProperties);
       }
-      if (formData.maxUnits !== '') {
+      if (formData.maxUnits !== undefined) {
         updates.maxUnits = formData.maxUnits === '' ? null : parseInt(formData.maxUnits);
       }
-      if (formData.maxUsers !== '') {
+      if (formData.maxUsers !== undefined) {
         updates.maxUsers = formData.maxUsers === '' ? null : parseInt(formData.maxUsers);
       }
-      if (formData.extranetTenantsLimit !== '') {
+      if (formData.extranetTenantsLimit !== undefined) {
         updates.extranetTenantsLimit = formData.extranetTenantsLimit === '' ? null : parseInt(formData.extranetTenantsLimit);
+        console.log('Sending extranetTenantsLimit:', updates.extranetTenantsLimit);
       }
       if (formData.features) {
         try {

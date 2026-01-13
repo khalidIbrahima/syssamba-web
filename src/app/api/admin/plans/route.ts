@@ -280,6 +280,7 @@ export async function PATCH(request: NextRequest) {
     }
     if (updates.extranetTenantsLimit !== undefined) {
       updateData.extranet_tenants_limit = updates.extranetTenantsLimit;
+      console.log('API received extranetTenantsLimit:', updates.extranetTenantsLimit);
     }
     if (updates.features !== undefined) {
       updateData.features = updates.features;
