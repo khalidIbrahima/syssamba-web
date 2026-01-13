@@ -176,14 +176,16 @@ export default function SignInPage() {
 
       // Construct full URL with subdomain if available
       // Check if we're on main domain and need to redirect to subdomain
+      // Skip subdomain redirects in development mode
+      const isDevelopment = process.env.NODE_ENV === 'development';
       const currentHost = window.location.hostname;
       const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
       const isMainDomain = currentHost === MAIN_DOMAIN || currentHost === `www.${MAIN_DOMAIN}`;
       
       let redirectUrl: string;
       
-      if (organizationSubdomain && isMainDomain) {
-        // User is on main domain and has subdomain - redirect to subdomain
+      if (organizationSubdomain && isMainDomain && !isDevelopment) {
+        // User is on main domain and has subdomain - redirect to subdomain (only in production)
         const protocol = window.location.protocol;
         redirectUrl = `${protocol}//${organizationSubdomain}.${MAIN_DOMAIN}${redirectPath}`;
         console.log(`[Sign In] Redirecting to subdomain: ${redirectUrl}`);

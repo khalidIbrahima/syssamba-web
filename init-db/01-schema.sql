@@ -83,8 +83,9 @@ CREATE TABLE units (
     rent_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
     charges_amount DECIMAL(12,2) DEFAULT 0,
     deposit_amount DECIMAL(12,2) DEFAULT 0,
+    sale_price DECIMAL(12,2) DEFAULT 0, -- Prix de vente pour les lots destinés à la vente
     photo_urls TEXT[], -- Tableau des URLs des photos de l'unité
-    status TEXT CHECK (status IN ('vacant','occupied','maintenance','reserved')) DEFAULT 'vacant',
+    status TEXT CHECK (status IN ('vacant','occupied','maintenance','reserved','for_sale')) DEFAULT 'vacant',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -151,6 +152,31 @@ CREATE TABLE payments (
     gateway_response JSONB,
     paid_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8.1. Ventes (transactions de vente de biens immobiliers)
+CREATE TABLE sales (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    unit_id UUID REFERENCES units(id) ON DELETE SET NULL,
+    property_id UUID REFERENCES properties(id) ON DELETE SET NULL,
+    buyer_first_name TEXT NOT NULL,
+    buyer_last_name TEXT NOT NULL,
+    buyer_email TEXT,
+    buyer_phone TEXT,
+    buyer_id_number TEXT, -- Numéro de pièce d'identité de l'acheteur
+    sale_price DECIMAL(12,2) NOT NULL,
+    commission_rate DECIMAL(5,2) DEFAULT 0, -- Taux de commission en pourcentage
+    commission_amount DECIMAL(12,2) DEFAULT 0, -- Montant de la commission
+    deposit_amount DECIMAL(12,2) DEFAULT 0, -- Acompte versé
+    sale_date DATE NOT NULL, -- Date de la vente
+    closing_date DATE, -- Date de clôture/acte de vente
+    status TEXT CHECK (status IN ('pending','in_progress','completed','cancelled')) DEFAULT 'pending',
+    payment_method_id UUID REFERENCES payment_methods(id),
+    notes TEXT,
+    documents TEXT[], -- Tableau des URLs des documents (acte de vente, etc.)
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 9. Plan comptable SYSCOHADA (pré-chargé)
@@ -227,6 +253,9 @@ CREATE TABLE messages (
 CREATE INDEX idx_units_org ON units(organization_id);
 CREATE INDEX idx_tenants_org ON tenants(organization_id);
 CREATE INDEX idx_payments_org ON payments(organization_id);
+CREATE INDEX idx_sales_org ON sales(organization_id);
+CREATE INDEX idx_sales_unit ON sales(unit_id);
+CREATE INDEX idx_sales_status ON sales(status);
 CREATE INDEX idx_tasks_org ON tasks(organization_id);
 CREATE INDEX idx_journal_org ON journal_entries(organization_id);
 CREATE INDEX idx_messages_tenant ON messages(tenant_id);

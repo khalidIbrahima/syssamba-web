@@ -18,3 +18,6 @@ END $$;
 -- Step 2: Add comment to document the column
 COMMENT ON COLUMN user_invitations.profile_id IS 'Profile assigned to the invited user. References profiles(id).';
 
+
+
+

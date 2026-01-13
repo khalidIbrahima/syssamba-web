@@ -6,6 +6,9 @@ import { isSuperAdmin } from '@/lib/super-admin';
 import { canUserAccessObject } from '@/lib/user-permissions';
 import { db } from '@/lib/db';
 
+// Force dynamic rendering for authenticated routes (uses cookies/headers)
+export const dynamic = 'force-dynamic';
+
 export default async function AuthLayout({
   children,
 }: {
@@ -98,6 +101,38 @@ export default async function AuthLayout({
       // Check super admin status (different from system admin)
       const userIsSuperAdmin = await isSuperAdmin(user.id);
 
+      // CRITICAL: Check organization configuration FIRST for ALL users (including System Admins)
+      // Only Super Admins (platform-level) can bypass this check
+      // System Administrators (organization-level admins) MUST have configured organization
+      const userOrganizationId = dbUser?.organization_id;
+      
+      // Check organization configuration status - explicitly check for true
+      let organizationIsConfigured = false;
+      let organization = null;
+      if (userOrganizationId) {
+        organization = await db.selectOne<{
+          id: string;
+          is_configured: boolean | null;
+        }>('organizations', {
+          eq: { id: userOrganizationId },
+        });
+
+        // is_configured can be true, false, or null - ONLY true means configured
+        // false or null means NOT configured
+        organizationIsConfigured = organization?.is_configured === true;
+        
+        // Debug logging
+        console.log('[AuthLayout] Organization check:', {
+          userId: user.id,
+          organizationId: userOrganizationId,
+          organizationFound: !!organization,
+          isConfiguredValue: organization?.is_configured,
+          organizationIsConfigured
+        });
+      } else {
+        console.log('[AuthLayout] User has no organization_id:', { userId: user.id });
+      }
+
       // Define organization-specific routes that super admins should not access
       const orgSpecificRoutes = [
         '/dashboard',
@@ -117,81 +152,80 @@ export default async function AuthLayout({
         pathname === route || pathname.startsWith(`${route}/`)
       );
 
-      // Redirect super admins away from organization-specific routes
-      if (userIsSuperAdmin && isOrgSpecificRoute && !isAdminPage && !isSubscriptionPage) {
-        // Super admin trying to access org routes - always redirect to admin dashboard
-        // Super admins manage the system from /admin/dashboard, not org-specific routes
-        redirect('/admin/dashboard');
-        return;
-      }
-
-      if (isSystemAdmin) {
-        // System admin: check if organization is configured
-        let organizationIsConfigured = false;
-        let hasOrganization = false;
-        
-        if (user.organizationId) {
-          hasOrganization = true;
-          const organization = await db.selectOne<{
-            id: string;
-            is_configured: boolean;
-          }>('organizations', {
-            eq: { id: user.organizationId },
-          });
-
-          organizationIsConfigured = organization?.is_configured === true;
+      // CRITICAL: Check organization configuration FIRST for ALL users (except Super Admins)
+      // Super Admins are platform-level admins and don't need organization configuration
+      // System Administrators (organization admins) MUST have configured organization
+      
+      // Check organization configuration for ALL users including System Administrators
+      // Only Super Admins can bypass organization configuration check
+      if (userIsSuperAdmin) {
+        // Super admin (platform-level) - redirect away from organization-specific routes
+        if (isOrgSpecificRoute && !isAdminPage && !isSubscriptionPage) {
+          // Super admin trying to access org routes - always redirect to admin dashboard
+          // Super admins manage the system from /admin/dashboard, not org-specific routes
+          redirect('/admin/dashboard');
+          return;
         }
-
-        // CRITICAL: If organization is not configured, BLOCK ALL ROUTES except /setup
-        // System Admins with unconfigured organizations can ONLY access /setup
-        // All other routes (dashboard, properties, settings, etc.) must redirect to /setup
-        if (!organizationIsConfigured) {
-          // Only allow access to /setup page
-          // Block all other routes with immediate redirect
+        // Super admin accessing admin pages - allow access (no org check needed)
+      } else {
+        // ALL other users (including System Administrators): MUST have configured organization to access routes
+        // CRITICAL: These checks MUST execute for all users - no exceptions
+        // System Administrators can configure the organization from the /setup page
+        if (!userOrganizationId) {
+          // User without organization - MUST redirect to setup
+          // No organization means user cannot access any protected routes
+          // This applies to System Administrators too
           if (!isSetupPage) {
-            // Force redirect to setup - user cannot access any other route
+            console.log('[AuthLayout] User without organization - redirecting to /setup', { 
+              pathname,
+              isSystemAdmin,
+              userId: user.id
+            });
             redirect('/setup');
             return;
           }
-          // User is on /setup page - allow access to complete setup
+          // User is on setup page - allow access
         } else {
-          // Organization is configured - allow access to all routes
-          // No restrictions for System Admins with configured organizations
-        }
-      } else if (userIsSuperAdmin) {
-        // Super admin (different from system admin) - already handled above
-        // If they reach here, they're accessing admin pages or other allowed routes
-        // No additional redirects needed - the check above already redirected them from org routes
-      } else {
-        // Regular user: check if organization is configured
-        if (user.organizationId) {
-          // Check if organization is configured
-          const organization = await db.selectOne<{
-            id: string;
-            is_configured: boolean;
-          }>('organizations', {
-            eq: { id: user.organizationId },
-          });
-
-          const organizationIsConfigured = organization?.is_configured === true;
-
-          // Block regular users from accessing unconfigured organizations
-          if (!organizationIsConfigured) {
-            // Regular user cannot access unconfigured organization
-            // Redirect to a message page or show error
-            if (!isSubscriptionInactivePage) {
-              redirect('/subscription-inactive'); // Reuse this page or create a new one
+          // User has organization - MUST check if configured
+          // CRITICAL: is_configured must be explicitly true, false or null means NOT configured
+          // This applies to ALL users including System Administrators
+          if (organization?.is_configured !== true) {
+            // Organization exists but is NOT configured (is_configured is false, null, or undefined)
+            // Force redirect to setup for ALL routes except setup page itself
+            // This applies to ALL users including System Administrators
+            if (!isSetupPage) {
+              console.log('[AuthLayout] Organization NOT configured - redirecting to /setup', {
+                pathname,
+                organizationId: userOrganizationId,
+                isConfiguredValue: organization?.is_configured,
+                isConfiguredType: typeof organization?.is_configured,
+                isSystemAdmin,
+                userId: user.id
+              });
+              redirect('/setup');
               return;
             }
+            // User is on setup page - allow access to complete setup
+          } else {
+            console.log('[AuthLayout] Organization is configured - allowing access', {
+              organizationId: userOrganizationId,
+              pathname,
+              isSystemAdmin,
+              userId: user.id
+            });
           }
+        }
 
-          // Organization is configured - continue with normal checks
-          // Check subscription status for users with organization
+        
+        // Organization is configured - continue with subscription checks
+        // This applies to all users including System Administrators
+        if (organizationIsConfigured && userOrganizationId) {
+          // Check subscription status for users with configured organization
           const subscriptions = await db.select<{
             id: string;
             status: string;
           }>('subscriptions', {
-            eq: { organization_id: user.organizationId },
+            eq: { organization_id: userOrganizationId },
             limit: 1,
           });
 
@@ -203,7 +237,7 @@ export default async function AuthLayout({
           const canEditOrg = await canUserAccessObject(user.id, 'Organization', 'edit');
           
           // If subscription is inactive, handle redirects
-          if (!hasActiveSubscription && !isSubscriptionPage) {
+          if (!hasActiveSubscription && !isSubscriptionPage && !isSubscriptionInactivePage) {
             if (canEditOrg) {
               // Admin user: redirect to subscription setup page
               redirect('/settings/subscription');
@@ -214,20 +248,21 @@ export default async function AuthLayout({
               return;
             }
           }
-
-          if (canEditOrg) {
-            // Organization admin - allow access to all pages including dashboard
-            // No redirect needed
-          } else {
-            // Regular user with configured organization - allow access (permissions checked in page components)
-            // User has configured organization - allow access to dashboard and other pages
-          }
-        } else {
-          // Regular user without organization - allow access (no organization to check)
-          // They can access the dashboard but won't see organization-specific data
         }
+        
+        // Organization is configured and subscription is active/trialing
+        // Allow access to all routes (permissions checked in page components)
       }
     } catch (error) {
+      // Don't catch NEXT_REDIRECT errors - let them bubble up
+      // Only catch actual errors
+      if (error && typeof error === 'object' && 'digest' in error) {
+        const digest = (error as { digest?: string }).digest;
+        if (digest && typeof digest === 'string' && digest.includes('NEXT_REDIRECT')) {
+          // Re-throw NEXT_REDIRECT errors so Next.js can handle them
+          throw error;
+        }
+      }
       console.error('Error checking organization:', error);
     }
   }

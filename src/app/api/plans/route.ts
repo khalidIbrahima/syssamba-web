@@ -106,6 +106,8 @@ export async function GET() {
           displayName: plan.display_name || plan.name,
           description: plan.description || null,
           price: price,
+          priceYearly: yearlyPrice,
+          yearlyDiscountRate: plan.yearly_discount_rate || null,
           priceType: price === 'custom' ? 'custom' : 'fixed',
           // Use exact field names from Plans table
           max_properties: plan.max_properties === -1 ? null : plan.max_properties,

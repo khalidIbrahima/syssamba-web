@@ -14,8 +14,16 @@ const intlMiddleware = createMiddleware(routing);
 // Main domain - organizations use subdomains on this domain
 const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
 
+// Check if we're in development mode
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+
 // Extract subdomain from hostname
 function getSubdomain(hostname: string): string | null {
+  // In development, don't extract subdomain (allow localhost:3000 to work)
+  if (IS_DEVELOPMENT) {
+    return null;
+  }
+  
   // Remove protocol if present
   const cleanHostname = hostname.replace(/^https?:\/\//, '');
   
@@ -79,10 +87,13 @@ export async function middleware(req: NextRequest) {
         // Continue with normal routing
         return handleNormalRouting(req, finalResponse, pathname);
       } else {
-        // Subdomain not found, redirect to main domain
-        const mainDomainUrl = new URL(pathname, `https://${MAIN_DOMAIN}`);
-        mainDomainUrl.search = url.search;
-        return NextResponse.redirect(mainDomainUrl);
+        // Subdomain not found, redirect to main domain (only in production)
+        if (!IS_DEVELOPMENT) {
+          const mainDomainUrl = new URL(pathname, `https://${MAIN_DOMAIN}`);
+          mainDomainUrl.search = url.search;
+          return NextResponse.redirect(mainDomainUrl);
+        }
+        // In development, continue with normal routing
       }
     } catch (error) {
       console.error('[Middleware] Error looking up subdomain:', error);
@@ -102,7 +113,8 @@ export async function middleware(req: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathnameWithoutLocale.startsWith(route));
   
   // If it's a protected route (and NOT an auth route), check if user should be redirected to their subdomain
-  if (isProtectedRoute && !isPublicRoute && !isAuthRoute) {
+  // Skip subdomain redirects in development mode
+  if (isProtectedRoute && !isPublicRoute && !isAuthRoute && !IS_DEVELOPMENT) {
     try {
       // Skip during build time
       if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -216,7 +228,8 @@ async function handleNormalRouting(
         });
 
         // If user exists in database, validate organization access
-        if (dbUser && dbUser.organization_id) {
+        // Skip organization validation redirects in development mode
+        if (dbUser && dbUser.organization_id && !IS_DEVELOPMENT) {
           if (dbUser.organization_id !== organizationIdFromHeader) {
             console.log(`[Middleware] User ${user.id} attempted to access organization ${organizationIdFromHeader} but belongs to ${dbUser.organization_id}`);
             // Redirect to their own organization's subdomain or main domain

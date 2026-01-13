@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { isSuperAdmin } from '@/lib/super-admin';
 
 /**
  * Layout for setup page - no sidebar/header, just the setup form
- * CRITICAL: This page should ONLY be accessible when organization is NOT configured
- * If organization is already configured, redirect to dashboard
+ * CRITICAL: This page should ONLY be accessible to super admins
+ * Super admins can set up organizations for new users or manage existing organizations
  */
 export default async function SetupLayout({
   children,
@@ -18,7 +19,15 @@ export default async function SetupLayout({
     redirect('/auth/sign-in');
   }
 
+  // CRITICAL CHECK: Only super admins can access the setup page
+  const userIsSuperAdmin = await isSuperAdmin(user.id);
+  if (!userIsSuperAdmin) {
+    redirect('/dashboard');
+    return;
+  }
+
   // CRITICAL CHECK: If organization is already configured, redirect away from setup
+  // (This is now less relevant since only super admins can access, but keeping for safety)
   if (user.organizationId) {
     const organization = await db.selectOne<{
       id: string;
@@ -34,6 +43,6 @@ export default async function SetupLayout({
     }
   }
 
-  // Organization is not configured (or user has no org) - allow access to setup
+  // User is super admin - allow access to setup
   return <>{children}</>;
 }

@@ -5,6 +5,7 @@ export type Country = {
   nameEn?: string;
   currency: string; // ISO 4217
   currencySymbol: string;
+  tva?: number; // Taux de TVA en pourcentage
   isActive: boolean;
   isOhada: boolean;
   createdAt: Date;
@@ -18,7 +19,7 @@ export type Organization = {
   type: 'agency' | 'sci' | 'syndic' | 'individual';
   country: string; // Code pays ISO 3166-1 alpha-2, référence à Country.code
   // Contact information
-  email?: string;
+  contactEmail?: string;
   phone?: string;
   phone2?: string; // Second phone number
   phoneVerified?: boolean; // Phone verification status
@@ -75,8 +76,9 @@ export type Unit = {
   rentAmount: string;
   chargesAmount: string;
   depositAmount: string;
+  salePrice?: string; // Prix de vente pour les lots destinés à la vente
   photoUrls?: string[]; // Array of photo URLs for the unit
-  status: 'vacant' | 'occupied' | 'maintenance' | 'reserved';
+  status: 'vacant' | 'occupied' | 'maintenance' | 'reserved' | 'for_sale';
   createdAt: Date;
 };
 

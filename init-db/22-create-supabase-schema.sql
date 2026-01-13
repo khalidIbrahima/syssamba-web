@@ -155,8 +155,9 @@ CREATE TABLE IF NOT EXISTS units (
     rent_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
     charges_amount DECIMAL(12, 2) DEFAULT 0,
     deposit_amount DECIMAL(12, 2) DEFAULT 0,
+    sale_price DECIMAL(12, 2) DEFAULT 0,
     photo_urls TEXT[],
-    status TEXT DEFAULT 'vacant' CHECK (status IN ('vacant', 'occupied', 'maintenance', 'reserved')),
+    status TEXT DEFAULT 'vacant' CHECK (status IN ('vacant', 'occupied', 'maintenance', 'reserved', 'for_sale')),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -246,6 +247,37 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE INDEX IF NOT EXISTS idx_payments_org ON payments(organization_id);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+
+-- =====================================================
+-- SALES TABLE (Ventes de biens immobiliers)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS sales (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    unit_id UUID REFERENCES units(id) ON DELETE SET NULL,
+    property_id UUID REFERENCES properties(id) ON DELETE SET NULL,
+    buyer_first_name TEXT NOT NULL,
+    buyer_last_name TEXT NOT NULL,
+    buyer_email TEXT,
+    buyer_phone TEXT,
+    buyer_id_number TEXT,
+    sale_price DECIMAL(12, 2) NOT NULL,
+    commission_rate DECIMAL(5, 2) DEFAULT 0,
+    commission_amount DECIMAL(12, 2) DEFAULT 0,
+    deposit_amount DECIMAL(12, 2) DEFAULT 0,
+    sale_date DATE NOT NULL,
+    closing_date DATE,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
+    payment_method_id UUID REFERENCES payment_methods(id),
+    notes TEXT,
+    documents TEXT[],
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_sales_org ON sales(organization_id);
+CREATE INDEX IF NOT EXISTS idx_sales_unit ON sales(unit_id);
+CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status);
 CREATE INDEX IF NOT EXISTS idx_payments_tenant ON payments(tenant_id);
 
 -- =====================================================

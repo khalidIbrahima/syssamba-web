@@ -35,6 +35,9 @@ import { useDataQuery } from '@/hooks/use-query';
 import { toast } from 'sonner';
 import { getDefaultCountry } from '@/lib/countries';
 import { cn } from '@/lib/utils';
+import { useSuperAdmin } from '@/hooks/use-super-admin';
+import { AccessDenied } from '@/components/ui/access-denied';
+import { PageLoader } from '@/components/ui/page-loader';
 
 // Fetch available plans
 async function getPlans() {
@@ -82,9 +85,51 @@ const organizationTypes = [
       'Rapports de base',
     ],
   },
-  
-  
-
+  {
+    id: 'agency',
+    name: 'Agence Immobilière',
+    description: 'Gestion professionnelle de biens immobiliers',
+    icon: Building2,
+    iconColor: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+    recommendedPlan: 'starter', // Default, will be updated based on active plans
+    features: [
+      'Gestion multi-biens',
+      'Outils marketing',
+      'Suivi clients',
+      'Rapports avancés',
+    ],
+  },
+  {
+    id: 'sci',
+    name: 'SCI / Société Civile',
+    description: 'Gestion de société civile immobilière',
+    icon: Users,
+    iconColor: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+    recommendedPlan: 'professional', // Default, will be updated based on active plans
+    features: [
+      'Gestion comptable',
+      'Répartition des charges',
+      'Assemblées générales',
+      'Documents légaux',
+    ],
+  },
+  {
+    id: 'syndic',
+    name: 'Syndic de Copropriété',
+    description: 'Administration de copropriétés et immeubles',
+    icon: Handshake,
+    iconColor: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+    recommendedPlan: 'starter', // Default, will be updated based on active plans
+    features: [
+      'Gestion des charges',
+      'Assemblées générales',
+      'Suivi des travaux',
+      'Communication résidents',
+    ],
+  },
 ];
 
 export default function SetupPage() {
@@ -111,10 +156,29 @@ export default function SetupPage() {
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'wave' | 'orange_money' | ''>('');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
+  // Check super admin access
+  const { isSuperAdmin, isLoading: isSuperAdminLoading } = useSuperAdmin();
   const { data: plans, isLoading: plansLoading } = useDataQuery(['plans'], getPlans);
   const { data: countriesData, isLoading: countriesLoading } = useDataQuery(['countries'], getCountries);
   const { data: currentUser } = useDataQuery(['currentUser'], getCurrentUser);
   const countries = countriesData?.countries || [];
+
+  // Wait for super admin check to complete
+  if (isSuperAdminLoading) {
+    return <PageLoader message="Vérification des accès..." />;
+  }
+
+  // CRITICAL: Only super admins can access the setup page
+  if (!isSuperAdmin) {
+    return (
+      <AccessDenied
+        title="Accès refusé"
+        message="Seuls les super-administrateurs peuvent accéder à cette page."
+        requiredPermission="Super-admin access"
+        featureName="Configuration d'organisation"
+      />
+    );
+  }
 
   // CRITICAL: Check if organization is already configured and redirect away
   useEffect(() => {
@@ -415,6 +479,24 @@ export default function SetupPage() {
     }
   }, [formData.organizationType, formData.lotsCount, plans]);
 
+  // If user is on payment step (step 3) but selects a free plan, go back to step 2
+  // If user is on step 4 but selects a paid plan from step 2, go to step 3
+  useEffect(() => {
+    if (currentStep === 3) {
+      const selectedPlan = plans?.find((p: any) => p.name === formData.planName);
+      const requiresPayment = formData.planName !== 'freemium' && selectedPlan && 
+        selectedPlan.price !== 'custom' && 
+        selectedPlan.price !== null && 
+        selectedPlan.price !== undefined && 
+        typeof selectedPlan.price === 'number' && 
+        selectedPlan.price > 0;
+      
+      if (!requiresPayment) {
+        setCurrentStep(2);
+      }
+    }
+  }, [formData.planName, currentStep, plans]);
+
   // Check if payment is required
   const isPaymentRequired = () => {
     if (formData.planName === 'freemium') return false;
@@ -424,8 +506,10 @@ export default function SetupPage() {
     return price !== 'custom' && price !== null && price !== undefined && typeof price === 'number' && price > 0;
   };
 
-  // Calculate total steps
-  const totalSteps = isPaymentRequired() ? 3 : 2;
+  // Calculate total steps: always 4 steps (info + plan selection + payment/contact + contact)
+  // Step 3: Payment (if plan requires payment) OR Contact (if free plan)
+  // Step 4: Contact (always shown, but skipped if already in step 3 for free plans)
+  const totalSteps = 4;
 
   // Handle step navigation
   const handleNext = () => {
@@ -437,13 +521,20 @@ export default function SetupPage() {
       }
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      // If payment is required, go to payment step
-      if (isPaymentRequired()) {
-        setCurrentStep(3);
-      } else {
-        // Otherwise, submit directly
-        handleSubmit();
-      }
+      // On step 2 (plan selection)
+      // Always go to step 3 (payment for paid plans, contact for free plans)
+      setCurrentStep(3);
+  } else if (currentStep === 3) {
+    // For paid plans, submit directly to go to payment page
+    // For free plans, go to step 4 (contact info)
+    if (isPaymentRequired()) {
+      handleSubmit();
+    } else {
+      setCurrentStep(4);
+    }
+  } else if (currentStep === 4) {
+      // Step 4 is contact info - submit
+      handleSubmit();
     }
   };
 
@@ -454,15 +545,55 @@ export default function SetupPage() {
   };
 
   const handleStartFree = async () => {
-    // Set to freemium and submit
-    setFormData(prev => ({ ...prev, planName: 'freemium', billingPeriod: 'monthly' }));
-    await handleSubmit();
+    // Set to freemium and submit directly (no payment step needed)
+    const freemiumFormData = { ...formData, planName: 'freemium', billingPeriod: 'monthly' };
+    // Update state for UI consistency, but use formDataOverride in handleSubmit to avoid race conditions
+    setFormData(freemiumFormData);
+    // Use the freemium formData directly - this will skip payment processing
+    await handleSubmit(undefined, freemiumFormData);
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent, formDataOverride?: typeof formData) => {
     if (e) {
       e.preventDefault();
     }
+
+    // Use formDataOverride if provided (for handleStartFree), otherwise use state formData
+    const dataToSubmit = formDataOverride || formData;
+
+    // Validate required contact information for all plans
+    if (!dataToSubmit.email?.trim()) {
+      toast.error('Veuillez saisir votre email');
+      return;
+    }
+    if (!dataToSubmit.phone?.trim()) {
+      toast.error('Veuillez saisir votre téléphone principal');
+      return;
+    }
+    if (!dataToSubmit.address?.trim()) {
+      toast.error('Veuillez saisir votre adresse');
+      return;
+    }
+    if (!dataToSubmit.city?.trim()) {
+      toast.error('Veuillez saisir votre ville');
+      return;
+    }
+    if (!dataToSubmit.postalCode?.trim()) {
+      toast.error('Veuillez saisir votre code postal');
+      return;
+    }
+    if (!dataToSubmit.state?.trim()) {
+      toast.error('Veuillez saisir votre région/province');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(dataToSubmit.email)) {
+      toast.error('Veuillez saisir un email valide');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -472,7 +603,7 @@ export default function SetupPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSubmit),
       });
 
       if (!setupResponse.ok) {
@@ -481,38 +612,50 @@ export default function SetupPage() {
       }
 
       const setupData = await setupResponse.json();
-      
-      // Get selected plan to get its ID
-      const selectedPlanForPayment = plans?.find((p: any) => p.name === formData.planName);
-      
-      // If payment is required and we're on payment step, process payment
-      if (isPaymentRequired() && currentStep === 3 && paymentMethod && selectedPlanForPayment?.id) {
-        setIsProcessingPayment(true);
-        
-        const paymentResponse = await fetch('/api/organization/payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            planId: selectedPlanForPayment.id,
-            billingPeriod: formData.billingPeriod,
-            paymentMethod: paymentMethod,
-          }),
-        });
-
-        if (!paymentResponse.ok) {
-          const error = await paymentResponse.json();
-          throw new Error(error.error || 'Payment failed');
-        }
-
-        const paymentData = await paymentResponse.json();
-        toast.success('Paiement traité avec succès!');
-      }
 
       toast.success('Organisation configurée avec succès!');
       
-      // Redirect to dashboard with custom subdomain if available
+      // Small delay to ensure user sees success message
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // If payment is required, redirect to appropriate payment processing
+      if (setupData.paymentRequired && setupData.plan?.id) {
+        if (paymentMethod === 'stripe') {
+          // Redirect to Stripe Checkout
+          const response = await fetch('/api/subscription/checkout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              planId: setupData.plan.id,
+              billingPeriod: dataToSubmit.billingPeriod,
+            }),
+          });
+
+          const checkoutData = await response.json();
+
+          if (!response.ok) {
+            throw new Error(checkoutData.error || 'Erreur lors de la création de la session de paiement');
+          }
+
+          if (checkoutData.checkoutUrl) {
+            window.location.href = checkoutData.checkoutUrl;
+          } else {
+            throw new Error('URL de paiement non reçue');
+          }
+        } else if (paymentMethod === 'wave' || paymentMethod === 'orange_money') {
+          // Redirect to wallet payment page with provider pre-selected
+          const walletUrl = `/setup/payment/wallet?planId=${setupData.plan.id}&billingPeriod=${dataToSubmit.billingPeriod}&provider=${paymentMethod}`;
+          window.location.href = walletUrl;
+        } else {
+          throw new Error('Méthode de paiement non valide');
+        }
+        return;
+      }
+      
+      // Redirect to dashboard if no payment required
       const redirectUrl = setupData.subdomainUrl 
         ? `${setupData.subdomainUrl}/dashboard`
         : (setupData.redirectTo || '/dashboard');
@@ -615,6 +758,7 @@ export default function SetupPage() {
                 {currentStep === 1 && 'Informations organisation'}
                 {currentStep === 2 && 'Choix du plan'}
                 {currentStep === 3 && 'Paiement'}
+                {currentStep === 4 && 'Informations de contact'}
               </p>
             </div>
           </div>
@@ -889,108 +1033,6 @@ export default function SetupPage() {
                   </p>
                 </div>
 
-                {/* Contact Information Section */}
-                <div className="space-y-4 pt-6 border-t border-border">
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-1">Informations de contact</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Ces informations sont facultatives et peuvent être complétées plus tard
-                    </p>
-                  </div>
-
-                  {/* Email */}
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="contact@exemple.com"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  {/* Phone numbers */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Téléphone principal</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+221 77 123 45 67"
-                        value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone2">Téléphone secondaire</Label>
-                      <Input
-                        id="phone2"
-                        type="tel"
-                        placeholder="+221 78 123 45 67"
-                        value={formData.phone2}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone2: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  {/* Address */}
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Adresse</Label>
-                    <Input
-                      id="address"
-                      placeholder="Rue, avenue, etc."
-                      value={formData.address}
-                      onChange={(e) =>
-                        setFormData({ ...formData, address: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  {/* City, Postal Code, State */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">Ville</Label>
-                      <Input
-                        id="city"
-                        placeholder="Dakar"
-                        value={formData.city}
-                        onChange={(e) =>
-                          setFormData({ ...formData, city: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="postalCode">Code postal</Label>
-                      <Input
-                        id="postalCode"
-                        placeholder="12500"
-                        value={formData.postalCode}
-                        onChange={(e) =>
-                          setFormData({ ...formData, postalCode: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="state">Région/Province</Label>
-                      <Input
-                        id="state"
-                        placeholder="Dakar"
-                        value={formData.state}
-                        onChange={(e) =>
-                          setFormData({ ...formData, state: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
               <div className="flex justify-end mt-6">
                 <Button
                   onClick={handleNext}
@@ -1131,15 +1173,95 @@ export default function SetupPage() {
                       ? `${plan.price.toLocaleString('fr-FR')} FCFA/mois`
                       : 'Sur devis';
                     
-                    // Get key features from plan.features
-                    const features = plan.features || {};
-                    const keyFeatures = [
-                      features.properties_management && 'Gestion des biens',
-                      features.units_management && 'Gestion des lots',
-                      features.tenants_full && 'Gestion complète locataires',
-                      features.payments_all_methods && 'Paiements (Wave/Orange)',
-                      features.accounting_sycoda_full && 'Comptabilité SYSCOHADA',
-                    ].filter(Boolean);
+                    // Get comprehensive features for each plan from database
+                    const getPlanFeatures = (plan: any) => {
+                      console.log('🔍 Plan data:', plan); // Debug log
+                      console.log('🔍 Plan features:', plan?.features); // Debug log
+                      console.log('🔍 Plan max_units:', plan?.max_units); // Debug log
+                      console.log('🔍 Plan max_users:', plan?.max_users); // Debug log
+
+                      if (!plan) {
+                        return ['Gestion des biens immobiliers', 'Gestion des lots', 'Suivi des locataires'];
+                      }
+
+                      const features = [];
+
+                      // Add limits as features
+                      if (plan.max_units !== null && plan.max_units !== undefined) {
+                        if (plan.max_units === -1) {
+                          features.push('Biens illimités');
+                        } else {
+                          features.push(`Jusqu'à ${plan.max_units} biens`);
+                        }
+                      }
+
+                      if (plan.max_users !== null && plan.max_users !== undefined) {
+                        if (plan.max_users === -1) {
+                          features.push('Utilisateurs illimités');
+                        } else {
+                          features.push(`${plan.max_users} utilisateur${plan.max_users > 1 ? 's' : ''}`);
+                        }
+                      }
+
+                      if (plan.extranet_tenants_limit !== null && plan.extranet_tenants_limit !== undefined) {
+                        if (plan.extranet_tenants_limit === -1) {
+                          features.push('Comptes locataires extranet illimités');
+                        } else {
+                          features.push(`${plan.extranet_tenants_limit} comptes locataires extranet`);
+                        }
+                      }
+
+                      // Add features from plan.features object
+                      if (plan.features && typeof plan.features === 'object') {
+                        console.log('🔍 Processing features object:', Object.keys(plan.features)); // Debug log
+
+                        // Map feature keys to user-friendly names (using actual feature names from database)
+                        const featureMapping: Record<string, string> = {
+                          'properties_management': 'Gestion des biens',
+                          'tasks_management': 'Gestion des tâches',
+                          'units_management': 'Gestion des lots',
+                          'tenants_management': 'Gestion des locataires',
+                          'leases_management': 'Gestion des baux',
+                          'payments_tracking': 'Suivi des paiements',
+                          'accounting_basic': 'Comptabilité de base',
+                          'messaging_system': 'Système de messagerie',
+                          'reports_basic': 'Rapports de base',
+                          'user_management': 'Gestion des utilisateurs',
+                        };
+
+                        // Add enabled features
+                        Object.keys(plan.features).forEach(featureKey => {
+                          console.log(`🔍 Checking feature: ${featureKey}, value: ${plan.features[featureKey]}`); // Debug log
+                          if (plan.features[featureKey] === true && featureMapping[featureKey]) {
+                            console.log(`✅ Adding feature: ${featureMapping[featureKey]}`); // Debug log
+                            features.push(featureMapping[featureKey]);
+                          }
+                        });
+                      }
+
+                      // Add price-related features for paid plans
+                      if (plan.price !== 'custom' && plan.price !== null && plan.price !== undefined && plan.price > 0) {
+                        features.push('Facturation mensuelle');
+                        if (plan.priceYearly) {
+                          features.push('Remise annuelle disponible');
+                        }
+                      }
+
+                      console.log('🎯 Final features array:', features); // Debug log
+
+                      // Fallback if no features found
+                      if (features.length === 0) {
+                        console.log('⚠️ No features found, using fallback'); // Debug log
+                        features.push('Gestion des biens immobiliers');
+                        features.push('Gestion des lots');
+                        features.push('Suivi des locataires');
+                      }
+
+                      // Remove duplicates and return
+                      return [...new Set(features)];
+                    };
+
+                    const keyFeatures = getPlanFeatures(plan);
 
                     return (
                       <Card
@@ -1187,8 +1309,24 @@ export default function SetupPage() {
                             )}
                           </div>
 
+                          {/* Key Features */}
+                          {keyFeatures.length > 0 && (
+                            <div className="space-y-3 mb-4 pb-4 border-b">
+                              <p className="text-sm font-semibold text-foreground">Fonctionnalités incluses</p>
+                              <ul className="space-y-2">
+                                {keyFeatures.map((feature, idx) => (
+                                  <li key={idx} className="flex items-center text-sm text-muted-foreground">
+                                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 mr-3 flex-shrink-0" />
+                                    <span>{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
                           {/* Limits */}
-                          <div className="space-y-2 mb-4 pb-4 border-b">
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Limites du plan</p>
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">Lots</span>
                               <span className="font-semibold text-foreground">
@@ -1208,21 +1346,6 @@ export default function SetupPage() {
                               </span>
                             </div>
                           </div>
-
-                          {/* Key Features */}
-                          {keyFeatures.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-xs font-semibold text-muted-foreground uppercase">Fonctionnalités</p>
-                              <ul className="space-y-1">
-                                {keyFeatures.slice(0, 5).map((feature, idx) => (
-                                  <li key={idx} className="flex items-center text-xs text-muted-foreground">
-                                    <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400 mr-2 flex-shrink-0" />
-                                    <span>{feature}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
                         </CardContent>
                       </Card>
                     );
@@ -1291,6 +1414,520 @@ export default function SetupPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Step 3: Payment (for paid plans) or Contact (for free plans) */}
+        {currentStep === 3 && isPaymentRequired() && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Paiement</CardTitle>
+              <CardDescription>
+                Finalisez votre abonnement {selectedPlan?.displayName || selectedPlan?.name}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Plan Summary */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Plan sélectionné</span>
+                  <span className="font-semibold">{selectedPlan?.displayName || selectedPlan?.name}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Période de facturation</span>
+                  <span className="font-semibold capitalize">
+                    {formData.billingPeriod === 'yearly' ? 'Annuel (-20%)' : 'Mensuel'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <span className="text-base font-semibold">Total</span>
+                  <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{displayPrice}</span>
+                </div>
+              </div>
+
+              {/* Payment Method Selection */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Méthode de paiement *</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card
+                    className={cn(
+                      'cursor-pointer transition-all',
+                      paymentMethod === 'stripe'
+                        ? 'ring-2 ring-blue-600 dark:ring-blue-400 border-blue-600 dark:border-blue-400'
+                        : 'hover:border-blue-300 dark:hover:border-blue-700',
+                    )}
+                    onClick={() => setPaymentMethod('stripe')}
+                  >
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <CreditCard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      <div className="flex-1">
+                        <p className="font-semibold">Carte bancaire</p>
+                        <p className="text-sm text-muted-foreground">Visa, Mastercard</p>
+                      </div>
+                      {paymentMethod === 'stripe' && (
+                        <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card
+                    className={cn(
+                      'cursor-pointer transition-all',
+                      paymentMethod === 'wave'
+                        ? 'ring-2 ring-blue-600 dark:ring-blue-400 border-blue-600 dark:border-blue-400'
+                        : 'hover:border-blue-300 dark:hover:border-blue-700',
+                    )}
+                    onClick={() => setPaymentMethod('wave')}
+                  >
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Wallet className="h-6 w-6 text-green-600 dark:text-green-400" />
+                      <div className="flex-1">
+                        <p className="font-semibold">Wave</p>
+                        <p className="text-sm text-muted-foreground">Mobile Money</p>
+                      </div>
+                      {paymentMethod === 'wave' && (
+                        <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card
+                    className={cn(
+                      'cursor-pointer transition-all',
+                      paymentMethod === 'orange_money'
+                        ? 'ring-2 ring-blue-600 dark:ring-blue-400 border-blue-600 dark:border-blue-400'
+                        : 'hover:border-blue-300 dark:hover:border-blue-700',
+                    )}
+                    onClick={() => setPaymentMethod('orange_money')}
+                  >
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <Wallet className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                      <div className="flex-1">
+                        <p className="font-semibold">Orange Money</p>
+                        <p className="text-sm text-muted-foreground">Mobile Money</p>
+                      </div>
+                      {paymentMethod === 'orange_money' && (
+                        <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Payment Security Note */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-800 dark:text-blue-400">
+                  <strong>🔒 Paiement sécurisé:</strong> Vos informations de paiement sont cryptées et sécurisées. 
+                  Nous ne stockons pas vos données de carte bancaire.
+                </p>
+              </div>
+
+              {/* Contact Information Section */}
+              <div className="space-y-4 pt-6 border-t border-border">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Informations de contact *</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Ces informations sont requises pour finaliser votre configuration
+                  </p>
+                </div>
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <Label htmlFor="payment-email">Email *</Label>
+                  <Input
+                    id="payment-email"
+                    type="email"
+                    placeholder="contact@exemple.com"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                {/* Phone numbers */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-phone">Téléphone principal *</Label>
+                    <Input
+                      id="payment-phone"
+                      type="tel"
+                      placeholder="+221 77 123 45 67"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-phone2">Téléphone secondaire</Label>
+                    <Input
+                      id="payment-phone2"
+                      type="tel"
+                      placeholder="+221 78 123 45 67"
+                      value={formData.phone2}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone2: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="space-y-2">
+                  <Label htmlFor="payment-address">Adresse *</Label>
+                  <Input
+                    id="payment-address"
+                    placeholder="Rue, avenue, etc."
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                {/* City, Postal Code, State */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-city">Ville *</Label>
+                    <Input
+                      id="payment-city"
+                      placeholder="Dakar"
+                      value={formData.city}
+                      onChange={(e) =>
+                        setFormData({ ...formData, city: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-postalCode">Code postal *</Label>
+                    <Input
+                      id="payment-postalCode"
+                      placeholder="12500"
+                      value={formData.postalCode}
+                      onChange={(e) =>
+                        setFormData({ ...formData, postalCode: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-state">Région/Province *</Label>
+                    <Input
+                      id="payment-state"
+                      placeholder="Dakar"
+                      value={formData.state}
+                      onChange={(e) =>
+                        setFormData({ ...formData, state: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between pt-4 border-t border-border">
+                <Button variant="outline" onClick={handleBack} disabled={isSubmitting || isProcessingPayment}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour
+                </Button>
+                <Button
+                  onClick={handleNext}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={isSubmitting || isProcessingPayment || !paymentMethod}
+                >
+                  Continuer
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Contact Information (for free plans) */}
+        {currentStep === 3 && !isPaymentRequired() && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Informations de contact</CardTitle>
+              <CardDescription>
+                Complétez vos informations de contact (requis)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="contact-free-email">Email *</Label>
+                <Input
+                  id="contact-free-email"
+                  type="email"
+                  placeholder="contact@exemple.com"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              {/* Phone numbers */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-free-phone">Téléphone principal *</Label>
+                  <Input
+                    id="contact-free-phone"
+                    type="tel"
+                    placeholder="+221 77 123 45 67"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-free-phone2">Téléphone secondaire</Label>
+                  <Input
+                    id="contact-free-phone2"
+                    type="tel"
+                    placeholder="+221 78 123 45 67"
+                    value={formData.phone2}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone2: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="space-y-2">
+                <Label htmlFor="contact-free-address">Adresse *</Label>
+                <Input
+                  id="contact-free-address"
+                  placeholder="Rue, avenue, etc."
+                  value={formData.address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              {/* City, Postal Code, State */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-free-city">Ville *</Label>
+                  <Input
+                    id="contact-free-city"
+                    placeholder="Dakar"
+                    value={formData.city}
+                    onChange={(e) =>
+                      setFormData({ ...formData, city: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-free-postalCode">Code postal *</Label>
+                  <Input
+                    id="contact-free-postalCode"
+                    placeholder="12500"
+                    value={formData.postalCode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, postalCode: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-free-state">Région/Province *</Label>
+                  <Input
+                    id="contact-free-state"
+                    placeholder="Dakar"
+                    value={formData.state}
+                    onChange={(e) =>
+                      setFormData({ ...formData, state: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-800 dark:text-blue-400">
+                  <strong>ℹ️ Note:</strong> Ces informations sont requises pour finaliser votre configuration d'organisation.
+                </p>
+              </div>
+
+              <div className="flex justify-between pt-4 border-t border-border">
+                <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Configuration...
+                    </>
+                  ) : (
+                    <>
+                      Finaliser la configuration
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 4: Contact Information (final step for paid plans) */}
+        {currentStep === 4 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Informations de contact</CardTitle>
+              <CardDescription>
+                Complétez vos informations de contact (requis)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="contact-email">Email *</Label>
+                <Input
+                  id="contact-email"
+                  type="email"
+                  placeholder="contact@exemple.com"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              {/* Phone numbers */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-phone">Téléphone principal *</Label>
+                  <Input
+                    id="contact-phone"
+                    type="tel"
+                    placeholder="+221 77 123 45 67"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-phone2">Téléphone secondaire</Label>
+                  <Input
+                    id="contact-phone2"
+                    type="tel"
+                    placeholder="+221 78 123 45 67"
+                    value={formData.phone2}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone2: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="space-y-2">
+                <Label htmlFor="contact-address">Adresse *</Label>
+                <Input
+                  id="contact-address"
+                  placeholder="Rue, avenue, etc."
+                  value={formData.address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              {/* City, Postal Code, State */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-city">Ville *</Label>
+                  <Input
+                    id="contact-city"
+                    placeholder="Dakar"
+                    value={formData.city}
+                    onChange={(e) =>
+                      setFormData({ ...formData, city: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-postalCode">Code postal *</Label>
+                  <Input
+                    id="contact-postalCode"
+                    placeholder="12500"
+                    value={formData.postalCode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, postalCode: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-state">Région/Province *</Label>
+                  <Input
+                    id="contact-state"
+                    placeholder="Dakar"
+                    value={formData.state}
+                    onChange={(e) =>
+                      setFormData({ ...formData, state: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <p className="text-sm text-blue-800 dark:text-blue-400">
+                  <strong>ℹ️ Note:</strong> Ces informations sont requises pour finaliser votre configuration d'organisation.
+                </p>
+              </div>
+
+              <div className="flex justify-between pt-4 border-t border-border">
+                <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Configuration...
+                    </>
+                  ) : (
+                    <>
+                      Finaliser la configuration
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
       </div>
     </div>
   );

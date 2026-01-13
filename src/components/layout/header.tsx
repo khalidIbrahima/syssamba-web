@@ -122,15 +122,23 @@ export function Header() {
   return (
     <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-border bg-background px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8" suppressHydrationWarning>
       <div className="flex flex-1 items-center justify-between gap-4">
-        {/* Left: Logo (only on properties page) or Title */}
+        {/* Left: Logo (only on properties page) or Title with Organization Name */}
         {isPropertiesPage ? (
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
             <Logo width={120} height={40} />
           </Link>
         ) : (
-          <h1 className="text-xl font-semibold text-foreground">
-            {isDashboardPage ? t('nav.dashboard') : t('nav.dashboard')}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-semibold text-foreground">
+              {isDashboardPage ? t('nav.dashboard') : t('nav.dashboard')}
+            </h1>
+            {currentUser?.organizationName && (
+              <span className="text-sm text-blue-700 dark:text-blue-300 font-semibold hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800">
+                <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                {currentUser.organizationName}
+              </span>
+            )}
+          </div>
         )}
 
         {/* Center: Search Bar (only on properties page) */}

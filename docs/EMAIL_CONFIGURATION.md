@@ -156,3 +156,6 @@ Pour tester la configuration email :
 - [Documentation Nodemailer](https://nodemailer.com/about/)
 - [Gmail App Passwords](https://support.google.com/accounts/answer/185833)
 
+
+
+

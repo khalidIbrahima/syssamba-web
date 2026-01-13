@@ -13,8 +13,9 @@ const createPlanSchema = z.object({
   priceMonthly: z.number().nullable().optional(),
   priceYearly: z.number().nullable().optional(),
   yearlyDiscountRate: z.number().min(0).max(100).nullable().optional(), // Taux de remise en % (0-100)
-  lotsLimit: z.number().nullable().optional(),
-  usersLimit: z.number().nullable().optional(),
+  maxProperties: z.number().nullable().optional(),
+  maxUnits: z.number().nullable().optional(),
+  maxUsers: z.number().nullable().optional(),
   extranetTenantsLimit: z.number().nullable().optional(),
   features: z.record(z.string(), z.any()).default({}),
   isActive: z.boolean().default(true),
@@ -29,8 +30,9 @@ const updatePlanSchema = z.object({
   priceMonthly: z.number().nullable().optional(),
   priceYearly: z.number().nullable().optional(),
   yearlyDiscountRate: z.number().min(0).max(100).nullable().optional(), // Taux de remise en % (0-100)
-  lotsLimit: z.number().nullable().optional(),
-  usersLimit: z.number().nullable().optional(),
+  maxProperties: z.number().nullable().optional(),
+  maxUnits: z.number().nullable().optional(),
+  maxUsers: z.number().nullable().optional(),
   extranetTenantsLimit: z.number().nullable().optional(),
   features: z.record(z.string(), z.any()).optional(),
   isActive: z.boolean().optional(),
@@ -80,6 +82,7 @@ export async function GET() {
       price_yearly: number | null;
       yearly_discount_rate: number | null;
       max_properties: number | null;
+      max_units: number | null;
       max_users: number | null;
       extranet_tenants_limit: number | null;
       features: any;
@@ -103,7 +106,7 @@ export async function GET() {
         }
       }
       
-      return {
+      const mappedPlan = {
         id: plan.id,
         name: plan.name,
         display_name: plan.display_name,
@@ -111,8 +114,9 @@ export async function GET() {
         price_monthly: plan.price_monthly,
         price_yearly: yearlyPrice,
         yearly_discount_rate: plan.yearly_discount_rate,
-        lots_limit: plan.max_properties,
-        users_limit: plan.max_users,
+        max_properties: plan.max_properties,
+        max_units: plan.max_units, // Units limit
+        max_users: plan.max_users,
         extranet_tenants_limit: plan.extranet_tenants_limit,
         features: plan.features || {},
         is_active: plan.is_active,
@@ -120,6 +124,15 @@ export async function GET() {
         created_at: plan.created_at,
         updated_at: plan.updated_at,
       };
+
+      // Debug logging for max_users
+      if (mappedPlan.max_users !== null && mappedPlan.max_users !== undefined) {
+        console.log(`Plan ${mappedPlan.name} has max_users: ${mappedPlan.max_users}`);
+      } else {
+        console.log(`Plan ${mappedPlan.name} has max_users: null/undefined`);
+      }
+
+      return mappedPlan;
     });
 
     return NextResponse.json({
@@ -131,8 +144,9 @@ export async function GET() {
         priceMonthly: plan.price_monthly ? parseFloat(plan.price_monthly) : null,
         priceYearly: plan.price_yearly ? parseFloat(plan.price_yearly) : null,
         yearlyDiscountRate: plan.yearly_discount_rate ? parseFloat(plan.yearly_discount_rate) : null,
-        lotsLimit: plan.lots_limit,
-        usersLimit: plan.users_limit,
+        maxProperties: plan.max_properties,
+        maxUnits: plan.max_units,
+        maxUsers: plan.max_users,
         extranetTenantsLimit: plan.extranet_tenants_limit,
         features: typeof plan.features === 'string' ? JSON.parse(plan.features) : (plan.features || {}),
         isActive: plan.is_active,
@@ -203,7 +217,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Build update object with only provided fields
-    // Map to actual database column names (max_properties, max_users)
+    // Map to actual database column names (max_properties, max_units, users_limit)
     const updateData: {
       display_name?: string;
       description?: string | null;
@@ -211,6 +225,7 @@ export async function PATCH(request: NextRequest) {
       price_yearly?: number | null;
       yearly_discount_rate?: number | null;
       max_properties?: number | null;
+      max_units?: number | null;
       max_users?: number | null;
       extranet_tenants_limit?: number | null;
       features?: any;
@@ -251,16 +266,21 @@ export async function PATCH(request: NextRequest) {
     if (updates.priceYearly !== undefined) {
       updateData.price_yearly = updates.priceYearly;
     }
-    // Map lotsLimit to max_properties (actual column name)
-    if (updates.lotsLimit !== undefined) {
-      updateData.max_properties = updates.lotsLimit;
+    // Handle maxProperties
+    if (updates.maxProperties !== undefined) {
+      updateData.max_properties = updates.maxProperties;
     }
-    // Map usersLimit to max_users (actual column name)
-    if (updates.usersLimit !== undefined) {
-      updateData.max_users = updates.usersLimit;
+    // Map maxUnits to max_units
+    if (updates.maxUnits !== undefined) {
+      updateData.max_units = updates.maxUnits;
+    }
+    // Map maxUsers to max_users (actual column name)
+    if (updates.maxUsers !== undefined) {
+      updateData.max_users = updates.maxUsers;
     }
     if (updates.extranetTenantsLimit !== undefined) {
       updateData.extranet_tenants_limit = updates.extranetTenantsLimit;
+      console.log('API received extranetTenantsLimit:', updates.extranetTenantsLimit);
     }
     if (updates.features !== undefined) {
       updateData.features = updates.features;
@@ -280,26 +300,38 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update the plan using Supabase client (more reliable)
-    await db.updateOne('plans', updateData, { id });
+    try {
+      await db.updateOne('plans', updateData, { id });
+    } catch (updateError) {
+      console.error('Error updating plan in database:', updateError);
+      throw updateError;
+    }
 
     // Fetch updated plan
-    const updatedPlan = await db.selectOne<{
-      id: string;
-      name: string;
-      display_name: string;
-      description: string | null;
-      price_monthly: number | null;
-      price_yearly: number | null;
-      yearly_discount_rate: number | null;
-      max_properties: number | null;
-      max_users: number | null;
-      extranet_tenants_limit: number | null;
-      features: any;
-      is_active: boolean;
-      sort_order: number | null;
-    }>('plans', {
-      eq: { id },
-    });
+    let updatedPlan;
+    try {
+      updatedPlan = await db.selectOne<{
+        id: string;
+        name: string;
+        display_name: string;
+        description: string | null;
+        price_monthly: number | null;
+        price_yearly: number | null;
+        yearly_discount_rate: number | null;
+        max_properties: number | null;
+        max_units: number | null;
+        max_users: number | null;
+        extranet_tenants_limit: number | null;
+        features: any;
+        is_active: boolean;
+        sort_order: number | null;
+      }>('plans', {
+        eq: { id },
+      });
+    } catch (fetchError) {
+      console.error('Error fetching updated plan:', fetchError);
+      throw fetchError;
+    }
 
     // Calculate yearly price if yearly_discount_rate is set
     let calculatedYearlyPrice = updatedPlan?.price_yearly ?? null;
@@ -321,8 +353,9 @@ export async function PATCH(request: NextRequest) {
         priceMonthly: updatedPlan.price_monthly ? parseFloat(String(updatedPlan.price_monthly)) : null,
         priceYearly: calculatedYearlyPrice ? parseFloat(String(calculatedYearlyPrice)) : null,
         yearlyDiscountRate: updatedPlan.yearly_discount_rate ? parseFloat(String(updatedPlan.yearly_discount_rate)) : null,
-        lotsLimit: updatedPlan.max_properties,
-        usersLimit: updatedPlan.max_users,
+        maxProperties: updatedPlan.max_properties,
+        maxUnits: updatedPlan.max_units,
+        maxUsers: updatedPlan.max_users,
         extranetTenantsLimit: updatedPlan.extranet_tenants_limit,
         features: typeof updatedPlan.features === 'string' ? JSON.parse(updatedPlan.features) : (updatedPlan.features || {}),
         isActive: updatedPlan.is_active,
@@ -413,8 +446,9 @@ export async function POST(request: NextRequest) {
       price_monthly: validatedData.priceMonthly ?? null,
       price_yearly: calculatedYearlyPrice,
       yearly_discount_rate: validatedData.yearlyDiscountRate ?? null,
-      max_properties: validatedData.lotsLimit ?? null,
-      max_users: validatedData.usersLimit ?? null,
+      max_properties: validatedData.maxProperties ?? null,
+      max_units: validatedData.maxUnits ?? null,
+      max_users: validatedData.maxUsers ?? null,
       extranet_tenants_limit: validatedData.extranetTenantsLimit ?? null,
       features: validatedData.features || {},
       is_active: validatedData.isActive ?? true,
@@ -431,6 +465,7 @@ export async function POST(request: NextRequest) {
       price_yearly: number | null;
       yearly_discount_rate: number | null;
       max_properties: number | null;
+      max_units: number | null;
       max_users: number | null;
       extranet_tenants_limit: number | null;
       features: any;
@@ -458,8 +493,9 @@ export async function POST(request: NextRequest) {
         priceMonthly: newPlan.price_monthly ? parseFloat(String(newPlan.price_monthly)) : null,
         priceYearly: newPlan.price_yearly ? parseFloat(String(newPlan.price_yearly)) : null,
         yearlyDiscountRate: newPlan.yearly_discount_rate ? parseFloat(String(newPlan.yearly_discount_rate)) : null,
-        lotsLimit: newPlan.max_properties,
-        usersLimit: newPlan.max_users,
+        maxProperties: newPlan.max_properties,
+        maxUnits: newPlan.max_units,
+        maxUsers: newPlan.max_users,
         extranetTenantsLimit: newPlan.extranet_tenants_limit,
         features: typeof newPlan.features === 'string' ? JSON.parse(newPlan.features) : (newPlan.features || {}),
         isActive: newPlan.is_active,

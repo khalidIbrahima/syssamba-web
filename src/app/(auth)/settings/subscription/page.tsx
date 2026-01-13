@@ -1,12 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import {
   Crown,
   Download,
@@ -50,6 +55,9 @@ async function getAllPlans() {
 }
 
 export default function SubscriptionPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const { canPerformAction, canAccessObject, isLoading: isAccessLoading } = useAccess();
   const { currentUsage, limits: planLimits, plan: currentPlan, definition: planDefinition } = usePlan();
   const { data: billingData, isLoading: billingLoading } = useDataQuery(
@@ -60,6 +68,44 @@ export default function SubscriptionPage() {
     ['all-plans'],
     getAllPlans
   );
+
+  // Handle payment success callback
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const sessionId = searchParams.get('session_id');
+    const canceled = searchParams.get('canceled');
+
+    if (success === 'true' && sessionId) {
+      // Finalize the upgrade after successful payment
+      fetch('/api/subscription/success?session_id=' + sessionId, {
+        credentials: 'include',
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (res.ok) {
+            toast.success(data.message || 'Paiement réussi! Plan mis à jour.');
+            // Remove query params
+            router.replace('/settings/subscription');
+            // Invalidate and refetch queries to refresh data without full reload
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['organization-plan'] }),
+              queryClient.invalidateQueries({ queryKey: ['billing-info'] }),
+            ]);
+          } else {
+            toast.error(data.error || 'Erreur lors de la finalisation du paiement');
+            router.replace('/settings/subscription');
+          }
+        })
+        .catch((error) => {
+          console.error('Error finalizing payment:', error);
+          toast.error('Erreur lors de la finalisation du paiement');
+          router.replace('/settings/subscription');
+        });
+    } else if (canceled === 'true') {
+      toast.info('Paiement annulé');
+      router.replace('/settings/subscription');
+    }
+  }, [searchParams, router, queryClient]);
 
   // Wait for access data to load
   if (isAccessLoading) {
@@ -144,14 +190,88 @@ export default function SubscriptionPage() {
   const extranetLimit = limits.extranetTenants;
   const extranetNearLimit = isNearLimit(usage.extranetTenants, extranetLimit);
 
-  const handleUpgrade = (planName: string) => {
-    toast.info(`Mise à niveau vers ${planName}...`);
-    // TODO: Implement upgrade logic
+  const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [selectedPlanForUpgrade, setSelectedPlanForUpgrade] = useState<{ id: string; name: string; isDowngrade: boolean } | null>(null);
+  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+
+  const handleUpgradeClick = (planId: string, planName: string, isDowngrade: boolean) => {
+    setSelectedPlanForUpgrade({ id: planId, name: planName, isDowngrade });
+    setSelectedBillingPeriod(billingPeriod || 'monthly');
+    setUpgradeDialogOpen(true);
   };
 
-  const handleDowngrade = () => {
-    toast.warning('Le downgrade n\'est pas recommandé. Vos données pourraient être affectées.');
-    // TODO: Implement downgrade logic
+  const handleUpgrade = async (planId: string, planName: string, isDowngrade: boolean, billingPeriodChoice: 'monthly' | 'yearly') => {
+    if (isUpgrading) return; // Prevent double clicks
+    
+    setIsUpgrading(planId);
+    
+    try {
+      const response = await fetch('/api/subscription/upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          planId,
+          billingPeriod: billingPeriodChoice,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle validation errors with details
+        if (data.details && Array.isArray(data.details)) {
+          toast.error(data.error || 'Erreur lors du changement de plan', {
+            description: data.details.join(' '),
+            duration: 8000,
+          });
+        } else {
+          toast.error(data.error || 'Erreur lors du changement de plan', {
+            description: data.details || 'Une erreur est survenue. Veuillez réessayer.',
+            duration: 6000,
+          });
+        }
+        return;
+      }
+
+      // Check if payment is required (paid plans)
+      if (data.requiresPayment && data.checkoutUrl) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.checkoutUrl;
+        return; // Don't reset loading state, page will redirect
+      }
+
+      // Success (for free plans)
+      toast.success(data.message || 'Plan mis à jour avec succès!', {
+        duration: 5000,
+      });
+
+      // Refresh data
+      window.location.reload(); // Simple reload to refresh all data
+    } catch (error: any) {
+      console.error('Error upgrading plan:', error);
+      toast.error('Erreur lors du changement de plan', {
+        description: error.message || 'Une erreur est survenue. Veuillez réessayer.',
+        duration: 6000,
+      });
+      setIsUpgrading(null);
+    }
+  };
+
+  const handleDowngrade = async (planId: string, planName: string) => {
+    // Show confirmation dialog for downgrade
+    const confirmed = window.confirm(
+      '⚠️ Attention: Le downgrade n\'est pas recommandé.\n\n' +
+      'Vos données pourraient être affectées et certaines fonctionnalités peuvent ne plus être disponibles.\n\n' +
+      'Êtes-vous sûr de vouloir continuer?'
+    );
+
+    if (!confirmed) return;
+
+    await handleUpgrade(planId, planName, true);
   };
 
   const handleDownloadInvoice = (invoiceId: string) => {
@@ -328,7 +448,20 @@ export default function SubscriptionPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {availablePlans.map((plan: any) => {
               const isRecommended = plan.name === 'syndic';
-              const isDowngrade = ['freemium', 'starter', 'individual'].includes(plan.name);
+              
+              // Determine if this is a downgrade by comparing limits
+              const currentLotsLimit = limits.lots === -1 ? Infinity : limits.lots;
+              const targetLotsLimit = plan.lotsLimit === -1 ? Infinity : plan.lotsLimit;
+              const currentUsersLimit = limits.users === -1 ? Infinity : limits.users;
+              const targetUsersLimit = plan.usersLimit === -1 ? Infinity : plan.usersLimit;
+              const currentExtranetLimit = limits.extranetTenants === -1 ? Infinity : limits.extranetTenants;
+              const targetExtranetLimit = plan.extranetTenantsLimit === -1 ? Infinity : plan.extranetTenantsLimit;
+              
+              const isDowngrade = targetLotsLimit < currentLotsLimit || 
+                                  targetUsersLimit < currentUsersLimit || 
+                                  targetExtranetLimit < currentExtranetLimit;
+              
+              const isLoading = isUpgrading === plan.id;
               
               return (
                 <Card key={plan.id} className={cn(
@@ -422,11 +555,18 @@ export default function SubscriptionPage() {
                     <Button
                       className={cn(
                         'w-full mt-4',
-                        isRecommended ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' : 'bg-muted hover:bg-muted/80 text-foreground'
+                        isRecommended ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' : 'bg-muted hover:bg-muted/80 text-foreground',
+                        isLoading && 'opacity-50 cursor-not-allowed'
                       )}
-                      onClick={() => isDowngrade ? handleDowngrade() : handleUpgrade(plan.name)}
+                      onClick={() => isDowngrade ? handleDowngrade(plan.id, plan.displayName || plan.name) : handleUpgradeClick(plan.id, plan.displayName || plan.name, false)}
+                      disabled={isLoading}
                     >
-                      {isDowngrade ? 'Downgrader (non recommandé)' : `Upgrader vers ${plan.displayName?.replace(/0$/, '') || plan.name}`}
+                      {isLoading 
+                        ? 'Traitement...' 
+                        : isDowngrade 
+                          ? 'Downgrader (non recommandé)' 
+                          : `Upgrader vers ${plan.displayName?.replace(/0$/, '') || plan.name}`
+                      }
                     </Button>
                   </CardContent>
                 </Card>
@@ -485,6 +625,105 @@ export default function SubscriptionPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Upgrade Dialog - Frequency Selection */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choisir la fréquence de facturation</DialogTitle>
+            <DialogDescription>
+              Sélectionnez la période de facturation pour votre abonnement
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <RadioGroup
+              value={selectedBillingPeriod}
+              onValueChange={(value) => setSelectedBillingPeriod(value as 'monthly' | 'yearly')}
+            >
+              <div className="flex items-center space-x-2 space-y-1">
+                <RadioGroupItem value="monthly" id="monthly" />
+                <Label htmlFor="monthly" className="cursor-pointer flex-1">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Mensuel</span>
+                    {selectedPlanForUpgrade && (
+                      <span className="text-muted-foreground">
+                        {(() => {
+                          const plan = plans.find((p: any) => p.id === selectedPlanForUpgrade.id);
+                          if (plan && plan.price) {
+                            return formatCurrency(parseFloat(plan.price.toString()));
+                          }
+                          return 'Sur devis';
+                        })()}/mois
+                      </span>
+                    )}
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 space-y-1">
+                <RadioGroupItem value="yearly" id="yearly" />
+                <Label htmlFor="yearly" className="cursor-pointer flex-1">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="font-medium">Annuel</span>
+                      {selectedPlanForUpgrade && (() => {
+                        const plan = plans.find((p: any) => p.id === selectedPlanForUpgrade.id);
+                        if (plan && plan.price && plan.yearlyDiscountRate) {
+                          return (
+                            <Badge variant="secondary" className="ml-2">Économisez {plan.yearlyDiscountRate}%</Badge>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    {selectedPlanForUpgrade && (
+                      <span className="text-muted-foreground">
+                        {(() => {
+                          const plan = plans.find((p: any) => p.id === selectedPlanForUpgrade.id);
+                          if (plan) {
+                            if (plan.priceYearly) {
+                              return formatCurrency(parseFloat(plan.priceYearly.toString()));
+                            }
+                            if (plan.price && plan.yearlyDiscountRate) {
+                              const discountMultiplier = 1 - (plan.yearlyDiscountRate / 100);
+                              const yearlyPrice = parseFloat(plan.price.toString()) * 12 * discountMultiplier;
+                              return formatCurrency(yearlyPrice);
+                            }
+                            if (plan.price) {
+                              const yearlyPrice = parseFloat(plan.price.toString()) * 12;
+                              return formatCurrency(yearlyPrice);
+                            }
+                          }
+                          return 'Sur devis';
+                        })()}/an
+                      </span>
+                    )}
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedPlanForUpgrade) {
+                  setUpgradeDialogOpen(false);
+                  handleUpgrade(
+                    selectedPlanForUpgrade.id,
+                    selectedPlanForUpgrade.name,
+                    selectedPlanForUpgrade.isDowngrade,
+                    selectedBillingPeriod
+                  );
+                }
+              }}
+            >
+              Continuer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Payment Method */}
       <Card>

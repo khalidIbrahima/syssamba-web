@@ -80,6 +80,7 @@ const statusColors = {
   occupied: 'bg-green-100 text-green-800',
   maintenance: 'bg-yellow-100 text-yellow-800',
   reserved: 'bg-purple-100 text-purple-800',
+  for_sale: 'bg-blue-100 text-blue-800',
 };
 
 const statusLabels = {
@@ -87,6 +88,7 @@ const statusLabels = {
   occupied: 'Occupé',
   maintenance: 'Maintenance',
   reserved: 'Réservé',
+  for_sale: 'À vendre',
 };
 
 export default function UnitsPage() {

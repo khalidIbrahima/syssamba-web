@@ -24,6 +24,7 @@ import {
   Home,
   Globe,
   Plus,
+  Building2,
 } from 'lucide-react';
 import { useDataQuery } from '@/hooks/use-query';
 import { toast } from 'sonner';
@@ -102,8 +103,9 @@ export default function PlansAdminPage() {
     priceMonthly: '',
     priceYearly: '',
     yearlyDiscountRate: '',
-    lotsLimit: '',
-    usersLimit: '',
+    maxProperties: '',
+    maxUnits: '',
+    maxUsers: '',
     extranetTenantsLimit: '',
     features: '{}',
     isActive: true,
@@ -118,8 +120,9 @@ export default function PlansAdminPage() {
     priceMonthly: '',
     priceYearly: '',
     yearlyDiscountRate: '',
-    lotsLimit: '',
-    usersLimit: '',
+    maxProperties: '',
+    maxUnits: '',
+    maxUsers: '',
     extranetTenantsLimit: '',
     features: '{}',
     isActive: true,
@@ -137,8 +140,9 @@ export default function PlansAdminPage() {
       priceMonthly: plan.priceMonthly !== null && plan.priceMonthly !== undefined ? plan.priceMonthly.toString() : '',
       priceYearly: plan.priceYearly !== null && plan.priceYearly !== undefined ? plan.priceYearly.toString() : '',
       yearlyDiscountRate: plan.yearlyDiscountRate !== null && plan.yearlyDiscountRate !== undefined ? plan.yearlyDiscountRate.toString() : '',
-      lotsLimit: plan.lotsLimit !== null && plan.lotsLimit !== undefined ? plan.lotsLimit.toString() : '',
-      usersLimit: plan.usersLimit !== null && plan.usersLimit !== undefined ? plan.usersLimit.toString() : '',
+      maxProperties: plan.maxProperties !== null && plan.maxProperties !== undefined ? plan.maxProperties.toString() : '',
+      maxUnits: plan.maxUnits !== null && plan.maxUnits !== undefined ? plan.maxUnits.toString() : '',
+      maxUsers: plan.maxUsers !== null && plan.maxUsers !== undefined ? plan.maxUsers.toString() : '',
       extranetTenantsLimit: plan.extranetTenantsLimit !== null && plan.extranetTenantsLimit !== undefined ? plan.extranetTenantsLimit.toString() : '',
       features: plan.features ? JSON.stringify(plan.features, null, 2) : '{}',
       isActive: plan.isActive !== undefined ? plan.isActive : true,
@@ -164,8 +168,9 @@ export default function PlansAdminPage() {
         priceMonthly: createFormData.priceMonthly === '' ? null : parseFloat(createFormData.priceMonthly),
         priceYearly: createFormData.priceYearly === '' ? null : parseFloat(createFormData.priceYearly),
         yearlyDiscountRate: createFormData.yearlyDiscountRate === '' ? null : parseFloat(createFormData.yearlyDiscountRate),
-        lotsLimit: createFormData.lotsLimit === '' ? null : parseInt(createFormData.lotsLimit),
-        usersLimit: createFormData.usersLimit === '' ? null : parseInt(createFormData.usersLimit),
+        maxProperties: createFormData.maxProperties === '' ? null : parseInt(createFormData.maxProperties),
+        maxUnits: createFormData.maxUnits === '' ? null : parseInt(createFormData.maxUnits),
+        maxUsers: createFormData.maxUsers === '' ? null : parseInt(createFormData.maxUsers),
         extranetTenantsLimit: createFormData.extranetTenantsLimit === '' ? null : parseInt(createFormData.extranetTenantsLimit),
         features: {},
         isActive: createFormData.isActive,
@@ -192,8 +197,9 @@ export default function PlansAdminPage() {
         priceMonthly: '',
         priceYearly: '',
         yearlyDiscountRate: '',
-        lotsLimit: '',
-        usersLimit: '',
+        maxProperties: '',
+        maxUnits: '',
+        maxUsers: '',
         extranetTenantsLimit: '',
         features: '{}',
         isActive: true,
@@ -226,14 +232,25 @@ export default function PlansAdminPage() {
       }
       // Always include yearlyDiscountRate to allow setting it to null
       updates.yearlyDiscountRate = formData.yearlyDiscountRate === '' ? null : (formData.yearlyDiscountRate ? parseFloat(formData.yearlyDiscountRate) : null);
-      if (formData.lotsLimit !== '') {
-        updates.lotsLimit = formData.lotsLimit === '' ? null : parseInt(formData.lotsLimit);
+      if (formData.maxProperties !== undefined) {
+        const parsedValue = formData.maxProperties === '' ? null : parseInt(formData.maxProperties);
+        updates.maxProperties = isNaN(parsedValue) ? null : parsedValue;
+        console.log('Sending maxProperties:', updates.maxProperties, 'from:', formData.maxProperties);
       }
-      if (formData.usersLimit !== '') {
-        updates.usersLimit = formData.usersLimit === '' ? null : parseInt(formData.usersLimit);
+      if (formData.maxUnits !== undefined) {
+        const parsedValue = formData.maxUnits === '' ? null : parseInt(formData.maxUnits);
+        updates.maxUnits = isNaN(parsedValue) ? null : parsedValue;
+        console.log('Sending maxUnits:', updates.maxUnits, 'from:', formData.maxUnits);
       }
-      if (formData.extranetTenantsLimit !== '') {
-        updates.extranetTenantsLimit = formData.extranetTenantsLimit === '' ? null : parseInt(formData.extranetTenantsLimit);
+      if (formData.maxUsers !== undefined) {
+        const parsedValue = formData.maxUsers === '' ? null : parseInt(formData.maxUsers);
+        updates.maxUsers = isNaN(parsedValue) ? null : parsedValue;
+        console.log('Sending maxUsers:', updates.maxUsers, 'from:', formData.maxUsers);
+      }
+      if (formData.extranetTenantsLimit !== undefined) {
+        const parsedValue = formData.extranetTenantsLimit === '' ? null : parseInt(formData.extranetTenantsLimit);
+        updates.extranetTenantsLimit = isNaN(parsedValue) ? null : parsedValue;
+        console.log('Sending extranetTenantsLimit:', updates.extranetTenantsLimit, 'from:', formData.extranetTenantsLimit);
       }
       if (formData.features) {
         try {
@@ -373,13 +390,24 @@ export default function PlansAdminPage() {
                   {/* Limits */}
                   <div className="space-y-2 pt-2 border-t">
                     <div className="flex items-center gap-2 text-sm">
-                      <Home className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Lots:</span>
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Propriétés:</span>
                       <span className="text-foreground">
-                        {plan.lotsLimit !== null && plan.lotsLimit !== undefined
-                          ? plan.lotsLimit === -1
+                        {plan.maxProperties !== null && plan.maxProperties !== undefined
+                          ? plan.maxProperties === -1
                             ? 'Illimité'
-                            : plan.lotsLimit
+                            : plan.maxProperties
+                          : 'Illimité'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Home className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Unités:</span>
+                      <span className="text-foreground">
+                        {plan.maxUnits !== null && plan.maxUnits !== undefined
+                          ? plan.maxUnits === -1
+                            ? 'Illimité'
+                            : plan.maxUnits
                           : 'Illimité'}
                       </span>
                     </div>
@@ -387,10 +415,10 @@ export default function PlansAdminPage() {
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Utilisateurs:</span>
                       <span className="text-foreground">
-                        {plan.usersLimit !== null && plan.usersLimit !== undefined
-                          ? plan.usersLimit === -1
+                        {plan.maxUsers !== null && plan.maxUsers !== undefined
+                          ? plan.maxUsers === -1
                             ? 'Illimité'
-                            : plan.usersLimit
+                            : plan.maxUsers
                           : 'Illimité'}
                       </span>
                     </div>
@@ -524,15 +552,26 @@ export default function PlansAdminPage() {
                   </p>
 
                   {/* Limits */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="lots-limit">Limite Lots</Label>
+                      <Label htmlFor="max-properties">Limite Propriétés</Label>
                       <Input
-                        id="lots-limit"
+                        id="max-properties"
                         type="number"
                         placeholder="Illimité (laisser vide)"
-                        value={formData.lotsLimit}
-                        onChange={(e) => setFormData(prev => ({ ...prev, lotsLimit: e.target.value }))}
+                        value={formData.maxProperties}
+                        onChange={(e) => setFormData(prev => ({ ...prev, maxProperties: e.target.value }))}
+                        disabled={savingPlan}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="max-units">Limite Unités</Label>
+                      <Input
+                        id="max-units"
+                        type="number"
+                        placeholder="Illimité (laisser vide)"
+                        value={formData.maxUnits}
+                        onChange={(e) => setFormData(prev => ({ ...prev, maxUnits: e.target.value }))}
                         disabled={savingPlan}
                       />
                     </div>
@@ -542,8 +581,8 @@ export default function PlansAdminPage() {
                         id="users-limit"
                         type="number"
                         placeholder="Illimité (laisser vide)"
-                        value={formData.usersLimit}
-                        onChange={(e) => setFormData(prev => ({ ...prev, usersLimit: e.target.value }))}
+                        value={formData.maxUsers}
+                        onChange={(e) => setFormData(prev => ({ ...prev, maxUsers: e.target.value }))}
                         disabled={savingPlan}
                       />
                     </div>
@@ -739,15 +778,26 @@ export default function PlansAdminPage() {
                 </p>
 
                 {/* Limits */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="create-lots-limit">Limite Lots</Label>
+                    <Label htmlFor="create-max-properties">Limite Propriétés</Label>
                     <Input
-                      id="create-lots-limit"
+                      id="create-max-properties"
                       type="number"
                       placeholder="Illimité (laisser vide)"
-                      value={createFormData.lotsLimit}
-                      onChange={(e) => setCreateFormData(prev => ({ ...prev, lotsLimit: e.target.value }))}
+                      value={createFormData.maxProperties}
+                      onChange={(e) => setCreateFormData(prev => ({ ...prev, maxProperties: e.target.value }))}
+                      disabled={creatingPlan}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-max-units">Limite Unités</Label>
+                    <Input
+                      id="create-max-units"
+                      type="number"
+                      placeholder="Illimité (laisser vide)"
+                      value={createFormData.maxUnits}
+                      onChange={(e) => setCreateFormData(prev => ({ ...prev, maxUnits: e.target.value }))}
                       disabled={creatingPlan}
                     />
                   </div>
@@ -757,8 +807,8 @@ export default function PlansAdminPage() {
                       id="create-users-limit"
                       type="number"
                       placeholder="Illimité (laisser vide)"
-                      value={createFormData.usersLimit}
-                      onChange={(e) => setCreateFormData(prev => ({ ...prev, usersLimit: e.target.value }))}
+                      value={createFormData.maxUsers}
+                      onChange={(e) => setCreateFormData(prev => ({ ...prev, maxUsers: e.target.value }))}
                       disabled={creatingPlan}
                     />
                   </div>
@@ -846,8 +896,9 @@ export default function PlansAdminPage() {
                         priceMonthly: '',
                         priceYearly: '',
                         yearlyDiscountRate: '',
-                        lotsLimit: '',
-                        usersLimit: '',
+                        maxProperties: '',
+                        maxUnits: '',
+                        maxUsers: '',
                         extranetTenantsLimit: '',
                         features: '{}',
                         isActive: true,

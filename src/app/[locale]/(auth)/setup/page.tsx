@@ -416,21 +416,73 @@ export default function SetupPage() {
                       ? `${plan.price.toLocaleString('fr-FR')} FCFA/mois`
                       : 'Sur devis';
                     
-                    // Get key features from plan.features (from Supabase)
-                    const features = plan.features || {};
-                    const keyFeatures = [
-                      features.properties_management && 'Gestion des biens',
-                      features.units_management && 'Gestion des lots',
-                      features.tenants_full && 'Gestion complète locataires',
-                      features.leases_full && 'Gestion des baux',
-                      features.payments_all_methods && 'Paiements (Wave/Orange)',
-                      features.electronic_signature && 'Signature électronique',
-                      features.accounting_sycoda_full && 'Comptabilité SYSCOHADA',
-                      features.dsf_export && 'Export DSF',
-                      features.bank_sync && 'Synchronisation bancaire',
-                      features.custom_extranet_domain && 'Domaine extranet personnalisé',
-                      features.full_white_label && 'Marque blanche complète',
-                    ].filter(Boolean);
+                    // Get comprehensive features for each plan from database (same logic as /api/plans)
+                    const getPlanFeatures = (plan: any) => {
+                      if (!plan) {
+                        return ['Gestion des biens immobiliers', 'Gestion des lots', 'Suivi des locataires'];
+                      }
+
+                      const features = [];
+
+                      // Add features from plan.features object (from Supabase API)
+                      if (plan.features && typeof plan.features === 'object') {
+                        console.log('🔍 Plan features from API:', Object.keys(plan.features)); // Debug log
+
+                        // Map feature keys to user-friendly names (using actual feature names from database)
+                        const featureMapping: Record<string, string> = {
+                          'properties_management': 'Gestion des biens',
+                          'tasks_management': 'Gestion des tâches',
+                          'units_management': 'Gestion des lots',
+                          'tenants_management': 'Gestion des locataires',
+                          'leases_management': 'Gestion des baux',
+                          'payments_tracking': 'Suivi des paiements',
+                          'accounting_basic': 'Comptabilité de base',
+                          'messaging_system': 'Système de messagerie',
+                          'reports_basic': 'Rapports de base',
+                          'user_management': 'Gestion des utilisateurs',
+                          // Add more mappings as features are added to database
+                          'tenants_full': 'Gestion complète locataires',
+                          'leases_full': 'Gestion des baux',
+                          'payments_all_methods': 'Paiements (Wave/Orange)',
+                          'electronic_signature': 'Signature électronique',
+                          'accounting_sycoda_full': 'Comptabilité SYSCOHADA',
+                          'dsf_export': 'Export DSF',
+                          'bank_sync': 'Synchronisation bancaire',
+                          'custom_extranet_domain': 'Domaine extranet personnalisé',
+                          'full_white_label': 'Marque blanche complète',
+                        };
+
+                        // Add enabled features
+                        Object.keys(plan.features).forEach(featureKey => {
+                          console.log(`🔍 Checking feature: ${featureKey}, value: ${plan.features[featureKey]}`); // Debug log
+                          if (plan.features[featureKey] === true && featureMapping[featureKey]) {
+                            console.log(`✅ Adding feature from mapping: ${featureMapping[featureKey]}`); // Debug log
+                            features.push(featureMapping[featureKey]);
+                          }
+                        });
+                      }
+
+                      // Add price-related features for paid plans
+                      if (plan.price !== 'custom' && plan.price !== null && plan.price !== undefined && plan.price > 0) {
+                        features.push('Facturation mensuelle');
+                        if (plan.priceYearly) {
+                          features.push('Remise annuelle disponible');
+                        }
+                      }
+
+
+                      // Remove duplicates and return
+                      const deduplicatedFeatures = [...new Set(features)];
+           
+                      // Fallback if no features found
+                      if (deduplicatedFeatures.length === 0) {
+                        return ['Gestion des biens immobiliers', 'Gestion des lots', 'Suivi des locataires'];
+                      }
+
+                      return deduplicatedFeatures;
+                    };
+
+                    const keyFeatures = getPlanFeatures(plan);
 
                     return (
                       <Card
@@ -493,6 +545,12 @@ export default function SetupPage() {
                               <span className="text-muted-foreground">Locataires extranet</span>
                               <span className="font-semibold text-foreground">
                                 {plan.extranet_tenants_limit === null || plan.extranet_tenants_limit === undefined ? 'Illimités' : plan.extranet_tenants_limit}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Biens immobiliers</span>
+                              <span className="font-semibold text-foreground">
+                                {plan.max_properties === null || plan.max_properties === undefined ? 'Illimités' : plan.max_properties}
                               </span>
                             </div>
                           </div>
