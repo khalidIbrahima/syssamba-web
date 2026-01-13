@@ -233,17 +233,24 @@ export default function PlansAdminPage() {
       // Always include yearlyDiscountRate to allow setting it to null
       updates.yearlyDiscountRate = formData.yearlyDiscountRate === '' ? null : (formData.yearlyDiscountRate ? parseFloat(formData.yearlyDiscountRate) : null);
       if (formData.maxProperties !== undefined) {
-        updates.maxProperties = formData.maxProperties === '' ? null : parseInt(formData.maxProperties);
+        const parsedValue = formData.maxProperties === '' ? null : parseInt(formData.maxProperties);
+        updates.maxProperties = isNaN(parsedValue) ? null : parsedValue;
+        console.log('Sending maxProperties:', updates.maxProperties, 'from:', formData.maxProperties);
       }
       if (formData.maxUnits !== undefined) {
-        updates.maxUnits = formData.maxUnits === '' ? null : parseInt(formData.maxUnits);
+        const parsedValue = formData.maxUnits === '' ? null : parseInt(formData.maxUnits);
+        updates.maxUnits = isNaN(parsedValue) ? null : parsedValue;
+        console.log('Sending maxUnits:', updates.maxUnits, 'from:', formData.maxUnits);
       }
       if (formData.maxUsers !== undefined) {
-        updates.maxUsers = formData.maxUsers === '' ? null : parseInt(formData.maxUsers);
+        const parsedValue = formData.maxUsers === '' ? null : parseInt(formData.maxUsers);
+        updates.maxUsers = isNaN(parsedValue) ? null : parsedValue;
+        console.log('Sending maxUsers:', updates.maxUsers, 'from:', formData.maxUsers);
       }
       if (formData.extranetTenantsLimit !== undefined) {
-        updates.extranetTenantsLimit = formData.extranetTenantsLimit === '' ? null : parseInt(formData.extranetTenantsLimit);
-        console.log('Sending extranetTenantsLimit:', updates.extranetTenantsLimit);
+        const parsedValue = formData.extranetTenantsLimit === '' ? null : parseInt(formData.extranetTenantsLimit);
+        updates.extranetTenantsLimit = isNaN(parsedValue) ? null : parsedValue;
+        console.log('Sending extranetTenantsLimit:', updates.extranetTenantsLimit, 'from:', formData.extranetTenantsLimit);
       }
       if (formData.features) {
         try {
