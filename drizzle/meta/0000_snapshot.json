@@ -1,5 +1,5 @@
 {
-  "id": "fc73832f-833b-4c37-be29-9d1126850a25",
+  "id": "441d751c-3e9b-4cae-a4a1-b65645d8cbac",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -3086,8 +3086,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "users_limit": {
-          "name": "users_limit",
+        "max_users": {
+          "name": "max_users",
           "type": "integer",
           "primaryKey": false,
           "notNull": false

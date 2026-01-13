@@ -305,7 +305,7 @@ CREATE TABLE "plans" (
 	"yearly_discount_rate" numeric(5, 2),
 	"max_properties" integer,
 	"max_units" integer,
-	"users_limit" integer,
+	"max_users" integer,
 	"extranet_tenants_limit" integer,
 	"features" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"support_level" text DEFAULT 'community',

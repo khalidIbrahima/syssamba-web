@@ -105,7 +105,7 @@ export default function PlansAdminPage() {
     yearlyDiscountRate: '',
     maxProperties: '',
     maxUnits: '',
-    usersLimit: '',
+    maxUsers: '',
     extranetTenantsLimit: '',
     features: '{}',
     isActive: true,
@@ -122,7 +122,7 @@ export default function PlansAdminPage() {
     yearlyDiscountRate: '',
     maxProperties: '',
     maxUnits: '',
-    usersLimit: '',
+    maxUsers: '',
     extranetTenantsLimit: '',
     features: '{}',
     isActive: true,
@@ -142,7 +142,7 @@ export default function PlansAdminPage() {
       yearlyDiscountRate: plan.yearlyDiscountRate !== null && plan.yearlyDiscountRate !== undefined ? plan.yearlyDiscountRate.toString() : '',
       maxProperties: plan.maxProperties !== null && plan.maxProperties !== undefined ? plan.maxProperties.toString() : '',
       maxUnits: plan.maxUnits !== null && plan.maxUnits !== undefined ? plan.maxUnits.toString() : '',
-      usersLimit: plan.usersLimit !== null && plan.usersLimit !== undefined ? plan.usersLimit.toString() : '',
+      maxUsers: plan.maxUsers !== null && plan.maxUsers !== undefined ? plan.maxUsers.toString() : '',
       extranetTenantsLimit: plan.extranetTenantsLimit !== null && plan.extranetTenantsLimit !== undefined ? plan.extranetTenantsLimit.toString() : '',
       features: plan.features ? JSON.stringify(plan.features, null, 2) : '{}',
       isActive: plan.isActive !== undefined ? plan.isActive : true,
@@ -170,7 +170,7 @@ export default function PlansAdminPage() {
         yearlyDiscountRate: createFormData.yearlyDiscountRate === '' ? null : parseFloat(createFormData.yearlyDiscountRate),
         maxProperties: createFormData.maxProperties === '' ? null : parseInt(createFormData.maxProperties),
         maxUnits: createFormData.maxUnits === '' ? null : parseInt(createFormData.maxUnits),
-        usersLimit: createFormData.usersLimit === '' ? null : parseInt(createFormData.usersLimit),
+        maxUsers: createFormData.maxUsers === '' ? null : parseInt(createFormData.maxUsers),
         extranetTenantsLimit: createFormData.extranetTenantsLimit === '' ? null : parseInt(createFormData.extranetTenantsLimit),
         features: {},
         isActive: createFormData.isActive,
@@ -199,7 +199,7 @@ export default function PlansAdminPage() {
         yearlyDiscountRate: '',
         maxProperties: '',
         maxUnits: '',
-        usersLimit: '',
+        maxUsers: '',
         extranetTenantsLimit: '',
         features: '{}',
         isActive: true,
@@ -238,8 +238,8 @@ export default function PlansAdminPage() {
       if (formData.maxUnits !== '') {
         updates.maxUnits = formData.maxUnits === '' ? null : parseInt(formData.maxUnits);
       }
-      if (formData.usersLimit !== '') {
-        updates.usersLimit = formData.usersLimit === '' ? null : parseInt(formData.usersLimit);
+      if (formData.maxUsers !== '') {
+        updates.maxUsers = formData.maxUsers === '' ? null : parseInt(formData.maxUsers);
       }
       if (formData.extranetTenantsLimit !== '') {
         updates.extranetTenantsLimit = formData.extranetTenantsLimit === '' ? null : parseInt(formData.extranetTenantsLimit);
@@ -407,10 +407,10 @@ export default function PlansAdminPage() {
                       <Users className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">Utilisateurs:</span>
                       <span className="text-foreground">
-                        {plan.usersLimit !== null && plan.usersLimit !== undefined
-                          ? plan.usersLimit === -1
+                        {plan.maxUsers !== null && plan.maxUsers !== undefined
+                          ? plan.maxUsers === -1
                             ? 'Illimité'
-                            : plan.usersLimit
+                            : plan.maxUsers
                           : 'Illimité'}
                       </span>
                     </div>
@@ -573,8 +573,8 @@ export default function PlansAdminPage() {
                         id="users-limit"
                         type="number"
                         placeholder="Illimité (laisser vide)"
-                        value={formData.usersLimit}
-                        onChange={(e) => setFormData(prev => ({ ...prev, usersLimit: e.target.value }))}
+                        value={formData.maxUsers}
+                        onChange={(e) => setFormData(prev => ({ ...prev, maxUsers: e.target.value }))}
                         disabled={savingPlan}
                       />
                     </div>
@@ -799,8 +799,8 @@ export default function PlansAdminPage() {
                       id="create-users-limit"
                       type="number"
                       placeholder="Illimité (laisser vide)"
-                      value={createFormData.usersLimit}
-                      onChange={(e) => setCreateFormData(prev => ({ ...prev, usersLimit: e.target.value }))}
+                      value={createFormData.maxUsers}
+                      onChange={(e) => setCreateFormData(prev => ({ ...prev, maxUsers: e.target.value }))}
                       disabled={creatingPlan}
                     />
                   </div>
@@ -890,7 +890,7 @@ export default function PlansAdminPage() {
                         yearlyDiscountRate: '',
                         maxProperties: '',
                         maxUnits: '',
-                        usersLimit: '',
+                        maxUsers: '',
                         extranetTenantsLimit: '',
                         features: '{}',
                         isActive: true,

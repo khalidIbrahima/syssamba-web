@@ -15,7 +15,7 @@ const createPlanSchema = z.object({
   yearlyDiscountRate: z.number().min(0).max(100).nullable().optional(), // Taux de remise en % (0-100)
   maxProperties: z.number().nullable().optional(),
   maxUnits: z.number().nullable().optional(),
-  usersLimit: z.number().nullable().optional(),
+  maxUsers: z.number().nullable().optional(),
   extranetTenantsLimit: z.number().nullable().optional(),
   features: z.record(z.string(), z.any()).default({}),
   isActive: z.boolean().default(true),
@@ -32,7 +32,7 @@ const updatePlanSchema = z.object({
   yearlyDiscountRate: z.number().min(0).max(100).nullable().optional(), // Taux de remise en % (0-100)
   maxProperties: z.number().nullable().optional(),
   maxUnits: z.number().nullable().optional(),
-  usersLimit: z.number().nullable().optional(),
+  maxUsers: z.number().nullable().optional(),
   extranetTenantsLimit: z.number().nullable().optional(),
   features: z.record(z.string(), z.any()).optional(),
   isActive: z.boolean().optional(),
@@ -83,7 +83,7 @@ export async function GET() {
       yearly_discount_rate: number | null;
       max_properties: number | null;
       max_units: number | null;
-      users_limit: number | null;
+      max_users: number | null;
       extranet_tenants_limit: number | null;
       features: any;
       is_active: boolean;
@@ -116,7 +116,7 @@ export async function GET() {
         yearly_discount_rate: plan.yearly_discount_rate,
         max_properties: plan.max_properties,
         max_units: plan.max_units, // Units limit
-        users_limit: plan.users_limit,
+        users_limit: plan.max_users,
         extranet_tenants_limit: plan.extranet_tenants_limit,
         features: plan.features || {},
         is_active: plan.is_active,
@@ -137,7 +137,7 @@ export async function GET() {
         yearlyDiscountRate: plan.yearly_discount_rate ? parseFloat(plan.yearly_discount_rate) : null,
         maxProperties: plan.max_properties,
         maxUnits: plan.max_units,
-        usersLimit: plan.users_limit,
+        maxUsers: plan.max_users,
         extranetTenantsLimit: plan.extranet_tenants_limit,
         features: typeof plan.features === 'string' ? JSON.parse(plan.features) : (plan.features || {}),
         isActive: plan.is_active,
@@ -217,7 +217,7 @@ export async function PATCH(request: NextRequest) {
       yearly_discount_rate?: number | null;
       max_properties?: number | null;
       max_units?: number | null;
-      users_limit?: number | null;
+      max_users?: number | null;
       extranet_tenants_limit?: number | null;
       features?: any;
       is_active?: boolean;
@@ -265,9 +265,9 @@ export async function PATCH(request: NextRequest) {
     if (updates.maxUnits !== undefined) {
       updateData.max_units = updates.maxUnits;
     }
-    // Map usersLimit to users_limit (actual column name)
-    if (updates.usersLimit !== undefined) {
-      updateData.users_limit = updates.usersLimit;
+    // Map maxUsers to max_users (actual column name)
+    if (updates.maxUsers !== undefined) {
+      updateData.max_users = updates.maxUsers;
     }
     if (updates.extranetTenantsLimit !== undefined) {
       updateData.extranet_tenants_limit = updates.extranetTenantsLimit;
@@ -310,7 +310,7 @@ export async function PATCH(request: NextRequest) {
         yearly_discount_rate: number | null;
         max_properties: number | null;
         max_units: number | null;
-        users_limit: number | null;
+        max_users: number | null;
         extranet_tenants_limit: number | null;
         features: any;
         is_active: boolean;
@@ -345,7 +345,7 @@ export async function PATCH(request: NextRequest) {
         yearlyDiscountRate: updatedPlan.yearly_discount_rate ? parseFloat(String(updatedPlan.yearly_discount_rate)) : null,
         maxProperties: updatedPlan.max_properties,
         maxUnits: updatedPlan.max_units,
-        usersLimit: updatedPlan.users_limit,
+        maxUsers: updatedPlan.max_users,
         extranetTenantsLimit: updatedPlan.extranet_tenants_limit,
         features: typeof updatedPlan.features === 'string' ? JSON.parse(updatedPlan.features) : (updatedPlan.features || {}),
         isActive: updatedPlan.is_active,
@@ -438,7 +438,7 @@ export async function POST(request: NextRequest) {
       yearly_discount_rate: validatedData.yearlyDiscountRate ?? null,
       max_properties: validatedData.maxProperties ?? null,
       max_units: validatedData.maxUnits ?? null,
-      users_limit: validatedData.usersLimit ?? null,
+      max_users: validatedData.maxUsers ?? null,
       extranet_tenants_limit: validatedData.extranetTenantsLimit ?? null,
       features: validatedData.features || {},
       is_active: validatedData.isActive ?? true,
@@ -456,7 +456,7 @@ export async function POST(request: NextRequest) {
       yearly_discount_rate: number | null;
       max_properties: number | null;
       max_units: number | null;
-      users_limit: number | null;
+      max_users: number | null;
       extranet_tenants_limit: number | null;
       features: any;
       is_active: boolean;
@@ -485,7 +485,7 @@ export async function POST(request: NextRequest) {
         yearlyDiscountRate: newPlan.yearly_discount_rate ? parseFloat(String(newPlan.yearly_discount_rate)) : null,
         maxProperties: newPlan.max_properties,
         maxUnits: newPlan.max_units,
-        usersLimit: newPlan.users_limit,
+        maxUsers: newPlan.max_users,
         extranetTenantsLimit: newPlan.extranet_tenants_limit,
         features: typeof newPlan.features === 'string' ? JSON.parse(newPlan.features) : (newPlan.features || {}),
         isActive: newPlan.is_active,
