@@ -106,7 +106,7 @@ export async function GET() {
         }
       }
       
-      return {
+      const mappedPlan = {
         id: plan.id,
         name: plan.name,
         display_name: plan.display_name,
@@ -116,7 +116,7 @@ export async function GET() {
         yearly_discount_rate: plan.yearly_discount_rate,
         max_properties: plan.max_properties,
         max_units: plan.max_units, // Units limit
-        users_limit: plan.max_users,
+        max_users: plan.max_users,
         extranet_tenants_limit: plan.extranet_tenants_limit,
         features: plan.features || {},
         is_active: plan.is_active,
@@ -124,6 +124,15 @@ export async function GET() {
         created_at: plan.created_at,
         updated_at: plan.updated_at,
       };
+
+      // Debug logging for max_users
+      if (mappedPlan.max_users !== null && mappedPlan.max_users !== undefined) {
+        console.log(`Plan ${mappedPlan.name} has max_users: ${mappedPlan.max_users}`);
+      } else {
+        console.log(`Plan ${mappedPlan.name} has max_users: null/undefined`);
+      }
+
+      return mappedPlan;
     });
 
     return NextResponse.json({
