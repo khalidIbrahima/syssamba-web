@@ -4,13 +4,7 @@ import { db } from '@/lib/db';
 import { supabaseAdmin } from '@/lib/db';
 import { getPlanLimits } from '@/lib/permissions';
 import { z } from 'zod';
-import Stripe from 'stripe';
-
-// Initialize Stripe (only if STRIPE_SECRET_KEY is set)
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
-  apiVersion: '2025-11-17.clover',
-}) : null;
+import { stripe, getOrCreateStripePrice } from '@/lib/stripe-helpers';
 
 // Schema for upgrade request
 const upgradeSchema = z.object({
@@ -51,6 +45,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get TVA rate from countries table
+    // Règle fiscale : TVA = 0% pour clients non-sénégalais (exonération exportation)
+    // TVA = taux du pays pour clients sénégalais
+    let tvaRate = 0.00; // Default to 0% (exportation exonérée)
+    const clientCountry = organization.country || 'SN'; // Default to Senegal if not set
+    
+    // Si le client est au Sénégal, appliquer la TVA sénégalaise
+    if (clientCountry === 'SN') {
+      const { data: countryData, error: countryError } = await supabaseAdmin
+        .from('countries')
+        .select('tva')
+        .eq('code', 'SN')
+        .single();
+      
+      if (!countryError && countryData && countryData.tva !== null) {
+        tvaRate = parseFloat(countryData.tva.toString());
+      } else {
+        tvaRate = 18.00; // Fallback to 18% for Senegal
+      }
+    }
+    // Pour les clients non-sénégalais, TVA reste à 0% (exonération exportation)
+
     const body = await request.json();
     const validatedData = upgradeSchema.parse(body);
 
@@ -85,6 +101,7 @@ export async function POST(request: Request) {
       current_period_start: string;
       current_period_end: string;
       stripe_customer_id: string | null;
+      stripe_subscription_id: string | null;
     }>('subscriptions', {
       eq: { organization_id: user.organizationId },
       limit: 1,
@@ -196,7 +213,7 @@ export async function POST(request: Request) {
       price = 0;
     }
 
-    // For paid plans, create Stripe checkout session instead of direct upgrade
+    // For paid plans, handle payment
     if (price > 0) {
       if (!stripe) {
         return NextResponse.json(
@@ -228,18 +245,78 @@ export async function POST(request: Request) {
         }, { id: user.organizationId });
       }
 
+      // Get or create Stripe Price for recurring subscription
+      // XOF is a zero-decimal currency, so we don't multiply by 100
+      const interval = validatedData.billingPeriod === 'yearly' ? 'year' : 'month';
+      const priceInSmallestUnit = Math.round(price); // XOF has no decimals, use amount as-is
+      
+      const priceId = await getOrCreateStripePrice(
+        targetPlan.name,
+        targetPlan.display_name,
+        priceInSmallestUnit,
+        interval
+      );
+
+      // If user has an active Stripe subscription, update it directly
+      if (currentSubscription?.stripe_subscription_id && currentSubscription.status === 'active') {
+        try {
+          // Retrieve the current subscription from Stripe
+          const stripeSubscription = await stripe.subscriptions.retrieve(currentSubscription.stripe_subscription_id);
+          
+          // Update the subscription to the new price
+          const updatedSubscription = await stripe.subscriptions.update(stripeSubscription.id, {
+            items: [{
+              id: stripeSubscription.items.data[0].id,
+              price: priceId,
+            }],
+            metadata: {
+              organizationId: user.organizationId,
+              planId: validatedData.planId,
+              billingPeriod: validatedData.billingPeriod,
+            },
+            proration_behavior: 'always_invoice', // Prorate and invoice immediately
+          });
+
+          // Update database subscription
+          await db.update('subscriptions', {
+            plan_id: validatedData.planId,
+            billing_period: validatedData.billingPeriod,
+            price: price,
+            stripe_subscription_id: updatedSubscription.id,
+            current_period_start: new Date(updatedSubscription.current_period_start * 1000).toISOString().split('T')[0],
+            current_period_end: new Date(updatedSubscription.current_period_end * 1000).toISOString().split('T')[0],
+            updated_at: new Date().toISOString(),
+          }, { id: currentSubscription.id });
+
+          return NextResponse.json({
+            success: true,
+            message: `Plan mis à niveau vers ${targetPlan.display_name} avec succès!`,
+            subscription: {
+              id: currentSubscription.id,
+              planId: validatedData.planId,
+              planName: targetPlan.name,
+              planDisplayName: targetPlan.display_name,
+              status: 'active',
+              billingPeriod: validatedData.billingPeriod,
+              price: price,
+            },
+          });
+        } catch (error: any) {
+          // If update fails (e.g., subscription canceled in Stripe), create new checkout session
+          console.error('Error updating Stripe subscription:', error);
+          // Continue to create checkout session below
+        }
+      }
+
+      // Create new Stripe Checkout session (for new subscriptions or if update failed)
       // Get base URL
-      // In development, use current request URL to preserve domain/subdomain
-      // In production, use NEXT_PUBLIC_APP_URL
       const isDevelopment = process.env.NODE_ENV === 'development';
       let baseUrl: string;
       if (isDevelopment) {
-        // Use current request URL origin to keep the same domain/subdomain
         try {
           const requestUrl = new URL(request.url);
           baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
         } catch {
-          // Fallback if URL parsing fails
           const origin = request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/');
           baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         }
@@ -247,24 +324,18 @@ export async function POST(request: Request) {
         baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       }
 
-      // Create Stripe Checkout session (payment mode, not subscription)
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
-        mode: 'payment',
+        mode: 'subscription',
         line_items: [
           {
-            price_data: {
-              currency: 'xof', // FCFA
-              product_data: {
-                name: `${targetPlan.display_name} - ${validatedData.billingPeriod === 'yearly' ? 'Annuel' : 'Mensuel'}`,
-                description: `Plan ${targetPlan.display_name}`,
-              },
-              unit_amount: Math.round(price * 100), // Convert to cents (XOF doesn't use decimals, but Stripe expects smallest unit)
-            },
+            price: priceId,
             quantity: 1,
           },
         ],
+        // Enable automatic tax if Stripe Tax is configured (optional)
+        // automatic_tax: { enabled: true },
         success_url: `${baseUrl}/settings/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/settings/subscription?canceled=true`,
         metadata: {
@@ -272,6 +343,17 @@ export async function POST(request: Request) {
           planId: validatedData.planId,
           billingPeriod: validatedData.billingPeriod,
           upgrade: 'true',
+          tvaRate: tvaRate.toString(),
+          country: organization.country || 'SN',
+        },
+        subscription_data: {
+          metadata: {
+            organizationId: user.organizationId,
+            planId: validatedData.planId,
+            billingPeriod: validatedData.billingPeriod,
+            tvaRate: tvaRate.toString(),
+            country: organization.country || 'SN',
+          },
         },
       });
 

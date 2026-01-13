@@ -9,6 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import {
   Crown,
   Download,
@@ -188,8 +191,17 @@ export default function SubscriptionPage() {
   const extranetNearLimit = isNearLimit(usage.extranetTenants, extranetLimit);
 
   const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
+  const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+  const [selectedPlanForUpgrade, setSelectedPlanForUpgrade] = useState<{ id: string; name: string; isDowngrade: boolean } | null>(null);
+  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
-  const handleUpgrade = async (planId: string, planName: string, isDowngrade: boolean) => {
+  const handleUpgradeClick = (planId: string, planName: string, isDowngrade: boolean) => {
+    setSelectedPlanForUpgrade({ id: planId, name: planName, isDowngrade });
+    setSelectedBillingPeriod(billingPeriod || 'monthly');
+    setUpgradeDialogOpen(true);
+  };
+
+  const handleUpgrade = async (planId: string, planName: string, isDowngrade: boolean, billingPeriodChoice: 'monthly' | 'yearly') => {
     if (isUpgrading) return; // Prevent double clicks
     
     setIsUpgrading(planId);
@@ -203,7 +215,7 @@ export default function SubscriptionPage() {
         credentials: 'include',
         body: JSON.stringify({
           planId,
-          billingPeriod: billingPeriod || 'monthly', // Use current billing period
+          billingPeriod: billingPeriodChoice,
         }),
       });
 
@@ -546,7 +558,7 @@ export default function SubscriptionPage() {
                         isRecommended ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' : 'bg-muted hover:bg-muted/80 text-foreground',
                         isLoading && 'opacity-50 cursor-not-allowed'
                       )}
-                      onClick={() => isDowngrade ? handleDowngrade(plan.id, plan.displayName || plan.name) : handleUpgrade(plan.id, plan.displayName || plan.name, false)}
+                      onClick={() => isDowngrade ? handleDowngrade(plan.id, plan.displayName || plan.name) : handleUpgradeClick(plan.id, plan.displayName || plan.name, false)}
                       disabled={isLoading}
                     >
                       {isLoading 
@@ -613,6 +625,105 @@ export default function SubscriptionPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Upgrade Dialog - Frequency Selection */}
+      <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choisir la fréquence de facturation</DialogTitle>
+            <DialogDescription>
+              Sélectionnez la période de facturation pour votre abonnement
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <RadioGroup
+              value={selectedBillingPeriod}
+              onValueChange={(value) => setSelectedBillingPeriod(value as 'monthly' | 'yearly')}
+            >
+              <div className="flex items-center space-x-2 space-y-1">
+                <RadioGroupItem value="monthly" id="monthly" />
+                <Label htmlFor="monthly" className="cursor-pointer flex-1">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Mensuel</span>
+                    {selectedPlanForUpgrade && (
+                      <span className="text-muted-foreground">
+                        {(() => {
+                          const plan = plans.find((p: any) => p.id === selectedPlanForUpgrade.id);
+                          if (plan && plan.price) {
+                            return formatCurrency(parseFloat(plan.price.toString()));
+                          }
+                          return 'Sur devis';
+                        })()}/mois
+                      </span>
+                    )}
+                  </div>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 space-y-1">
+                <RadioGroupItem value="yearly" id="yearly" />
+                <Label htmlFor="yearly" className="cursor-pointer flex-1">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="font-medium">Annuel</span>
+                      {selectedPlanForUpgrade && (() => {
+                        const plan = plans.find((p: any) => p.id === selectedPlanForUpgrade.id);
+                        if (plan && plan.price && plan.yearlyDiscountRate) {
+                          return (
+                            <Badge variant="secondary" className="ml-2">Économisez {plan.yearlyDiscountRate}%</Badge>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    {selectedPlanForUpgrade && (
+                      <span className="text-muted-foreground">
+                        {(() => {
+                          const plan = plans.find((p: any) => p.id === selectedPlanForUpgrade.id);
+                          if (plan) {
+                            if (plan.priceYearly) {
+                              return formatCurrency(parseFloat(plan.priceYearly.toString()));
+                            }
+                            if (plan.price && plan.yearlyDiscountRate) {
+                              const discountMultiplier = 1 - (plan.yearlyDiscountRate / 100);
+                              const yearlyPrice = parseFloat(plan.price.toString()) * 12 * discountMultiplier;
+                              return formatCurrency(yearlyPrice);
+                            }
+                            if (plan.price) {
+                              const yearlyPrice = parseFloat(plan.price.toString()) * 12;
+                              return formatCurrency(yearlyPrice);
+                            }
+                          }
+                          return 'Sur devis';
+                        })()}/an
+                      </span>
+                    )}
+                  </div>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUpgradeDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedPlanForUpgrade) {
+                  setUpgradeDialogOpen(false);
+                  handleUpgrade(
+                    selectedPlanForUpgrade.id,
+                    selectedPlanForUpgrade.name,
+                    selectedPlanForUpgrade.isDowngrade,
+                    selectedBillingPeriod
+                  );
+                }
+              }}
+            >
+              Continuer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Payment Method */}
       <Card>

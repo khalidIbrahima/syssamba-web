@@ -304,7 +304,7 @@ CREATE TABLE "plans" (
 	"price_type" text DEFAULT 'fixed',
 	"yearly_discount_rate" numeric(5, 2),
 	"max_properties" integer,
-	"lots_limit" integer,
+	"max_units" integer,
 	"users_limit" integer,
 	"extranet_tenants_limit" integer,
 	"features" jsonb DEFAULT '{}'::jsonb NOT NULL,

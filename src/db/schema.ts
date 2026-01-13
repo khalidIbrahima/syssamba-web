@@ -33,7 +33,7 @@ export const plans = pgTable('plans', {
   
   // Limites
   maxProperties: integer('max_properties'), // null pour illimité
-  lotsLimit: integer('lots_limit'), // null pour illimité
+  maxUnits: integer('max_units'), // null pour illimité
   usersLimit: integer('users_limit'), // null pour illimité
   extranetTenantsLimit: integer('extranet_tenants_limit'), // null pour illimité
   

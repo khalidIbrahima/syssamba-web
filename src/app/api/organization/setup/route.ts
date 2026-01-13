@@ -11,14 +11,14 @@ const setupSchema = z.object({
   country: z.string().min(1, 'Le pays est requis'),
   planName: z.string().min(1, 'Le nom du plan est requis'),
   billingPeriod: z.enum(['monthly', 'yearly']),
-  // Contact information (optional)
-  email: z.string().email().optional().or(z.literal('')),
-  phone: z.string().optional().or(z.literal('')),
+  // Contact information (required for all plans)
+  email: z.string().email('Email invalide').min(1, 'Email requis'),
+  phone: z.string().min(1, 'Téléphone requis'),
   phone2: z.string().optional().or(z.literal('')),
-  address: z.string().optional().or(z.literal('')),
-  city: z.string().optional().or(z.literal('')),
-  postalCode: z.string().optional().or(z.literal('')),
-  state: z.string().optional().or(z.literal('')),
+  address: z.string().min(1, 'Adresse requise'),
+  city: z.string().min(1, 'Ville requise'),
+  postalCode: z.string().min(1, 'Code postal requis'),
+  state: z.string().min(1, 'Région requise'),
 });
 
 /**
@@ -239,17 +239,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Get plan details by name (before subscription creation so it's accessible later)
+    const plan = await db.selectOne<{
+      id: string;
+      name: string;
+      price_monthly: number | null;
+      price_yearly: number | null;
+    }>('plans', {
+      eq: { name: validatedData.planName },
+    });
+
     // Create subscription for the organization
     try {
-      // Get plan details by name
-      const plan = await db.selectOne<{
-        id: string;
-        name: string;
-        price_monthly: number | null;
-        price_yearly: number | null;
-      }>('plans', {
-        eq: { name: validatedData.planName },
-      });
 
       if (!plan || !plan.id) {
         console.error(`[Setup] Plan not found: ${validatedData.planName}`);
@@ -348,6 +349,14 @@ export async function POST(request: NextRequest) {
     const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'syssamba.com';
     const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
     
+    // Determine if payment is required
+    // Freemium plan never requires payment
+    // For other plans, payment is required if price_monthly exists and is greater than 0
+    const paymentRequired = plan 
+      && plan.name !== 'freemium' 
+      && plan.price_monthly !== null 
+      && plan.price_monthly > 0;
+
     return NextResponse.json({
       success: true,
       organization: {
@@ -358,10 +367,15 @@ export async function POST(request: NextRequest) {
         type: organization.type,
         country: organization.country,
       },
+      plan: plan ? {
+        id: plan.id,
+        name: plan.name,
+      } : null,
+      paymentRequired,
       // Don't return subdomainUrl in development mode
       subdomainUrl: IS_DEVELOPMENT ? null : `https://${organization.subdomain}.${MAIN_DOMAIN}`,
       message: 'Organisation configurée avec succès',
-      redirectTo: '/dashboard', // Explicit redirect path
+      redirectTo: paymentRequired ? '/setup/payment' : '/dashboard', // Redirect to payment if required
     });
 
   } catch (error) {

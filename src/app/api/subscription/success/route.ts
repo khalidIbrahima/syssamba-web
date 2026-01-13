@@ -2,14 +2,9 @@ import { NextResponse } from 'next/server';
 import { checkAuth, getCurrentUser } from '@/lib/auth-helpers';
 import { db } from '@/lib/db';
 import { supabaseAdmin } from '@/lib/db';
+import { stripe } from '@/lib/stripe-helpers';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
-
-// Initialize Stripe (only if STRIPE_SECRET_KEY is set)
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
-  apiVersion: '2025-11-17.clover',
-}) : null;
 
 /**
  * GET /api/subscription/success
@@ -52,9 +47,9 @@ export async function GET(request: Request) {
       );
     }
 
-    // Retrieve the Stripe checkout session (payment mode, not subscription)
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['payment_intent'],
+    // Retrieve the Stripe checkout session (subscription mode)
+    const session = await stripe!.checkout.sessions.retrieve(sessionId, {
+      expand: ['subscription'],
     });
 
     if (!session.metadata || !session.metadata.organizationId || session.metadata.organizationId !== user.organizationId) {
@@ -109,7 +104,18 @@ export async function GET(request: Request) {
       }
     }
 
-    // Get current subscription
+    const customerId = session.customer as string;
+    const subscriptionId = session.subscription as string;
+
+    // If this is subscription mode, get subscription details from Stripe
+    let stripeSubscription: Stripe.Subscription | null = null;
+    if (session.mode === 'subscription' && subscriptionId) {
+      stripeSubscription = typeof subscriptionId === 'string' 
+        ? await stripe!.subscriptions.retrieve(subscriptionId)
+        : subscriptionId;
+    }
+
+    // Get current subscription from database
     const subscriptions = await db.select<{
       id: string;
       plan_id: string;
@@ -121,44 +127,54 @@ export async function GET(request: Request) {
 
     const currentSubscription = subscriptions[0];
 
-    // Get payment intent ID (for payment mode, not subscription ID)
-    const paymentIntentId = session.payment_intent as string;
-    const customerId = session.customer as string;
+    // Prepare subscription data
+    const subscriptionData: any = {
+      plan_id: planId,
+      billing_period: billingPeriod,
+      price: price,
+      status: stripeSubscription 
+        ? (stripeSubscription.status === 'active' || stripeSubscription.status === 'trialing' ? 'active' : 'active')
+        : 'active',
+      stripe_customer_id: customerId,
+      cancel_at_period_end: false,
+      canceled_at: null,
+      updated_at: new Date().toISOString(),
+    };
 
-    const now = new Date();
-    const periodEnd = new Date(now);
-    if (billingPeriod === 'yearly') {
-      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+    if (stripeSubscription) {
+      // Use Stripe subscription data for recurring subscriptions
+      subscriptionData.stripe_subscription_id = stripeSubscription.id;
+      subscriptionData.current_period_start = new Date(stripeSubscription.current_period_start * 1000).toISOString().split('T')[0];
+      subscriptionData.current_period_end = new Date(stripeSubscription.current_period_end * 1000).toISOString().split('T')[0];
+      subscriptionData.cancel_at_period_end = stripeSubscription.cancel_at_period_end || false;
+      if (stripeSubscription.trial_start) {
+        subscriptionData.trial_start = new Date(stripeSubscription.trial_start * 1000).toISOString().split('T')[0];
+      }
+      if (stripeSubscription.trial_end) {
+        subscriptionData.trial_end = new Date(stripeSubscription.trial_end * 1000).toISOString().split('T')[0];
+      }
     } else {
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      // Fallback for payment mode (shouldn't happen with subscription mode, but keep for compatibility)
+      const now = new Date();
+      const periodEnd = new Date(now);
+      if (billingPeriod === 'yearly') {
+        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      } else {
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+      }
+      subscriptionData.current_period_start = now.toISOString().split('T')[0];
+      subscriptionData.current_period_end = periodEnd.toISOString().split('T')[0];
     }
 
     if (currentSubscription) {
-      // Update existing subscription (no stripe_subscription_id for payment mode)
-      await db.update('subscriptions', {
-        plan_id: planId,
-        billing_period: billingPeriod,
-        price: price,
-        status: 'active',
-        stripe_customer_id: customerId,
-        current_period_start: now.toISOString().split('T')[0],
-        current_period_end: periodEnd.toISOString().split('T')[0],
-        cancel_at_period_end: false,
-        canceled_at: null,
-        updated_at: new Date().toISOString(),
-      }, { id: currentSubscription.id });
+      // Update existing subscription
+      await db.update('subscriptions', subscriptionData, { id: currentSubscription.id });
     } else {
-      // Create new subscription (no stripe_subscription_id for payment mode)
+      // Create new subscription
       await db.insertOne('subscriptions', {
+        ...subscriptionData,
         organization_id: user.organizationId,
-        plan_id: planId,
-        billing_period: billingPeriod,
-        price: price,
-        status: 'active',
-        stripe_customer_id: customerId,
-        start_date: now.toISOString().split('T')[0],
-        current_period_start: now.toISOString().split('T')[0],
-        current_period_end: periodEnd.toISOString().split('T')[0],
+        start_date: subscriptionData.current_period_start,
         currency: 'XOF',
       });
     }

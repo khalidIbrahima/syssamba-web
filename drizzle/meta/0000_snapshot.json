@@ -1,5 +1,5 @@
 {
-  "id": "d56c1dcf-7b0a-4b0d-8230-0892e99fab78",
+  "id": "fc73832f-833b-4c37-be29-9d1126850a25",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -3080,8 +3080,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "lots_limit": {
-          "name": "lots_limit",
+        "max_units": {
+          "name": "max_units",
           "type": "integer",
           "primaryKey": false,
           "notNull": false

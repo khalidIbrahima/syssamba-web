@@ -4,13 +4,7 @@ import { db } from '@/lib/db';
 import { supabaseAdmin } from '@/lib/db';
 import { getPlanLimits } from '@/lib/permissions';
 import { z } from 'zod';
-import Stripe from 'stripe';
-
-// Initialize Stripe (only if STRIPE_SECRET_KEY is set)
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
-  apiVersion: '2025-11-17.clover',
-}) : null;
+import { stripe, getOrCreateStripePrice } from '@/lib/stripe-helpers';
 
 // Schema for checkout request
 const checkoutSchema = z.object({
@@ -49,6 +43,28 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
+
+    // Get TVA rate from countries table
+    // Règle fiscale : TVA = 0% pour clients non-sénégalais (exonération exportation)
+    // TVA = taux du pays pour clients sénégalais
+    let tvaRate = 0.00; // Default to 0% (exportation exonérée)
+    const clientCountry = organization.country || 'SN'; // Default to Senegal if not set
+    
+    // Si le client est au Sénégal, appliquer la TVA sénégalaise
+    if (clientCountry === 'SN') {
+      const { data: countryData, error: countryError } = await supabaseAdmin
+        .from('countries')
+        .select('tva')
+        .eq('code', 'SN')
+        .single();
+      
+      if (!countryError && countryData && countryData.tva !== null) {
+        tvaRate = parseFloat(countryData.tva.toString());
+      } else {
+        tvaRate = 18.00; // Fallback to 18% for Senegal
+      }
+    }
+    // Pour les clients non-sénégalais, TVA reste à 0% (exonération exportation)
 
     const body = await request.json();
     const validatedData = checkoutSchema.parse(body);
@@ -169,24 +185,32 @@ export async function POST(request: Request) {
       baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     }
 
-    // Create Stripe Checkout session (payment mode, not subscription)
-    const session = await stripe.checkout.sessions.create({
+    // Get or create Stripe Price for recurring subscription
+    // XOF is a zero-decimal currency, so we don't multiply by 100
+    const interval = validatedData.billingPeriod === 'yearly' ? 'year' : 'month';
+    const priceInSmallestUnit = Math.round(price); // XOF has no decimals, use amount as-is
+    
+    const priceId = await getOrCreateStripePrice(
+      targetPlan.name,
+      targetPlan.display_name,
+      priceInSmallestUnit,
+      interval
+    );
+
+    // Create Stripe Checkout session in subscription mode for recurring payments
+    // Note: Invoices are created automatically for subscriptions (no need for invoice_creation parameter)
+    const session = await stripe!.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
-      mode: 'payment',
+      mode: 'subscription',
       line_items: [
         {
-          price_data: {
-            currency: 'xof', // FCFA
-            product_data: {
-              name: `${targetPlan.display_name} - ${validatedData.billingPeriod === 'yearly' ? 'Annuel' : 'Mensuel'}`,
-              description: `Plan ${targetPlan.display_name}`,
-            },
-            unit_amount: Math.round(price * 100), // Convert to cents (XOF doesn't use decimals, but Stripe expects smallest unit)
-          },
+          price: priceId,
           quantity: 1,
         },
       ],
+      // Enable automatic tax if Stripe Tax is configured (optional)
+      // automatic_tax: { enabled: true },
       success_url: `${baseUrl}/settings/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/settings/subscription?canceled=true`,
       metadata: {
@@ -194,6 +218,17 @@ export async function POST(request: Request) {
         planId: validatedData.planId,
         billingPeriod: validatedData.billingPeriod,
         upgrade: 'true',
+        tvaRate: tvaRate.toString(),
+        country: organization.country || 'SN',
+      },
+      subscription_data: {
+        metadata: {
+          organizationId: user.organizationId,
+          planId: validatedData.planId,
+          billingPeriod: validatedData.billingPeriod,
+          tvaRate: tvaRate.toString(),
+          country: organization.country || 'SN',
+        },
       },
     });
 

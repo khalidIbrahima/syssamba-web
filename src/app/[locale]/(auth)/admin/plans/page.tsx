@@ -104,7 +104,7 @@ export default function PlansAdminPage() {
     priceYearly: '',
     yearlyDiscountRate: '',
     maxProperties: '',
-    lotsLimit: '',
+    maxUnits: '',
     usersLimit: '',
     extranetTenantsLimit: '',
     features: '{}',
@@ -121,7 +121,7 @@ export default function PlansAdminPage() {
     priceYearly: '',
     yearlyDiscountRate: '',
     maxProperties: '',
-    lotsLimit: '',
+    maxUnits: '',
     usersLimit: '',
     extranetTenantsLimit: '',
     features: '{}',
@@ -141,7 +141,7 @@ export default function PlansAdminPage() {
       priceYearly: plan.priceYearly !== null && plan.priceYearly !== undefined ? plan.priceYearly.toString() : '',
       yearlyDiscountRate: plan.yearlyDiscountRate !== null && plan.yearlyDiscountRate !== undefined ? plan.yearlyDiscountRate.toString() : '',
       maxProperties: plan.maxProperties !== null && plan.maxProperties !== undefined ? plan.maxProperties.toString() : '',
-      lotsLimit: plan.lotsLimit !== null && plan.lotsLimit !== undefined ? plan.lotsLimit.toString() : '',
+      maxUnits: plan.maxUnits !== null && plan.maxUnits !== undefined ? plan.maxUnits.toString() : '',
       usersLimit: plan.usersLimit !== null && plan.usersLimit !== undefined ? plan.usersLimit.toString() : '',
       extranetTenantsLimit: plan.extranetTenantsLimit !== null && plan.extranetTenantsLimit !== undefined ? plan.extranetTenantsLimit.toString() : '',
       features: plan.features ? JSON.stringify(plan.features, null, 2) : '{}',
@@ -169,7 +169,7 @@ export default function PlansAdminPage() {
         priceYearly: createFormData.priceYearly === '' ? null : parseFloat(createFormData.priceYearly),
         yearlyDiscountRate: createFormData.yearlyDiscountRate === '' ? null : parseFloat(createFormData.yearlyDiscountRate),
         maxProperties: createFormData.maxProperties === '' ? null : parseInt(createFormData.maxProperties),
-        lotsLimit: createFormData.lotsLimit === '' ? null : parseInt(createFormData.lotsLimit),
+        maxUnits: createFormData.maxUnits === '' ? null : parseInt(createFormData.maxUnits),
         usersLimit: createFormData.usersLimit === '' ? null : parseInt(createFormData.usersLimit),
         extranetTenantsLimit: createFormData.extranetTenantsLimit === '' ? null : parseInt(createFormData.extranetTenantsLimit),
         features: {},
@@ -198,7 +198,7 @@ export default function PlansAdminPage() {
         priceYearly: '',
         yearlyDiscountRate: '',
         maxProperties: '',
-        lotsLimit: '',
+        maxUnits: '',
         usersLimit: '',
         extranetTenantsLimit: '',
         features: '{}',
@@ -235,8 +235,8 @@ export default function PlansAdminPage() {
       if (formData.maxProperties !== '') {
         updates.maxProperties = formData.maxProperties === '' ? null : parseInt(formData.maxProperties);
       }
-      if (formData.lotsLimit !== '') {
-        updates.lotsLimit = formData.lotsLimit === '' ? null : parseInt(formData.lotsLimit);
+      if (formData.maxUnits !== '') {
+        updates.maxUnits = formData.maxUnits === '' ? null : parseInt(formData.maxUnits);
       }
       if (formData.usersLimit !== '') {
         updates.usersLimit = formData.usersLimit === '' ? null : parseInt(formData.usersLimit);
@@ -394,12 +394,12 @@ export default function PlansAdminPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Home className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Lots:</span>
+                      <span className="font-medium">Unités:</span>
                       <span className="text-foreground">
-                        {plan.lotsLimit !== null && plan.lotsLimit !== undefined
-                          ? plan.lotsLimit === -1
+                        {plan.maxUnits !== null && plan.maxUnits !== undefined
+                          ? plan.maxUnits === -1
                             ? 'Illimité'
-                            : plan.lotsLimit
+                            : plan.maxUnits
                           : 'Illimité'}
                       </span>
                     </div>
@@ -557,13 +557,13 @@ export default function PlansAdminPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lots-limit">Limite Lots</Label>
+                      <Label htmlFor="max-units">Limite Unités</Label>
                       <Input
-                        id="lots-limit"
+                        id="max-units"
                         type="number"
                         placeholder="Illimité (laisser vide)"
-                        value={formData.lotsLimit}
-                        onChange={(e) => setFormData(prev => ({ ...prev, lotsLimit: e.target.value }))}
+                        value={formData.maxUnits}
+                        onChange={(e) => setFormData(prev => ({ ...prev, maxUnits: e.target.value }))}
                         disabled={savingPlan}
                       />
                     </div>
@@ -783,13 +783,13 @@ export default function PlansAdminPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="create-lots-limit">Limite Lots</Label>
+                    <Label htmlFor="create-max-units">Limite Unités</Label>
                     <Input
-                      id="create-lots-limit"
+                      id="create-max-units"
                       type="number"
                       placeholder="Illimité (laisser vide)"
-                      value={createFormData.lotsLimit}
-                      onChange={(e) => setCreateFormData(prev => ({ ...prev, lotsLimit: e.target.value }))}
+                      value={createFormData.maxUnits}
+                      onChange={(e) => setCreateFormData(prev => ({ ...prev, maxUnits: e.target.value }))}
                       disabled={creatingPlan}
                     />
                   </div>
@@ -889,7 +889,7 @@ export default function PlansAdminPage() {
                         priceYearly: '',
                         yearlyDiscountRate: '',
                         maxProperties: '',
-                        lotsLimit: '',
+                        maxUnits: '',
                         usersLimit: '',
                         extranetTenantsLimit: '',
                         features: '{}',

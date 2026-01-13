@@ -5,6 +5,7 @@ export type Country = {
   nameEn?: string;
   currency: string; // ISO 4217
   currencySymbol: string;
+  tva?: number; // Taux de TVA en pourcentage
   isActive: boolean;
   isOhada: boolean;
   createdAt: Date;
